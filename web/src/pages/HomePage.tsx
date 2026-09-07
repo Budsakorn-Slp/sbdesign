@@ -1,5 +1,6 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import FeedStrip from "../components/FeedStrip";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
 import ProductCard from "../components/ProductCard";
@@ -145,6 +146,7 @@ export default function HomePage() {
       </section>
 
       <ProductStrip title="ดีลพิเศษวันนี้" items={content.deals} more="/search?tag=deal" />
+      <FeedStrip title="สินค้าขายดีจริงจากยอดสั่งซื้อ" path="/best-sellers?limit=8" more="/search?tag=bestseller" />
       <ProductStrip title="สินค้าขายดี" items={content.bestsellers} more="/search?tag=bestseller" />
 
       {/* ROOM ROWS */}
@@ -184,6 +186,7 @@ export default function HomePage() {
       </section>
 
       <ProductStrip title="สินค้าใหม่" items={content.new_products} more="/search?tag=new" />
+      <FeedStrip title="ดูล่าสุด" path="/me/recently-viewed?limit=8" more="/account/recent" />
     </main>
   );
 }

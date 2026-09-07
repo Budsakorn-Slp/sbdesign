@@ -193,6 +193,10 @@ def add_item(db: Session, cart: Cart, actor: User | None, matnr: str, qty: int, 
         _history(db, cart, matnr, "add", 0, qty, actor)
     cart.updated_at = utcnow()
     audit_service.log(db, actor, "cart.item_add", "cart", cart.id, {"matnr": matnr, "qty": qty, "supply_mode": mode, "plant_code": plant_code, "unit_price": str(price)})
+    from app.services import analytics_service  # import ตรงนี้กัน circular import
+
+    # นับให้ลูกค้าเจ้าของตะกร้าเสมอ แม้เซลล์เป็นคนกดใส่แทน
+    analytics_service.track(db, cart.customer, cart.anon_token, "add_to_cart", matnr, source="sales_app" if by_sales else "web", payload={"qty": qty})
     db.commit()
     db.refresh(item)
     emit(cart, "item_added", {"item_id": item.id, "matnr": matnr, "qty": item.qty, "added_by": item.added_by, "by_name": actor.name if actor else None})
@@ -306,6 +310,10 @@ def merge_guest_cart_on_login(db: Session, user: User, request: Request | None) 
     token = anon_token_from(request)
     if not token:
         return
+    from app.services import analytics_service  # import ตรงนี้กัน circular import
+
+    analytics_service.merge_owner(db, token, user)
+    db.commit()
     guest = find_guest_cart(db, token)
     if not guest or not guest.items:
         return

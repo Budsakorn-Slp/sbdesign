@@ -155,3 +155,25 @@
   .brand-tiles { grid-template-columns: repeat(2, 1fr); }
   .product-actions { flex-direction: column; }
 }
+
+/* ---------- บัญชีของฉัน: ประวัติ · รายการโปรด · ดูล่าสุด (STEP 10) ---------- */
+.account h1 { margin-bottom: 14px; }
+.account-tabs { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.account-tab { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; color: var(--ink-2); text-decoration: none; border-bottom: 2px solid transparent; }
+.account-tab.on { color: var(--red); border-bottom-color: var(--red); font-weight: 600; }
+.order-list { display: grid; gap: 10px; }
+.order-card { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.order-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; background: none; border: 0; cursor: pointer; text-align: left; }
+.order-no { font-weight: 700; }
+.order-right { display: flex; align-items: center; gap: 12px; }
+.order-status { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--bg-2); color: var(--ink-2); white-space: nowrap; }
+.order-status.s-delivered { background: #e7f4ea; color: #1c6b34; }
+.order-status.s-shipping, .order-status.s-in_production { background: #fdf1de; color: #8a5a10; }
+.order-status.s-cancelled { background: #fbe9e9; color: #a12626; }
+.order-lines { border-top: 1px solid var(--line); padding: 12px 16px; display: grid; gap: 8px; }
+.order-line { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; }
+.order-line a { color: inherit; text-decoration: none; }
+.order-line a:hover { text-decoration: underline; }
+.btn.icon-only { padding-inline: 14px; }
+.btn.icon-only.on { color: var(--red); border-color: var(--red); }
+.hdr-user-link { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; }

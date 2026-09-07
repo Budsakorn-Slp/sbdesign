@@ -396,3 +396,17 @@ export type HomeContent = {
   bestsellers: MaterialCard[];
   brands: Brand[];
 };
+
+// ---------- ประวัติ + สินค้าขายดี (STEP 10) ----------
+export type OrderLine = { matnr: string; name: string; qty: number; unit_price: string; line_total: string };
+export type OrderHistory = {
+  so_no: string;
+  order_date: string;
+  status: "confirmed" | "in_production" | "shipping" | "delivered" | "cancelled";
+  channel: string;
+  branch: string | null;
+  grand_total: string;
+  delivery_date: string | null;
+  synced_at: string;
+  lines: OrderLine[];
+};

@@ -1,0 +1,50 @@
+from datetime import date, datetime
+from decimal import Decimal
+
+from pydantic import BaseModel, Field
+
+from app.schemas.catalog import MaterialCard
+
+
+class TrackIn(BaseModel):
+    event: str
+    matnr: str | None = None
+    query: str | None = None
+    source: str = "web"
+    payload: dict | None = None
+
+
+class OrderLineOut(BaseModel):
+    matnr: str
+    name: str
+    qty: int
+    unit_price: Decimal
+    line_total: Decimal
+
+    model_config = {"from_attributes": True}
+
+
+class OrderOut(BaseModel):
+    so_no: str
+    order_date: date
+    status: str
+    channel: str
+    branch: str | None = None
+    grand_total: Decimal
+    delivery_date: date | None = None
+    synced_at: datetime
+    lines: list[OrderLineOut] = Field(default_factory=list)
+
+    model_config = {"from_attributes": True}
+
+
+class WishlistOut(BaseModel):
+    in_wishlist: bool
+    items: list[MaterialCard] = Field(default_factory=list)
+
+
+class DailyJobOut(BaseModel):
+    days: int
+    stat_rows: int
+    best_sellers: int
+    top: list[str]

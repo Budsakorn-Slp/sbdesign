@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
-import { apiGet, errorMessage } from "../lib/api";
+import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
@@ -22,6 +22,7 @@ export default function ProductPage() {
   const [mode, setMode] = useState<SupplyMode>("ship");
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [wished, setWished] = useState(false);
   const isStaff = auth.role === "sales" || auth.role === "manager" || auth.role === "admin";
 
   useEffect(() => {
@@ -41,6 +42,19 @@ export default function ProductPage() {
     const t = setTimeout(() => setToast(null), 4000);
     return () => clearTimeout(t);
   }, [toast]);
+
+  useEffect(() => {
+    setWished(false);
+    if (!auth.user || !matnr) return;
+    apiGet<{ matnr: string }[]>("/me/wishlist").then((ws) => setWished(ws.some((w) => w.matnr === matnr))).catch(() => setWished(false));
+  }, [auth.user, matnr]);
+
+  const toggleWish = async () => {
+    if (!auth.user) return auth.openLogin();
+    const r = await apiPost<{ in_wishlist: boolean }>(`/me/wishlist/${matnr}`);
+    setWished(r.in_wishlist);
+    setToast(r.in_wishlist ? "เก็บใส่รายการโปรดแล้ว" : "เอาออกจากรายการโปรดแล้ว");
+  };
 
   const checkStock = async () => {
     setChecking(true);
@@ -141,6 +155,9 @@ export default function ProductPage() {
                 </button>
                 <button className="btn lg" onClick={checkStock} disabled={checking}>
                   <Icon name="inventory_2" size={20} /> {checking ? "กำลังเช็ค…" : "เช็คสต็อก"}
+                </button>
+                <button className={"btn lg icon-only" + (wished ? " on" : "")} onClick={toggleWish} aria-label="รายการโปรด" title={wished ? "เอาออกจากรายการโปรด" : "เก็บใส่รายการโปรด"}>
+                  <Icon name="favorite" size={20} />
                 </button>
               </div>
             </div>

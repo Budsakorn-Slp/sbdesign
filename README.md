@@ -209,3 +209,20 @@ cd web && npm test
 3. ฝั่งลูกค้า: `/cart` → `/checkout` กรอกที่อยู่ + คำนวณค่าส่ง + เลือกคิว → **ยืนยันการสั่งซื้อ** → เด้งไปหน้าชำระเงิน
 4. จำลอง SAP ล่ม: ใน pytest ใช้ `get_sap_client().fail_next(1)` → ล็อกอิน MG-001 เปิดไอคอน sync ที่ header (`/manager/sap-sync`) เห็นใบค้าง กด **ส่งใหม่** ได้เลข SO
 5. test: `pytest tests/test_step9_payment.py` (5 เคส)
+
+### STEP 10 — ประวัติ + สินค้าขายดี
+- **เก็บพฤติกรรม**: `user_events` (view_material / search / add_to_cart / …) บันทึกอัตโนมัติจาก `GET /materials/{matnr}`, `GET /materials/search` และตอนใส่ตะกร้า (ทั้งฝั่งลูกค้าและเซลล์ — นับให้ลูกค้าเจ้าของตะกร้าเสมอ) · ยิงเองเพิ่มได้ที่ `POST /events` · คำค้นแยกเก็บใน `search_queries`
+- guest ก็เก็บได้ (ผูกกับ `sb_anon` cookie) แล้ว **ย้ายมาเป็นของบัญชีตอนล็อกอิน** พร้อมกับตะกร้า
+- `GET /me/recently-viewed` (ดูล่าสุด · guest ใช้ได้) · `GET /me/wishlist` + `POST /me/wishlist/{matnr}` (toggle) · `GET /me/bought-again`
+- **ประวัติการสั่งซื้อ mirror จาก SAP**: `GET /me/orders` sync `order_history` + `order_history_lines` จาก `SapClient.get_order_history` ทุกครั้ง (mock สุ่มแบบ deterministic ต่อเลขลูกค้า) · `GET /me/orders/{so_no}` — ของคนอื่นตอบ 404
+- **job รายวัน**: `POST /admin/jobs/daily-stats?days=30` (manager/admin) ย่อย events + ยอดขายลง `material_daily_stats` แล้ว refresh `best_sellers` · คะแนน = ยอดขาย×10 + ใส่ตะกร้า×2 + วิว×0.2 (ย้อนหลัง 30 วัน) · ของจริงตั้งเป็น cron รายวัน
+- `GET /best-sellers` (อันดับจากยอดจริง ไม่ใช่ tag ที่ตั้งมือ) · `GET /admin/top-searches` ดูคำค้นยอดฮิต
+- หน้าเว็บ: หน้าแรกมีแถบ **สินค้าขายดีจริงจากยอดสั่งซื้อ** + **ดูล่าสุด** · หน้าสินค้ามีปุ่มหัวใจเก็บรายการโปรด · `/account` มี 3 แท็บ: ประวัติการสั่งซื้อ (กดดูรายการในใบได้) · รายการโปรด · ดูล่าสุด
+
+วิธีลอง
+1. เปิดสินค้าสัก 2-3 ตัว แล้วใส่ตะกร้า → เช็ค DB: `select event, matnr from user_events order by created_at desc limit 10;` เห็น row ทันที
+2. หน้าแรกเลื่อนลง เห็นแถบ **ดูล่าสุด** ขึ้นตามที่เพิ่งดู (ยังไม่ล็อกอินก็เห็น เพราะผูกกับ cookie) → ล็อกอินแล้วยังอยู่ครบ
+3. กดหัวใจที่หน้าสินค้า → ไปที่ไอคอนหัวใจบน header (`/account/wishlist`) เห็นรายการ กดเอาออกได้
+4. `/account/orders` — ดึงประวัติจาก SAP mock มาแสดง กดที่ใบเพื่อดูรายการสินค้าในออร์เดอร์
+5. ล็อกอิน MG-001 แล้ว `POST /admin/jobs/daily-stats` → เรียก `GET /best-sellers` เทียบก่อน/หลัง จะเห็นอันดับเปลี่ยนตามยอดจริง
+6. test: `pytest tests/test_step10_history.py` (5 เคส)

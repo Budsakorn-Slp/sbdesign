@@ -105,6 +105,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
         <div className="hdr-icons">
           <button className="icon-btn" aria-label="แจ้งเตือน"><Icon name="notifications" /></button>
           <button className="icon-btn" aria-label="คูปอง"><Icon name="confirmation_number" /></button>
+          <Link to="/account/wishlist" className="icon-btn" aria-label="รายการโปรด" title="รายการโปรด"><Icon name="favorite" /></Link>
           <Link to={cartHref} className="icon-btn" aria-label="ตะกร้า">
             <Icon name="shopping_cart" />
             {cartCount > 0 && <span className="badge">{cartCount}</span>}
@@ -117,11 +118,13 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
           )}
           {auth.user ? (
             <div className="hdr-user">
-              <Icon name="account_circle" size={26} />
-              <span className="hdr-user-txt">
-                <b>{auth.user.name}</b>
-                <small>{roleLabel}</small>
-              </span>
+              <Link to="/account" className="hdr-user-link" title="บัญชีของฉัน">
+                <Icon name="account_circle" size={26} />
+                <span className="hdr-user-txt">
+                  <b>{auth.user.name}</b>
+                  <small>{roleLabel}</small>
+                </span>
+              </Link>
               <button className="link-btn small" onClick={() => auth.logout()}>ออก</button>
             </div>
           ) : (

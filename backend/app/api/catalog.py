@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.models.catalog import Brand, Category, Material, Plant
 from app.models.user import User
 from app.schemas.catalog import BrandOut, CategoryOut, MaterialCard, MaterialDetail, PlantOut, SearchOut, StockOut, StockRowOut, StockSummaryOut
-from app.services import catalog_service, stock_service
+from app.services import analytics_service, cart_service, catalog_service, stock_service
 
 router = APIRouter(tags=["catalog"])
 CONTENT_DIR = Path(__file__).resolve().parents[2] / "seed" / "content"
@@ -70,20 +70,26 @@ def search(
     tag: str | None = None,
     limit: int = Query(default=24, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    request: Request = None,
     db: Session = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
     rows, total = catalog_service.search(db, q, category, room, tag, limit, offset)
     stock = catalog_service.stock_summary(db, [m.matnr for m in rows])
+    if q and offset == 0:
+        analytics_service.track(db, user, cart_service.anon_token_from(request), "search", query=q, payload={"result_count": total})
+        db.commit()
     return SearchOut(items=[to_card(m, user, stock.get(m.matnr)) for m in rows], total=total, q=q, category=category)
 
 
 @router.get("/materials/{matnr}", response_model=MaterialDetail)
-def material_detail(matnr: str, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+def material_detail(matnr: str, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
     m = catalog_service.get_material(db, matnr)
     if not m:
         raise HTTPException(status_code=404, detail="ไม่พบสินค้า")
     stock = catalog_service.stock_summary(db, [matnr]).get(matnr)
+    analytics_service.track(db, user, cart_service.anon_token_from(request), "view_material", matnr)
+    db.commit()
     return to_detail(m, user, stock)
 
 

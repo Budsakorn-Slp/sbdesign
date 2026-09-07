@@ -125,6 +125,28 @@ class DeliveryQuote:
 
 
 @dataclass
+class OrderLineDTO:
+    matnr: str
+    name: str
+    qty: int
+    unit_price: Decimal
+    line_total: Decimal
+
+
+@dataclass
+class OrderDTO:
+    so_no: str
+    sap_customer_no: str
+    order_date: date
+    status: str  # confirmed | in_production | shipping | delivered | cancelled
+    grand_total: Decimal
+    channel: str
+    branch: str | None
+    delivery_date: date | None
+    lines: list[OrderLineDTO]
+
+
+@dataclass
 class SapSoResult:
     ok: bool
     sap_so_no: str | None
@@ -145,3 +167,5 @@ class SapClient(Protocol):
     def create_sales_order(self, quotation_no: str) -> SapSoResult: ...
 
     def get_customer(self, key: str) -> CustomerDTO | None: ...
+
+    def get_order_history(self, sap_customer_no: str) -> list[OrderDTO]: ...

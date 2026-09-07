@@ -14,6 +14,8 @@ from app.integrations.sap.base import (
     DeliveryQuote,
     DeliverySlotDTO,
     MaterialDTO,
+    OrderDTO,
+    OrderLineDTO,
     PromoResult,
     SapError,
     SapSoResult,
@@ -145,6 +147,30 @@ class MockSapClient:
         so = "26" + "".join(random.choices(string.digits, k=8))
         self.created_orders.append(so)
         return SapSoResult(ok=True, sap_so_no=so, message="mock SO created")
+
+    def get_order_history(self, sap_customer_no: str) -> list[OrderDTO]:
+        """mock: สุ่มแบบ deterministic จากเลขลูกค้า — ลูกค้าคนเดิมได้ประวัติเดิมทุกครั้ง"""
+        self._maybe_fail("get_order_history", sap_customer_no)
+        rnd = random.Random(sap_customer_no)
+        today = date.today()
+        orders: list[OrderDTO] = []
+        for i in range(rnd.randint(2, 5)):
+            ordered = today - timedelta(days=rnd.randint(20, 700))
+            picks = rnd.sample(self._materials, rnd.randint(1, 3))
+            lines = []
+            for m in picks:
+                qty = rnd.randint(1, 2)
+                unit = Decimal(str(m.prices.get("standard", 0)))
+                lines.append(OrderLineDTO(matnr=m.matnr, name=m.name_th, qty=qty, unit_price=unit, line_total=unit * qty))
+            total = sum((l.line_total for l in lines), Decimal(0))
+            age = (today - ordered).days
+            status = "delivered" if age > 30 else rnd.choice(["shipping", "in_production", "confirmed"])
+            orders.append(OrderDTO(
+                so_no="26" + str(abs(hash((sap_customer_no, i))) % 10**8).zfill(8), sap_customer_no=sap_customer_no, order_date=ordered, status=status,
+                grand_total=total, channel=rnd.choice(["online", "in_store_assisted"]), branch=rnd.choice(["SB Design Square บางนา", "SB Design Square เซ็นทรัลเวิลด์", "SB Design Square รัชดา"]),
+                delivery_date=ordered + timedelta(days=rnd.randint(3, 21)), lines=lines,
+            ))
+        return sorted(orders, key=lambda o: o.order_date, reverse=True)
 
     def get_customer(self, key: str) -> CustomerDTO | None:
         self._maybe_fail("get_customer", key)

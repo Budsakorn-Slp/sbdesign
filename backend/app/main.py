@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, cart, catalog, delivery, health, payment, promo, quotation, sales, ws
+from app.api import admin, analytics, auth, cart, catalog, delivery, health, payment, promo, quotation, sales, ws
 from app.core.config import get_settings
 from app.realtime import manager, on_cart_event
 from app.services import cart_service
@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title=settings.app_name, version="0.9.0", lifespan=lifespan)
+    app = FastAPI(title=settings.app_name, version="0.10.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(delivery.router)
     app.include_router(quotation.router)
     app.include_router(payment.router)
+    app.include_router(analytics.router)
     app.include_router(ws.router)
     app.include_router(admin.router)
     if on_cart_event not in cart_service._change_hooks:
