@@ -1,0 +1,25 @@
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+backend/*.db
+backend/*.db-journal
+backend/.env
+
+# node
+node_modules/
+web/dist/
+web/.vite/
+
+# env
+.env
+.env.local
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

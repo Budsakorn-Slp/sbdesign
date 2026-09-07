@@ -1,0 +1,6 @@
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:#fff;color:#111;font-family:"Noto Sans Thai",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+a{color:#111;text-decoration:none}
+button{font-family:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}

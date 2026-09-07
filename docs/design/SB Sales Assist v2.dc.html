@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #F4F4F2; -webkit-font-smoothing: antialiased; }
+  a { color: #C8102E; text-decoration: none; }
+  a:hover { color: #8E0B20; text-decoration: underline; }
+  .ms { font-family: 'Material Symbols Rounded'; font-weight: 400; font-style: normal; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; direction: ltr; }
+</style>
+</helmet>
+
+<div style="font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif; color: #16181A; padding: clamp(20px, 4vw, 56px) clamp(14px, 4vw, 48px) 96px; display: flex; flex-direction: column; gap: clamp(38px, 6vw, 68px); max-width: 1320px; margin: 0 auto;">
+
+  <header style="display: flex; flex-direction: column; gap: 16px; border-bottom: 2px solid #16181A; padding-bottom: 26px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+      <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; background: #16181A; color: #fff; padding: 6px 12px; border-radius: 4px;">SB Design Square</span>
+      <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; border: 1.5px solid #16181A; padding: 5px 12px; border-radius: 4px;">Sales App · v2</span>
+      <span style="font-size: 13px; color: #6B7076;">Frontend only · Backend/SAP ทีมอื่นทำ service มาให้</span>
+    </div>
+    <h1 style="margin: 0; font-size: clamp(28px, 4.6vw, 48px); line-height: 1.14; font-weight: 700; letter-spacing: -0.02em; max-width: 24ch; text-wrap: pretty;">โฟลว์เซลล์: ค้นหาแมท → Preso → Quotation → จ่ายเงิน</h1>
+    <p style="margin: 0; font-size: clamp(15px, 1.5vw, 18px); line-height: 1.6; color: #43484D; max-width: 64ch; text-wrap: pretty;">แก้ตามที่คุยกันแล้ว: เซลล์จับคู่ลูกค้าด้วยการ <strong>ค้นหาเลขสมาชิก / เบอร์โทร / อีเมล</strong> (QR เป็นทางเลือกสำรอง) และปลายทางของโฟลว์คือ Quotation ที่ระบบหลังบ้านจะไปคอนเวิร์ตเป็น SO ใน SAP</p>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 18px;">
+    <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #C8102E;">01</span>
+      <h2 style="margin: 0; font-size: clamp(21px, 2.5vw, 30px); font-weight: 700; letter-spacing: -0.01em;">โฟลว์หลัก 9 สเต็ป</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px;">
+      <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #16181A; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">1</span><span class="ms" style="font-size: 18px; color: #7A8086;">search</span></div><strong style="font-size: 14.5px;">ค้นหาแมท</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">ชื่อ / รหัสแมท / บาร์โค้ด · สแกนได้</span></div>
+      <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #16181A; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">2</span><span class="ms" style="font-size: 18px; color: #7A8086;">inventory_2</span></div><strong style="font-size: 14.5px;">เช็คสต็อก</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">สาขา / คลัง / ATP วันพร้อมส่ง</span></div>
+      <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #16181A; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">3</span><span class="ms" style="font-size: 18px; color: #7A8086;">add_shopping_cart</span></div><strong style="font-size: 14.5px;">ลงตะกร้า</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">ระบุจำนวน + แหล่งจ่ายของ</span></div>
+      <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #16181A; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">4</span><span class="ms" style="font-size: 18px; color: #7A8086;">shopping_cart</span></div><strong style="font-size: 14.5px;">ไปหน้าตะกร้า</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">แก้จำนวน / ลบ / ใส่หมายเหตุ</span></div>
+      <div style="background: #fff; border: 1.5px solid #C8102E; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #C8102E; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">5</span><span class="ms" style="font-size: 18px; color: #C8102E;">person_search</span></div><strong style="font-size: 14.5px;">ค้นหา Customer</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">เลขสมาชิก / เบอร์ / อีเมล — ถ้ามีตะกร้าอยู่แล้วให้ merge</span></div>
+      <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #16181A; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">6</span><span class="ms" style="font-size: 18px; color: #7A8086;">sell</span></div><strong style="font-size: 14.5px;">เช็คโปรโมชั่น</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">โปรที่เข้าเงื่อนไข + ส่วนลด + เงื่อนไขที่ยังไม่ครบ</span></div>
+      <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #16181A; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">7</span><span class="ms" style="font-size: 18px; color: #7A8086;">local_shipping</span></div><strong style="font-size: 14.5px;">เช็คสต็อก + คิวส่งอีกรอบ</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">ยืนยัน ATP · ค่าขนส่ง · จองคิวติดตั้ง</span></div>
+      <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #16181A; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">8</span><span class="ms" style="font-size: 18px; color: #7A8086;">save</span></div><strong style="font-size: 14.5px;">Save Preso</strong><span style="font-size: 12.5px; color: #5A6067; line-height: 1.5;">เซฟใบเสนอร่าง ดึงกลับมาทำต่อได้</span></div>
+      <div style="background: #16181A; color: #fff; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; gap: 7px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="width: 24px; height: 24px; border-radius: 999px; background: #C8102E; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center;">9</span><span class="ms" style="font-size: 18px; opacity: 0.75;">request_quote</span></div><strong style="font-size: 14.5px;">สร้าง Quotation → จ่ายเงิน</strong><span style="font-size: 12.5px; opacity: 0.78; line-height: 1.5;">ส่ง Quotation ให้ service ไป convert เป็น SO ใน SAP</span></div>
+    </div>
+    <div style="background: #fff; border: 1px solid #E2E2DE; border-left: 4px solid #C8102E; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;">
+      <strong style="font-size: 14.5px;">ขอบเขตของงานหน้าบ้าน</strong>
+      <p style="margin: 0; font-size: 14px; line-height: 1.65; color: #43484D;">หน้าบ้านจบที่ <strong>Quotation + หน้าจ่ายเงิน</strong> ส่วนการดึง Quotation ไป convert เป็น Sales Order ใน SAP เป็นของทีมหลังบ้าน เราแค่ต้องตกลง contract ของ service ที่จะเรียก (ดูส่วน 04)</p>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 22px;">
+    <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #C8102E;">02</span>
+      <h2 style="margin: 0; font-size: clamp(21px, 2.5vw, 30px); font-weight: 700; letter-spacing: -0.01em;">UI ฝั่งเซลล์ — แท็บเล็ต</h2>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 430px), 1fr)); gap: 22px;">
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><strong style="font-size: 15px;">S1 · ค้นหาแมท + เช็คสต็อก</strong><span style="font-size: 13px; color: #7A8086;">สเต็ป 1–2</span></div>
+        <div style="background: #16181A; border-radius: 18px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; display: flex; flex-direction: column;">
+            <div style="background: #0F2C25; color: #fff; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span class="ms" style="font-size: 17px;">storefront</span><span style="font-size: 12.5px; font-weight: 600;">SB Sales · บางนา</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 11.5px; opacity: 0.85;"><span>ตะกร้า 2 รายการ</span><span style="background: rgba(255,255,255,0.16); padding: 3px 8px; border-radius: 4px;">ยังไม่ผูกลูกค้า</span></div>
+            </div>
+            <div style="padding: 10px 14px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid #EDEDE9;">
+              <div style="flex: 1; height: 36px; border: 1.5px solid #16181A; border-radius: 8px; display: flex; align-items: center; gap: 8px; padding: 0 10px;"><span class="ms" style="font-size: 17px;">search</span><span style="font-size: 13px; font-weight: 600;">โซฟา 3 ที่นั่ง</span></div>
+              <div style="height: 36px; padding: 0 12px; border: 1px solid #D7D7D2; border-radius: 8px; display: flex; align-items: center; gap: 6px;"><span class="ms" style="font-size: 17px;">barcode_scanner</span><span style="font-size: 12.5px; font-weight: 600;">สแกน</span></div>
+            </div>
+            <div style="padding: 8px 14px; display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid #F0F0EC;">
+              <span style="font-size: 11.5px; background: #16181A; color: #fff; padding: 4px 10px; border-radius: 999px;">ทั้งหมด</span>
+              <span style="font-size: 11.5px; border: 1px solid #D7D7D2; padding: 4px 10px; border-radius: 999px; color: #5A6067;">มีของที่สาขา</span>
+              <span style="font-size: 11.5px; border: 1px solid #D7D7D2; padding: 4px 10px; border-radius: 999px; color: #5A6067;">มีโปรโมชั่น</span>
+              <span style="font-size: 11.5px; border: 1px solid #D7D7D2; padding: 4px 10px; border-radius: 999px; color: #5A6067;">Sofa</span>
+            </div>
+            <div style="flex: 1; display: grid; grid-template-columns: 1fr 216px; min-height: 0;">
+              <div style="display: flex; flex-direction: column; min-height: 0;">
+                <div style="display: flex; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #F0F0EC; align-items: center; background: #FBFDFC;">
+                  <div style="width: 46px; height: 46px; border-radius: 6px; background: #E9E9E4; display: grid; place-items: center;"><span class="ms" style="font-size: 21px; color: #A9A9A3;">chair</span></div>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+                    <span style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">โซฟา 3 ที่นั่ง NORDIC ผ้า Grey</span>
+                    <span style="font-size: 11px; color: #7A8086; font-family: 'IBM Plex Sans', monospace;">MAT 10023841 · SOF-NRD-3S-GY</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;"><span style="font-size: 13.5px; font-weight: 700;">32,900.-</span><span style="font-size: 10.5px; color: #C8102E; font-weight: 600;">สมาชิก 30,900.-</span></div>
+                  <div style="display: flex; flex-direction: column; gap: 4px;"><div style="border: 1.5px solid #16181A; font-size: 11.5px; font-weight: 700; padding: 6px 10px; border-radius: 6px; text-align: center;">เช็คสต็อก</div><div style="background: #C8102E; color: #fff; font-size: 11.5px; font-weight: 700; padding: 6px 10px; border-radius: 6px; text-align: center;">ลงตะกร้า</div></div>
+                </div>
+                <div style="display: flex; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #F0F0EC; align-items: center;">
+                  <div style="width: 46px; height: 46px; border-radius: 6px; background: #E9E9E4; display: grid; place-items: center;"><span class="ms" style="font-size: 21px; color: #A9A9A3;">chair</span></div>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+                    <span style="font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">โซฟา 3 ที่นั่ง VERONA หนัง PU</span>
+                    <span style="font-size: 11px; color: #7A8086; font-family: 'IBM Plex Sans', monospace;">MAT 10025117</span>
+                  </div>
+                  <span style="font-size: 13.5px; font-weight: 700;">45,900.-</span>
+                  <div style="display: flex; flex-direction: column; gap: 4px;"><div style="border: 1px solid #D7D7D2; font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 6px; color: #5A6067;">เช็คสต็อก</div><div style="border: 1px solid #D7D7D2; font-size: 11.5px; font-weight: 600; padding: 6px 10px; border-radius: 6px; color: #5A6067;">ลงตะกร้า</div></div>
+                </div>
+              </div>
+              <div style="border-left: 1px solid #EDEDE9; background: #FAFAF8; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0;">
+                <div style="display: flex; align-items: center; justify-content: space-between;"><strong style="font-size: 12.5px;">สต็อก · MAT 10023841</strong><span class="ms" style="font-size: 16px; color: #9A9F9C;">close</span></div>
+                <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 8px; padding: 9px; display: flex; flex-direction: column; gap: 3px;"><div style="display: flex; justify-content: space-between; font-size: 12px;"><strong>สาขาบางนา</strong><span style="color: #0B6B58; font-weight: 700;">2 ชิ้น</span></div><span style="font-size: 10.5px; color: #7A8086;">โชว์รูม 1 · พร้อมยกกลับ 1</span></div>
+                <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 8px; padding: 9px; display: flex; flex-direction: column; gap: 3px;"><div style="display: flex; justify-content: space-between; font-size: 12px;"><strong>คลังบางพลี</strong><span style="color: #0B6B58; font-weight: 700;">18 ชิ้น</span></div><span style="font-size: 10.5px; color: #7A8086;">ATP: ส่งได้ 15 ก.ย.</span></div>
+                <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 8px; padding: 9px; display: flex; flex-direction: column; gap: 3px;"><div style="display: flex; justify-content: space-between; font-size: 12px;"><strong>สาขารามอินทรา</strong><span style="color: #7A8086; font-weight: 700;">0 ชิ้น</span></div><span style="font-size: 10.5px; color: #C8102E;">ของหมด</span></div>
+                <div style="margin-top: auto; font-size: 10.5px; color: #7A8086; line-height: 1.5;">ข้อมูลสด จาก service SAP · อัปเดต 09:38</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><strong style="font-size: 15px;">S2 · ตะกร้า + ค้นหาลูกค้า</strong><span style="font-size: 13px; color: #7A8086;">สเต็ป 4–5</span></div>
+        <div style="background: #16181A; border-radius: 18px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; display: flex; flex-direction: column;">
+            <div style="background: #0F2C25; color: #fff; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 12.5px; font-weight: 600;">ตะกร้า / Preso ร่าง</span><span style="font-size: 11px; opacity: 0.85;">PRE-260907-0042 (ร่าง)</span></div>
+            <div style="padding: 11px 14px; border-bottom: 1px solid #EDEDE9; display: flex; flex-direction: column; gap: 8px; background: #FEF7F8;">
+              <div style="display: flex; align-items: center; gap: 8px;"><span class="ms" style="font-size: 17px; color: #C8102E;">person_search</span><strong style="font-size: 12.5px;">ค้นหาลูกค้า</strong><span style="font-size: 11px; color: #7A8086;">เลขสมาชิก · เบอร์โทร · อีเมล</span></div>
+              <div style="display: flex; gap: 7px;">
+                <div style="flex: 1; height: 34px; background: #fff; border: 1px solid #D7D7D2; border-radius: 7px; display: flex; align-items: center; gap: 7px; padding: 0 10px;"><span class="ms" style="font-size: 15px; color: #9A9F9C;">badge</span><span style="font-size: 12.5px; font-weight: 600;">089-xxx-4471</span></div>
+                <div style="height: 34px; padding: 0 14px; background: #16181A; color: #fff; border-radius: 7px; display: flex; align-items: center; font-size: 12.5px; font-weight: 600;">ค้นหา</div>
+                <div style="height: 34px; padding: 0 11px; border: 1px solid #D7D7D2; border-radius: 7px; display: flex; align-items: center; gap: 5px;"><span class="ms" style="font-size: 15px;">qr_code_scanner</span><span style="font-size: 12px;">สแกน</span></div>
+                <div style="height: 34px; padding: 0 11px; border: 1px solid #D7D7D2; border-radius: 7px; display: flex; align-items: center; font-size: 12px;">+ ลูกค้าใหม่</div>
+              </div>
+              <div style="background: #fff; border: 1.5px solid #0B6B58; border-radius: 8px; padding: 9px 11px; display: flex; align-items: center; gap: 10px;">
+                <span style="width: 28px; height: 28px; border-radius: 999px; background: #0F2C25; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center;">ณป</span>
+                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;"><span style="font-size: 12.5px; font-weight: 700;">ณภัทร พงษ์ศรี · Gold</span><span style="font-size: 10.5px; color: #5A6067; font-family: 'IBM Plex Sans', monospace;">CUST 4400182 · 089-xxx-4471</span></div>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;"><span style="font-size: 11px; color: #C8102E; font-weight: 700;">มีตะกร้าออนไลน์ 3 ชิ้น</span><span style="font-size: 11.5px; font-weight: 700; background: #0B6B58; color: #fff; padding: 5px 10px; border-radius: 6px;">รวมเข้าตะกร้านี้</span></div>
+              </div>
+            </div>
+            <div style="flex: 1; display: grid; grid-template-columns: 1fr 200px; min-height: 0;">
+              <div style="display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                <div style="display: flex; gap: 9px; padding: 9px 14px; border-bottom: 1px solid #F0F0EC; align-items: center;">
+                  <div style="width: 40px; height: 40px; border-radius: 5px; background: #E9E9E4; display: grid; place-items: center;"><span class="ms" style="font-size: 19px; color: #A9A9A3;">chair</span></div>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">โซฟา 3 ที่นั่ง NORDIC</span><div style="display: flex; gap: 5px; align-items: center;"><span style="font-size: 10px; font-weight: 600; background: #E8F3F0; color: #0B6B58; padding: 2px 5px; border-radius: 3px;">เซลล์เพิ่ม</span><span style="font-size: 10.5px; color: #7A8086;">คลังบางพลี</span></div></div>
+                  <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 22px; height: 22px; border: 1px solid #D7D7D2; border-radius: 5px; display: grid; place-items: center; font-size: 13px;">−</span><span style="font-size: 12.5px; font-weight: 600;">1</span><span style="width: 22px; height: 22px; border: 1px solid #D7D7D2; border-radius: 5px; display: grid; place-items: center; font-size: 13px;">+</span></div>
+                  <span style="font-size: 12.5px; font-weight: 700; width: 62px; text-align: right;">30,900.-</span>
+                </div>
+                <div style="display: flex; gap: 9px; padding: 9px 14px; border-bottom: 1px solid #F0F0EC; align-items: center;">
+                  <div style="width: 40px; height: 40px; border-radius: 5px; background: #E9E9E4; display: grid; place-items: center;"><span class="ms" style="font-size: 19px; color: #A9A9A3;">light</span></div>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">โคมไฟตั้งพื้น ARC BRASS</span><div style="display: flex; gap: 5px; align-items: center;"><span style="font-size: 10px; font-weight: 600; background: #E8F3F0; color: #0B6B58; padding: 2px 5px; border-radius: 3px;">เซลล์เพิ่ม</span><span style="font-size: 10.5px; color: #0B6B58;">ยกกลับได้</span></div></div>
+                  <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 22px; height: 22px; border: 1px solid #D7D7D2; border-radius: 5px; display: grid; place-items: center; font-size: 13px;">−</span><span style="font-size: 12.5px; font-weight: 600;">2</span><span style="width: 22px; height: 22px; border: 1px solid #D7D7D2; border-radius: 5px; display: grid; place-items: center; font-size: 13px;">+</span></div>
+                  <span style="font-size: 12.5px; font-weight: 700; width: 62px; text-align: right;">7,180.-</span>
+                </div>
+                <div style="display: flex; gap: 9px; padding: 9px 14px; align-items: center; background: #FBFBF9;">
+                  <div style="width: 40px; height: 40px; border-radius: 5px; background: #E9E9E4; display: grid; place-items: center;"><span class="ms" style="font-size: 19px; color: #A9A9A3;">table_restaurant</span></div>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">โต๊ะกลาง OAK 120</span><div style="display: flex; gap: 5px; align-items: center;"><span style="font-size: 10px; font-weight: 600; background: #FCE9EC; color: #A00C22; padding: 2px 5px; border-radius: 3px;">จากตะกร้าลูกค้า</span></div></div>
+                  <div style="display: flex; align-items: center; gap: 5px;"><span style="width: 22px; height: 22px; border: 1px solid #D7D7D2; border-radius: 5px; display: grid; place-items: center; font-size: 13px;">−</span><span style="font-size: 12.5px; font-weight: 600;">1</span><span style="width: 22px; height: 22px; border: 1px solid #D7D7D2; border-radius: 5px; display: grid; place-items: center; font-size: 13px;">+</span></div>
+                  <span style="font-size: 12.5px; font-weight: 700; width: 62px; text-align: right;">8,900.-</span>
+                </div>
+              </div>
+              <div style="border-left: 1px solid #EDEDE9; background: #FAFAF8; padding: 12px; display: flex; flex-direction: column; gap: 7px;">
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #43484D;"><span>สินค้า 4 ชิ้น</span><span>46,980.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #7A8086;"><span>ส่วนลด</span><span>รอเช็คโปร</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #7A8086;"><span>ค่าขนส่ง</span><span>รอคำนวณ</span></div>
+                <div style="height: 1px; background: #E2E2DE;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 12px; font-weight: 600;">ยอดชั่วคราว</span><strong style="font-size: 17px;">46,980.-</strong></div>
+                <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px;">
+                  <div style="border: 1px solid #D7D7D2; font-size: 11.5px; font-weight: 600; padding: 8px; border-radius: 7px; text-align: center; color: #5A6067;">Save Preso</div>
+                  <div style="background: #C8102E; color: #fff; font-size: 12.5px; font-weight: 700; padding: 11px; border-radius: 7px; text-align: center;">เช็คโปรโมชั่น</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><strong style="font-size: 15px;">S3 · เช็คโปรโมชั่น / ส่วนลด / เงื่อนไข</strong><span style="font-size: 13px; color: #7A8086;">สเต็ป 6</span></div>
+        <div style="background: #16181A; border-radius: 18px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; display: flex; flex-direction: column;">
+            <div style="background: #0F2C25; color: #fff; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 12.5px; font-weight: 600;">โปรโมชั่นที่ใช้ได้ · ณภัทร (Gold)</span><span style="font-size: 11px; opacity: 0.85;">3 รายการเข้าเงื่อนไข</span></div>
+            <div style="flex: 1; display: grid; grid-template-columns: 1fr 210px; min-height: 0;">
+              <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; overflow: hidden;">
+                <div style="border: 1.5px solid #0B6B58; background: #F5FBF9; border-radius: 9px; padding: 10px 11px; display: flex; gap: 10px; align-items: flex-start;">
+                  <span class="ms" style="font-size: 18px; color: #0B6B58; margin-top: 1px;">check_circle</span>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;"><strong style="font-size: 12.5px;">SEP-SOFA15 · โซฟาลด 15%</strong><span style="font-size: 11px; color: #5A6067; line-height: 1.5;">เงื่อนไข: หมวด Sofa ยอด ≥ 20,000 · ใช้ร่วมกับบัตรสมาชิกได้</span></div>
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px;"><span style="font-size: 12.5px; font-weight: 700; color: #0B6B58;">−4,635.-</span><span style="font-size: 11px; font-weight: 700; background: #0B6B58; color: #fff; padding: 4px 9px; border-radius: 5px;">ใช้แล้ว</span></div>
+                </div>
+                <div style="border: 1px solid #E2E2DE; border-radius: 9px; padding: 10px 11px; display: flex; gap: 10px; align-items: flex-start;">
+                  <span class="ms" style="font-size: 18px; color: #16181A; margin-top: 1px;">card_giftcard</span>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;"><strong style="font-size: 12.5px;">GOLD-FREESHIP · ส่งฟรีในเขต กทม.</strong><span style="font-size: 11px; color: #5A6067; line-height: 1.5;">เงื่อนไข: สมาชิก Gold + ยอด ≥ 30,000 · ไม่รวมค่าติดตั้ง</span></div>
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px;"><span style="font-size: 12.5px; font-weight: 700;">−800.-</span><span style="font-size: 11px; font-weight: 700; border: 1.5px solid #16181A; padding: 4px 9px; border-radius: 5px;">กดใช้</span></div>
+                </div>
+                <div style="border: 1px dashed #E0B84C; background: #FFFCF3; border-radius: 9px; padding: 10px 11px; display: flex; gap: 10px; align-items: flex-start;">
+                  <span class="ms" style="font-size: 18px; color: #B08514; margin-top: 1px;">error</span>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;"><strong style="font-size: 12.5px;">BUNDLE-BED · ซื้อที่นอนแถมหมอน 2 ใบ</strong><span style="font-size: 11px; color: #8A6A17; line-height: 1.5;">ยังไม่เข้าเงื่อนไข: ต้องมีที่นอนในบิล (ขาด 1 ชิ้น)</span></div>
+                  <span style="font-size: 11px; font-weight: 700; border: 1px solid #E0B84C; color: #8A6A17; padding: 4px 9px; border-radius: 5px;">ดูสินค้า</span>
+                </div>
+                <div style="border: 1px solid #E2E2DE; border-radius: 9px; padding: 10px 11px; display: flex; flex-direction: column; gap: 7px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;"><strong style="font-size: 12.5px;">ส่วนลดพนักงาน (manual)</strong><span style="font-size: 10.5px; color: #7A8086;">โควตาคงเหลือ 3%</span></div>
+                  <div style="display: flex; gap: 7px; align-items: center;"><div style="flex: 1; height: 30px; border: 1px solid #D7D7D2; border-radius: 6px; display: flex; align-items: center; padding: 0 9px; font-size: 12px; color: #16181A;">2 %</div><div style="height: 30px; padding: 0 12px; border: 1.5px solid #16181A; border-radius: 6px; display: flex; align-items: center; font-size: 11.5px; font-weight: 700;">ใส่ส่วนลด</div></div>
+                  <span style="font-size: 10.5px; color: #C8102E;">เกิน 3% ต้องขออนุมัติผู้จัดการสาขาในแอป</span>
+                </div>
+              </div>
+              <div style="border-left: 1px solid #EDEDE9; background: #FAFAF8; padding: 12px; display: flex; flex-direction: column; gap: 7px;">
+                <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #7A8086;">สรุปหลังส่วนลด</span>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #43484D;"><span>ราคาปกติ</span><span>49,880.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #C8102E;"><span>ราคาสมาชิก</span><span>−2,900.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #0B6B58;"><span>SEP-SOFA15</span><span>−4,635.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; color: #0B6B58;"><span>ส่วนลดพนักงาน 2%</span><span>−787.-</span></div>
+                <div style="height: 1px; background: #E2E2DE;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 12px; font-weight: 600;">ยอดสินค้า</span><strong style="font-size: 17px;">41,558.-</strong></div>
+                <div style="margin-top: auto; background: #C8102E; color: #fff; font-size: 12.5px; font-weight: 700; padding: 11px; border-radius: 7px; text-align: center;">เช็คสต็อก + คิวจัดส่ง</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><strong style="font-size: 15px;">S4 · เช็คสต็อกซ้ำ + ค่าขนส่ง + คิว</strong><span style="font-size: 13px; color: #7A8086;">สเต็ป 7</span></div>
+        <div style="background: #16181A; border-radius: 18px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; display: flex; flex-direction: column;">
+            <div style="background: #0F2C25; color: #fff; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 12.5px; font-weight: 600;">ยืนยันของ + คิวจัดส่ง</span><span style="font-size: 11px; opacity: 0.85;">เช็คสดอีกครั้งก่อนออกใบเสนอราคา</span></div>
+            <div style="flex: 1; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; overflow: hidden;">
+              <div style="background: #F5FBF9; border: 1px solid #B6D8CE; border-radius: 8px; padding: 8px 11px; display: flex; align-items: center; gap: 8px;"><span class="ms" style="font-size: 17px; color: #0B6B58;">verified</span><span style="font-size: 11.5px; color: #0B6B58; font-weight: 600;">เช็คสต็อกล่าสุด 09:46 · ครบทุกรายการ</span><span style="margin-left: auto; font-size: 11px; font-weight: 700; border: 1px solid #0B6B58; color: #0B6B58; padding: 4px 9px; border-radius: 5px;">เช็คใหม่</span></div>
+              <div style="border: 1px solid #E2E2DE; border-radius: 9px; padding: 10px 11px; display: flex; flex-direction: column; gap: 7px;">
+                <div style="display: flex; align-items: center; gap: 7px;"><span class="ms" style="font-size: 17px; color: #0B6B58;">shopping_bag</span><strong style="font-size: 12.5px;">ยกกลับวันนี้ · สาขาบางนา</strong><span style="margin-left: auto; font-size: 11.5px; color: #7A8086;">โคมไฟ ×2 · ฟรี</span></div>
+              </div>
+              <div style="border: 1.5px solid #16181A; border-radius: 9px; padding: 10px 11px; display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 7px;"><span class="ms" style="font-size: 17px;">local_shipping</span><strong style="font-size: 12.5px;">จัดส่งจากคลังบางพลี</strong><span style="margin-left: auto; font-size: 11.5px; color: #7A8086;">โซฟา + โต๊ะกลาง</span></div>
+                <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+                  <div style="border: 1.5px solid #16181A; border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 11.5px; font-weight: 700;">15 ก.ย. เช้า</span><span style="font-size: 10px; color: #0B6B58;">คิวว่าง 4</span></div>
+                  <div style="border: 1px solid #D7D7D2; border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 11.5px; font-weight: 600; color: #5A6067;">15 ก.ย. บ่าย</span><span style="font-size: 10px; color: #C8102E;">คิวเต็ม</span></div>
+                  <div style="border: 1px solid #D7D7D2; border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 11.5px; font-weight: 600; color: #5A6067;">16 ก.ย. เช้า</span><span style="font-size: 10px; color: #0B6B58;">คิวว่าง 9</span></div>
+                  <div style="border: 1px solid #D7D7D2; border-radius: 8px; padding: 7px 10px; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 11.5px; font-weight: 600; color: #5A6067;">17 ก.ย. บ่าย</span><span style="font-size: 10px; color: #0B6B58;">คิวว่าง 12</span></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #5A6067;"><span class="ms" style="font-size: 15px; color: #9A9F9C;">place</span><span style="flex: 1; min-width: 0;">88/12 ซ.สุขุมวิท 71 คลองตันเหนือ กทม. 10110 · เขตส่ง A</span><span style="font-weight: 700; color: #16181A;">ค่าส่ง 800.-</span></div>
+              </div>
+              <div style="border: 1px solid #E2E2DE; border-radius: 9px; padding: 10px 11px; display: flex; flex-direction: column; gap: 7px;">
+                <div style="display: flex; align-items: center; gap: 7px;"><span class="ms" style="font-size: 17px; color: #C8102E;">handyman</span><strong style="font-size: 12.5px;">งานติดตั้ง</strong><span style="margin-left: auto; font-size: 11.5px; color: #7A8086;">ไม่มีในบิลนี้</span></div>
+              </div>
+              <div style="margin-top: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <div style="display: flex; flex-direction: column;"><span style="font-size: 11px; color: #7A8086;">ยอดรวมทั้งบิล (รวม VAT)</span><strong style="font-size: 20px;">฿42,358</strong></div>
+                <div style="margin-left: auto; display: flex; gap: 8px;"><div style="border: 1.5px solid #16181A; font-size: 12.5px; font-weight: 700; padding: 10px 16px; border-radius: 7px;">Save Preso</div><div style="background: #C8102E; color: #fff; font-size: 12.5px; font-weight: 700; padding: 10px 16px; border-radius: 7px;">สร้าง Quotation</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><strong style="font-size: 15px;">S5 · Preso ที่เซฟไว้</strong><span style="font-size: 13px; color: #7A8086;">สเต็ป 8 · ดึงกลับมาทำต่อ</span></div>
+        <div style="background: #16181A; border-radius: 18px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; display: flex; flex-direction: column;">
+            <div style="background: #0F2C25; color: #fff; padding: 9px 14px; display: flex; align-items: center; justify-content: space-between;"><span style="font-size: 12.5px; font-weight: 600;">Preso ของฉัน</span><div style="display: flex; gap: 6px;"><span style="font-size: 11px; background: rgba(255,255,255,0.16); padding: 3px 9px; border-radius: 999px;">ร่าง 4</span><span style="font-size: 11px; opacity: 0.8; padding: 3px 9px;">ออก Quotation แล้ว 7</span></div></div>
+            <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.9fr auto; gap: 8px; padding: 8px 14px; background: #FAFAF8; border-bottom: 1px solid #EDEDE9; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: #7A8086;"><span>เลขที่ / ลูกค้า</span><span>สินค้า</span><span>ยอด</span><span>อัปเดต</span><span></span></div>
+              <div style="display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.9fr auto; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #F0F0EC; align-items: center; background: #FEF7F8;">
+                <div style="min-width: 0; display: flex; flex-direction: column;"><span style="font-size: 12px; font-weight: 700; font-family: 'IBM Plex Sans', monospace;">PRE-260907-0042</span><span style="font-size: 11px; color: #5A6067; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">ณภัทร พงษ์ศรี · Gold</span></div>
+                <span style="font-size: 11.5px; color: #43484D;">4 ชิ้น</span>
+                <span style="font-size: 12px; font-weight: 700;">42,358.-</span>
+                <span style="font-size: 11px; color: #7A8086;">2 นาทีที่แล้ว</span>
+                <div style="display: flex; gap: 6px;"><span style="font-size: 11px; font-weight: 700; border: 1px solid #D7D7D2; padding: 5px 9px; border-radius: 5px; color: #5A6067;">เปิด</span><span style="font-size: 11px; font-weight: 700; background: #C8102E; color: #fff; padding: 5px 9px; border-radius: 5px;">สร้าง Quotation</span></div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.9fr auto; gap: 8px; padding: 10px 14px; border-bottom: 1px solid #F0F0EC; align-items: center;">
+                <div style="min-width: 0; display: flex; flex-direction: column;"><span style="font-size: 12px; font-weight: 700; font-family: 'IBM Plex Sans', monospace;">PRE-260906-0038</span><span style="font-size: 11px; color: #5A6067; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">คุณวีระ (ลูกค้าใหม่)</span></div>
+                <span style="font-size: 11.5px; color: #43484D;">11 ชิ้น</span>
+                <span style="font-size: 12px; font-weight: 700;">158,900.-</span>
+                <span style="font-size: 11px; color: #7A8086;">เมื่อวาน</span>
+                <div style="display: flex; gap: 6px;"><span style="font-size: 11px; font-weight: 700; border: 1px solid #D7D7D2; padding: 5px 9px; border-radius: 5px; color: #5A6067;">เปิด</span><span style="font-size: 11px; font-weight: 700; border: 1px solid #D7D7D2; padding: 5px 9px; border-radius: 5px; color: #5A6067;">แชร์ลิงก์</span></div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.9fr auto; gap: 8px; padding: 10px 14px; align-items: center;">
+                <div style="min-width: 0; display: flex; flex-direction: column;"><span style="font-size: 12px; font-weight: 700; font-family: 'IBM Plex Sans', monospace;">QT-260905-0021</span><span style="font-size: 11px; color: #5A6067; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">บ.ทรัพย์ทวี · รอชำระ</span></div>
+                <span style="font-size: 11.5px; color: #43484D;">6 ชิ้น</span>
+                <span style="font-size: 12px; font-weight: 700;">86,400.-</span>
+                <span style="font-size: 11px; color: #7A8086;">2 วันก่อน</span>
+                <div style="display: flex; gap: 6px;"><span style="font-size: 11px; font-weight: 700; border: 1px solid #D7D7D2; padding: 5px 9px; border-radius: 5px; color: #5A6067;">ดู PDF</span><span style="font-size: 11px; font-weight: 700; border: 1.5px solid #16181A; padding: 5px 9px; border-radius: 5px;">ไปจ่ายเงิน</span></div>
+              </div>
+            </div>
+            <div style="border-top: 1px solid #EDEDE9; padding: 9px 14px; font-size: 11px; color: #7A8086; line-height: 1.5;">Preso = ใบร่างที่ยังแก้ได้ · Quotation = ล็อกราคา/โปร แล้วส่งต่อให้ระบบ SAP</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><strong style="font-size: 15px;">S6 · Quotation + ไปจ่ายเงิน</strong><span style="font-size: 13px; color: #7A8086;">สเต็ป 9 · ปลายทางหน้าบ้าน</span></div>
+        <div style="background: #16181A; border-radius: 18px; padding: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; display: grid; grid-template-columns: 1.15fr 1fr;">
+            <div style="padding: 14px; display: flex; flex-direction: column; gap: 9px; border-right: 1px solid #EDEDE9;">
+              <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; flex-direction: column;"><strong style="font-size: 14px;">ใบเสนอราคา</strong><span style="font-size: 11.5px; color: #7A8086; font-family: 'IBM Plex Sans', monospace;">QT-260907-0055</span></div>
+                <span style="font-size: 10.5px; font-weight: 700; background: #E8F3F0; color: #0B6B58; padding: 4px 9px; border-radius: 999px;">ล็อกราคาถึง 14 ก.ย.</span>
+              </div>
+              <div style="background: #FAFAF8; border-radius: 8px; padding: 9px 10px; display: flex; flex-direction: column; gap: 3px;"><span style="font-size: 11.5px; font-weight: 700;">ณภัทร พงษ์ศรี · CUST 4400182</span><span style="font-size: 10.5px; color: #5A6067;">089-xxx-4471 · napat@email.com</span><span style="font-size: 10.5px; color: #5A6067;">88/12 ซ.สุขุมวิท 71 กทม. 10110</span></div>
+              <div style="display: flex; flex-direction: column; gap: 5px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span>โซฟา NORDIC ×1</span><span>30,900.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span>โคมไฟ ARC BRASS ×2</span><span>7,180.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span>โต๊ะกลาง OAK 120 ×1</span><span>8,900.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #0B6B58;"><span>SEP-SOFA15 + ส่วนลดพนักงาน</span><span>−5,422.-</span></div>
+                <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span>ค่าขนส่ง (15 ก.ย. เช้า)</span><span>800.-</span></div>
+                <div style="height: 1px; background: #E2E2DE; margin: 3px 0;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 12px; font-weight: 700;">รวมสุทธิ (รวม VAT 7%)</span><strong style="font-size: 18px;">42,358.-</strong></div>
+              </div>
+              <div style="margin-top: auto; display: flex; gap: 7px; flex-wrap: wrap;"><span style="font-size: 11.5px; font-weight: 600; border: 1px solid #D7D7D2; padding: 7px 11px; border-radius: 6px; display: flex; align-items: center; gap: 5px;"><span class="ms" style="font-size: 14px;">picture_as_pdf</span>PDF</span><span style="font-size: 11.5px; font-weight: 600; border: 1px solid #D7D7D2; padding: 7px 11px; border-radius: 6px; display: flex; align-items: center; gap: 5px;"><span class="ms" style="font-size: 14px;">mail</span>ส่งอีเมล</span><span style="font-size: 11.5px; font-weight: 600; border: 1px solid #D7D7D2; padding: 7px 11px; border-radius: 6px; display: flex; align-items: center; gap: 5px;"><span class="ms" style="font-size: 14px;">sms</span>ส่ง SMS</span></div>
+            </div>
+            <div style="padding: 14px; display: flex; flex-direction: column; gap: 9px; background: #FAFAF8;">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: #7A8086;">ขั้นชำระเงิน</span>
+              <div style="background: #fff; border: 1.5px solid #16181A; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 9px;"><span class="ms" style="font-size: 18px;">qr_code_2</span><div style="flex: 1; min-width: 0;"><span style="font-size: 12px; font-weight: 700; display: block;">QR PromptPay ที่แท็บเล็ต</span><span style="font-size: 10.5px; color: #7A8086;">ลูกค้าสแกนจ่ายตรงนี้</span></div></div>
+              <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 9px;"><span class="ms" style="font-size: 18px;">send_to_mobile</span><div style="flex: 1; min-width: 0;"><span style="font-size: 12px; font-weight: 700; display: block;">ส่งลิงก์จ่ายเข้ามือถือ</span><span style="font-size: 10.5px; color: #7A8086;">อายุ 24 ชม. · ลูกค้าจ่ายเองที่บ้าน</span></div></div>
+              <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 9px;"><span class="ms" style="font-size: 18px;">credit_card</span><div style="flex: 1; min-width: 0;"><span style="font-size: 12px; font-weight: 700; display: block;">บัตร / ผ่อน 0%</span><span style="font-size: 10.5px; color: #7A8086;">เครื่อง EDC ที่แคชเชียร์</span></div></div>
+              <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 9px;"><span class="ms" style="font-size: 18px;">savings</span><div style="flex: 1; min-width: 0;"><span style="font-size: 12px; font-weight: 700; display: block;">มัดจำ 20%</span><span style="font-size: 10.5px; color: #7A8086;">฿8,472 วันนี้ · ที่เหลือวันส่ง</span></div></div>
+              <div style="margin-top: auto; display: flex; flex-direction: column; gap: 7px;">
+                <div style="background: #FFF8E7; border: 1px solid #F0DCA8; border-radius: 8px; padding: 9px; font-size: 10.5px; color: #7A5C12; line-height: 1.5;">เมื่อจ่ายสำเร็จ ระบบเรียก service ของทีมหลังบ้าน ส่ง Quotation ไป convert เป็น SO ใน SAP แล้วรับเลข SO กลับมาโชว์</div>
+                <div style="background: #C8102E; color: #fff; font-size: 13px; font-weight: 700; padding: 12px; border-radius: 7px; text-align: center;">ไปหน้าชำระเงิน</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #C8102E;">03</span>
+      <h2 style="margin: 0; font-size: clamp(21px, 2.5vw, 30px); font-weight: 700; letter-spacing: -0.01em;">ฝั่งลูกค้าเห็นอะไร</h2>
+    </div>
+    <p style="margin: 0; font-size: 16px; line-height: 1.65; color: #43484D; max-width: 70ch;">ลูกค้าไม่ต้องรู้จักคำว่า Preso หรือ Quotation — เห็นแค่ 3 อย่าง: ตะกร้าตัวเอง, ใบเสนอราคาที่เซลล์ส่งมา, และสถานะของ/คิวส่ง</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: clamp(16px, 2.5vw, 26px);">
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;"><strong style="font-size: 15px;">C1 · ตะกร้า (โหมดมีเซลล์ช่วย)</strong><span style="font-size: 12.5px; color: #7A8086;">เห็นสิ่งที่เซลล์เพิ่มแบบสด</span></div>
+        <div style="background: #16181A; border-radius: 26px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 20px; overflow: hidden; aspect-ratio: 9/19; display: flex; flex-direction: column;">
+            <div style="padding: 8px 14px 6px; display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;"><span>9:41</span><span>SB</span></div>
+            <div style="background: #0F2C25; color: #fff; padding: 9px 14px; display: flex; align-items: center; gap: 8px;"><span class="ms" style="font-size: 17px;">support_agent</span><div style="flex: 1; min-width: 0;"><span style="font-size: 11.5px; font-weight: 600; display: block;">สมชาย กำลังช่วยคุณ</span><span style="font-size: 10px; opacity: 0.8;">สาขาบางนา ชั้น 3</span></div><span style="font-size: 10px; border: 1px solid rgba(255,255,255,0.4); padding: 3px 7px; border-radius: 4px;">ยกเลิก</span></div>
+            <div style="margin: 10px 14px; background: #E8F3F0; border-left: 3px solid #0B6B58; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px;">
+              <span style="font-size: 11px; font-weight: 700; color: #0B6B58;">พนักงานเพิ่มสินค้า</span>
+              <span style="font-size: 11.5px; color: #16181A; line-height: 1.45;">โซฟา 3 ที่นั่ง NORDIC ×1 · 30,900.-</span>
+              <div style="display: flex; gap: 6px;"><div style="flex: 1; background: #0B6B58; color: #fff; font-size: 11.5px; font-weight: 600; padding: 8px; border-radius: 6px; text-align: center;">เก็บไว้</div><div style="flex: 1; border: 1px solid #B6C9C3; font-size: 11.5px; font-weight: 600; padding: 8px; border-radius: 6px; text-align: center; color: #0F2C25;">ลบออก</div></div>
+            </div>
+            <div style="padding: 0 14px; display: flex; flex-direction: column; gap: 9px;">
+              <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; color: #7A8086;">ในตะกร้า 4 ชิ้น</span>
+              <div style="display: flex; gap: 9px; align-items: center;"><div style="width: 36px; height: 36px; background: #E9E9E4; border-radius: 6px; display: grid; place-items: center;"><span class="ms" style="font-size: 17px; color: #A9A9A3;">table_restaurant</span></div><div style="flex: 1; min-width: 0;"><span style="font-size: 11.5px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">โต๊ะกลาง OAK 120</span><span style="font-size: 10px; background: #FCE9EC; color: #A00C22; padding: 1px 5px; border-radius: 3px; font-weight: 600;">คุณเพิ่ม</span></div></div>
+              <div style="display: flex; gap: 9px; align-items: center;"><div style="width: 36px; height: 36px; background: #E9E9E4; border-radius: 6px; display: grid; place-items: center;"><span class="ms" style="font-size: 17px; color: #A9A9A3;">light</span></div><div style="flex: 1; min-width: 0;"><span style="font-size: 11.5px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">โคมไฟ ARC BRASS ×2</span><span style="font-size: 10px; background: #E8F3F0; color: #0B6B58; padding: 1px 5px; border-radius: 3px; font-weight: 600;">สมชายเพิ่ม</span></div></div>
+            </div>
+            <div style="margin-top: auto; border-top: 1px solid #EDEDE9; padding: 11px 14px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 12px; color: #5A6067;">ยอดหลังส่วนลด</span><strong style="font-size: 16px;">41,558.-</strong></div>
+              <div style="background: #16181A; color: #fff; font-size: 13px; font-weight: 700; padding: 12px; border-radius: 8px; text-align: center;">สั่งซื้อเอง</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;"><strong style="font-size: 15px;">C2 · ใบเสนอราคาที่ได้รับ</strong><span style="font-size: 12.5px; color: #7A8086;">จากลิงก์ SMS / อีเมล</span></div>
+        <div style="background: #16181A; border-radius: 26px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 20px; overflow: hidden; aspect-ratio: 9/19; display: flex; flex-direction: column;">
+            <div style="padding: 8px 14px 6px; display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;"><span>9:41</span><span>SB</span></div>
+            <div style="padding: 12px 14px; border-bottom: 1px solid #EDEDE9; display: flex; flex-direction: column; gap: 4px;">
+              <span style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; color: #C8102E;">ใบเสนอราคา</span>
+              <strong style="font-size: 14px; font-family: 'IBM Plex Sans', monospace;">QT-260907-0055</strong>
+              <span style="font-size: 11px; color: #7A8086;">ยืนราคาถึง 14 ก.ย. 2569</span>
+            </div>
+            <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 7px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">โซฟา NORDIC ×1</span><span>30,900.-</span></div>
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span>โคมไฟ ×2</span><span>7,180.-</span></div>
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span>โต๊ะกลาง OAK ×1</span><span>8,900.-</span></div>
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #0B6B58;"><span>ส่วนลด</span><span>−5,422.-</span></div>
+              <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: #43484D;"><span>ค่าขนส่ง</span><span>800.-</span></div>
+              <div style="height: 1px; background: #EDEDE9;"></div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><span style="font-size: 12px; font-weight: 700;">รวมสุทธิ</span><strong style="font-size: 17px;">42,358.-</strong></div>
+            </div>
+            <div style="margin: 0 14px; background: #F4F4F2; border-radius: 9px; padding: 10px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 11px; font-weight: 700;">นัดส่ง 15 ก.ย. รอบเช้า</span><span style="font-size: 10.5px; color: #5A6067; line-height: 1.5;">88/12 ซ.สุขุมวิท 71 กทม.</span><span style="font-size: 10.5px; color: #C8102E; font-weight: 600;">โคมไฟ 2 ชิ้น รับที่สาขาแล้ว</span></div>
+            <div style="margin-top: auto; border-top: 1px solid #EDEDE9; padding: 11px 14px; display: flex; flex-direction: column; gap: 7px;">
+              <div style="background: #C8102E; color: #fff; font-size: 13px; font-weight: 700; padding: 12px; border-radius: 8px; text-align: center;">ชำระเงินทั้งจำนวน</div>
+              <div style="border: 1.5px solid #16181A; font-size: 12.5px; font-weight: 700; padding: 11px; border-radius: 8px; text-align: center;">จ่ายมัดจำ 20% (฿8,472)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;"><strong style="font-size: 15px;">C3 · ติดตามหลังจ่ายเงิน</strong><span style="font-size: 12.5px; color: #7A8086;">โชว์เลข SO จาก SAP</span></div>
+        <div style="background: #16181A; border-radius: 26px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.12);">
+          <div style="background: #fff; border-radius: 20px; overflow: hidden; aspect-ratio: 9/19; display: flex; flex-direction: column;">
+            <div style="padding: 8px 14px 6px; display: flex; justify-content: space-between; font-size: 10px; font-weight: 600;"><span>9:41</span><span>SB</span></div>
+            <div style="padding: 11px 14px; border-bottom: 1px solid #EDEDE9;"><strong style="font-size: 13.5px;">ชำระเงินสำเร็จ</strong><div style="font-size: 11px; color: #7A8086; margin-top: 3px; font-family: 'IBM Plex Sans', monospace;">SO 2609070118 · ฿42,358</div></div>
+            <div style="padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;">
+              <div style="border: 1px solid #E2E2DE; border-radius: 10px; padding: 11px; display: flex; flex-direction: column; gap: 5px;"><div style="display: flex; align-items: center; gap: 6px;"><span class="ms" style="font-size: 16px; color: #0B6B58;">check_circle</span><strong style="font-size: 12px; color: #0B6B58;">รับที่สาขาแล้ว</strong></div><span style="font-size: 11px; color: #5A6067;">โคมไฟ ARC BRASS ×2</span></div>
+              <div style="border: 1.5px solid #16181A; border-radius: 10px; padding: 11px; display: flex; flex-direction: column; gap: 6px;"><div style="display: flex; align-items: center; gap: 6px;"><span class="ms" style="font-size: 16px;">local_shipping</span><strong style="font-size: 12px;">จัดส่ง 15 ก.ย. รอบเช้า</strong></div><span style="font-size: 11px; color: #5A6067;">โซฟา NORDIC · โต๊ะกลาง OAK</span><div style="height: 4px; background: #EDEDE9; border-radius: 999px; overflow: hidden;"><div style="width: 45%; height: 100%; background: #16181A;"></div></div><span style="font-size: 10.5px; color: #7A8086;">กำลังจัดของที่คลังบางพลี</span></div>
+            </div>
+            <div style="margin-top: auto; padding: 11px 14px; border-top: 1px solid #EDEDE9; display: flex; align-items: center; gap: 8px;"><span class="ms" style="font-size: 18px; color: #7A8086;">support_agent</span><span style="font-size: 11.5px; color: #5A6067; line-height: 1.4;">ผู้ดูแล: สมชาย ก. · ทักแชทได้</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 20px;">
+    <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #C8102E;">04</span>
+      <h2 style="margin: 0; font-size: clamp(21px, 2.5vw, 30px); font-weight: 700; letter-spacing: -0.01em;">Service ที่หน้าบ้านต้องขอจากทีมหลังบ้าน</h2>
+    </div>
+    <p style="margin: 0; font-size: 16px; line-height: 1.65; color: #43484D; max-width: 70ch;">ไม่ต้องออกแบบ DB แล้ว แต่ต้องเคาะ 8 endpoint นี้กับพี่ที่ทำ service เพื่อให้ UI แต่ละจอมีข้อมูลครบ — คอลัมน์ขวาคือ field ที่จอนั้นต้องใช้จริง</p>
+    <div style="background: #fff; border: 1px solid #E2E2DE; border-radius: 14px; overflow: hidden;">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 11px 16px; background: #16181A; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 0.08em;"><span>ใช้ที่จอ</span><span>Service</span><span>ต้องได้ field</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F0F0EC; overflow-wrap: anywhere;"><span style="font-size: 13px; font-weight: 600;">S1 ค้นหาแมท</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #43484D;">GET /materials/search</span><span style="font-size: 12.5px; color: #5A6067;">mat_no, ชื่อ, หมวด, ราคาปกติ, ราคาสมาชิก, รูป, ยกกลับได้/ต้องส่ง, ต้องติดตั้ง</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F0F0EC; overflow-wrap: anywhere; background: #FBFBF9;"><span style="font-size: 13px; font-weight: 600;">S1 เช็คสต็อก</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #43484D;">GET /materials/{mat}/stock</span><span style="font-size: 12.5px; color: #5A6067;">รายสาขา/คลัง: on_hand, reserved, ATP date, ชื่อ location</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F0F0EC; overflow-wrap: anywhere;"><span style="font-size: 13px; font-weight: 600;">S2 ค้นหาลูกค้า</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #43484D;">GET /customers/search?q=</span><span style="font-size: 12.5px; color: #5A6067;">cust_no, ชื่อ, tier, เบอร์, อีเมล, ที่อยู่ default, มีตะกร้าค้างกี่ชิ้น</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F0F0EC; overflow-wrap: anywhere; background: #FBFBF9;"><span style="font-size: 13px; font-weight: 600;">S2 รวมตะกร้า</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #43484D;">POST /carts/{id}/merge</span><span style="font-size: 12.5px; color: #5A6067;">รายการหลัง merge + added_by (customer/sales) ต่อบรรทัด</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F0F0EC; overflow-wrap: anywhere;"><span style="font-size: 13px; font-weight: 600;">S3 โปรโมชั่น</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #43484D;">POST /promotions/evaluate</span><span style="font-size: 12.5px; color: #5A6067;">โปรที่ใช้ได้ + ส่วนลดเป็นบาท + <strong>เงื่อนไขที่ยังไม่ครบ</strong> + ใช้ร่วมกันได้ไหม + โควตาส่วนลดพนักงาน</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F0F0EC; overflow-wrap: anywhere; background: #FBFBF9;"><span style="font-size: 13px; font-weight: 600;">S4 ค่าส่ง + คิว</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #43484D;">POST /delivery/quote</span><span style="font-size: 12.5px; color: #5A6067;">ค่าขนส่งตามเขต, slot ว่าง (วัน + รอบ + จำนวนคิวเหลือ), แยกกลุ่มยกกลับ/ส่ง/ติดตั้ง</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; border-bottom: 1px solid #F0F0EC; overflow-wrap: anywhere;"><span style="font-size: 13px; font-weight: 600;">S5 Preso</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #43484D;">POST/GET /presos</span><span style="font-size: 12.5px; color: #5A6067;">preso_no, สถานะร่าง, ลูกค้า, บรรทัดสินค้า, โปรที่เลือก, slot ที่เลือก, ยอดรวม</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 10px; padding: 12px 16px; overflow-wrap: anywhere; background: #FEF7F8;"><span style="font-size: 13px; font-weight: 600;">S6 Quotation</span><span style="font-size: 12.5px; font-family: 'IBM Plex Sans', monospace; color: #C8102E;">POST /quotations · POST /payments · GET /quotations/{no}</span><span style="font-size: 12.5px; color: #5A6067;">quotation_no, วันยืนราคา, PDF url, payment status, <strong>sap_so_no</strong> ที่ส่งกลับมาหลังจ่ายเงิน</span></div>
+    </div>
+    <div style="background: #fff; border: 1px solid #E2E2DE; border-left: 4px solid #16181A; border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px;">
+      <strong style="font-size: 14.5px;">2 เรื่องที่ต้องถามพี่หลังบ้านให้ชัด</strong>
+      <p style="margin: 0; font-size: 14px; line-height: 1.7; color: #43484D;">1. การคำนวณโปร/ส่วนลด คิดที่ฝั่งไหน — ถ้าคิดที่ SAP หน้าบ้านต้องเรียก evaluate ทุกครั้งที่ตะกร้าเปลี่ยน (ต้องรู้ response time)<br />2. Quotation ถูกสร้างที่ระบบเรา แล้ว sync ไป SAP หรือสร้างที่ SAP ตั้งแต่แรก — มีผลกับว่าเลข QT ใครออก และแก้ไขได้แค่ไหนหลังสร้าง</p>
+    </div>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 16px; background: #16181A; color: #fff; border-radius: 18px; padding: clamp(22px, 3.5vw, 40px);">
+    <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: 0.16em; color: #FF7A8C;">05</span>
+      <h2 style="margin: 0; font-size: clamp(19px, 2.3vw, 27px); font-weight: 700;">สรุป + สิ่งที่ต้องเคาะต่อ</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 22px;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <strong style="font-size: 15px; color: #FFC9D1;">อธิบาย 3 บรรทัด</strong>
+        <p style="margin: 0; font-size: 14.5px; line-height: 1.7; opacity: 0.9;">เซลล์ทำงานเป็นเส้นตรง: หาของ → เช็คว่ามีจริง → ใส่ตะกร้า → ผูกลูกค้า → เช็คโปรกับคิวส่ง → เซฟ Preso → ออก Quotation → พาไปจ่ายเงิน จบที่หน้าบ้าน ที่เหลือ SAP รับไป</p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <strong style="font-size: 15px; color: #FFC9D1;">ยังต้องเคาะ</strong>
+        <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.6; opacity: 0.9;">
+          <span>· Preso 1 ใบ = 1 ลูกค้าเท่านั้น หรือแยกหลายใบต่อลูกค้าได้</span>
+          <span>· Quotation แก้ไขได้หลังสร้างไหม หรือต้อง cancel + ออกใหม่</span>
+          <span>· โควตาส่วนลดเซลล์กี่ % และใครอนุมัติเมื่อเกิน</span>
+          <span>· ลูกค้าใหม่ walk-in ต้องมี cust_no ใน SAP ก่อนออก Quotation ไหม</span>
+          <span>· เซลล์เพิ่มของในตะกร้าลูกค้าได้เลย หรือต้องให้ลูกค้ากดยืนยัน (ตอนนี้: เพิ่มได้เลย ลูกค้าลบได้)</span>
+        </div>
+      </div>
+    </div>
+    <div style="border-top: 1px solid rgba(255,255,255,0.18); padding-top: 16px; font-size: 13.5px; opacity: 0.72; line-height: 1.6;">ขั้นถัดไป: ทำ prototype กดได้ตามเส้น 9 สเต็ปนี้ (S1→S6) เอาไปให้เซลล์ลองจับบนแท็บเล็ตจริง ก่อนเริ่มต่อ service</div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}"></script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  body{margin:0;background:#f4f4f2;font-family:"Noto Sans Thai",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:#c8102e;text-decoration:none}a:hover{color:#8e0b20}
+</style>
+</helmet>
+
+<div style="max-width:1180px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(14px,4vw,44px) 90px;display:flex;flex-direction:column;gap:clamp(30px,5vw,56px);color:#16181a">
+
+  <header style="display:flex;flex-direction:column;gap:14px;border-bottom:2px solid #16181a;padding-bottom:22px">
+    <div style="display:flex;flex-wrap:wrap;gap:9px;align-items:center">
+      <span style="font-size:12px;font-weight:700;letter-spacing:.12em;background:#16181a;color:#fff;padding:6px 11px;border-radius:4px">SB SALES APP</span>
+      <span style="font-size:12px;font-weight:700;letter-spacing:.12em;border:1.5px solid #16181a;padding:5px 11px;border-radius:4px">DATABASE SCHEMA</span>
+      <span style="font-size:12.5px;color:#6b7076">PostgreSQL · เก็บเฉพาะที่ SAP ไม่ได้เก็บ</span>
+    </div>
+    <h1 style="margin:0;font-size:clamp(25px,4vw,42px);line-height:1.15;font-weight:700;letter-spacing:-.02em;max-width:24ch">ต้องสร้างตารางอะไร เก็บข้อมูลอะไรบ้าง</h1>
+    <p style="margin:0;font-size:clamp(14.5px,1.4vw,17px);line-height:1.65;color:#43484d;max-width:62ch">แบ่งเป็น 4 กลุ่ม: (A) ตารางที่ <b>เราต้องสร้างเอง</b> เพราะเป็นพฤติกรรมของแอป (B) ตาราง <b>cache/mirror</b> จาก SAP เพื่อให้ค้นหาเร็ว (C) <b>ประวัติการใช้งาน · ประวัติซื้อ · สินค้าขายดี</b> (D) ข้อมูลที่ <b>ไม่ต้องเก็บ</b> ให้เรียก service ตอนใช้จริง</p>
+  </header>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:11px;flex-wrap:wrap">
+      <span style="font-size:11.5px;font-weight:700;letter-spacing:.14em;color:#c8102e">GROUP A</span>
+      <h2 style="margin:0;font-size:clamp(19px,2.3vw,27px);font-weight:700">ตารางที่เราต้องสร้างเอง (10 ตาราง)</h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px">
+
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+        <div style="background:#16181a;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">users</b>
+          <span style="font-size:11px;opacity:.75">ลูกค้า + พนักงาน อยู่ตารางเดียว</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">id</b><span style="color:#7a8086">UUID PK</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">role</b><span style="color:#a00c22">customer / sales / manager / admin</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">phone / email</b><span style="color:#7a8086">VARCHAR UNIQUE (ใช้ล็อกอิน)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">password_hash</b><span style="color:#7a8086">TEXT NULL (bcrypt/argon2)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">sap_customer_no</b><span style="color:#7a8086">เลขลูกค้าใน SAP (ถ้ามี)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">staff_code / branch_id</b><span style="color:#7a8086">SA-104 · สาขาที่สังกัด</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">tier / is_guest</b><span style="color:#7a8086">Gold/Silver · ลูกค้ายังไม่สมัคร</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+        <div style="background:#16181a;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">user_sessions</b>
+          <span style="font-size:11px;opacity:.75">JWT / refresh token</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">user_id</b><span style="color:#7a8086">FK users</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">refresh_token_hash</b><span style="color:#7a8086">TEXT</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">device / ip</b><span style="color:#7a8086">แท็บเล็ตเครื่องไหน (audit)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">expires_at</b><span style="color:#7a8086">TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #c8102e;border-radius:12px;overflow:hidden">
+        <div style="background:#c8102e;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">carts</b>
+          <span style="font-size:11px;opacity:.85">1 เซลล์ถือหลายใบได้</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">id</b><span style="color:#7a8086">UUID PK</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">customer_user_id</b><span style="color:#7a8086">FK users NULL (ยังไม่ผูกลูกค้า)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">owner_sales_id</b><span style="color:#a00c22">FK users — เซลล์เจ้าของตะกร้าใบนี้</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">anon_token</b><span style="color:#7a8086">TEXT — ตะกร้าคนไม่ล็อกอิน</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">label / no</b><span style="color:#7a8086">ชื่อแท็บที่เซลล์เห็น เช่น #8823</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">status</b><span style="color:#7a8086">open / merged / converted / abandoned</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">merged_into_cart_id</b><span style="color:#7a8086">FK carts NULL</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #c8102e;border-radius:12px;overflow:hidden">
+        <div style="background:#c8102e;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">cart_items</b>
+          <span style="font-size:11px;opacity:.85">รู้ว่าใครใส่ + ลูกค้ายืนยันหรือยัง</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">cart_id</b><span style="color:#7a8086">FK carts</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">matnr / sku</b><span style="color:#7a8086">รหัสวัสดุจาก SAP</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">name_snapshot</b><span style="color:#7a8086">ชื่อ ณ เวลาที่ใส่ (กันชื่อเปลี่ยน)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">qty · unit_price_snapshot</b><span style="color:#7a8086">INT · NUMERIC(12,2)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">added_by</b><span style="color:#a00c22">customer / sales</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">added_by_user_id · added_at</b><span style="color:#7a8086">ใช้โชว์ “เพิ่มโดย สมชาย 09:46”</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">pending_ack</b><span style="color:#a00c22">BOOLEAN — ลูกค้ายังไม่กด “เก็บไว้”</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">supply_mode</b><span style="color:#7a8086">takeaway / ship / install / pickup</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #c8102e;border-radius:12px;overflow:hidden">
+        <div style="background:#c8102e;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">presos</b>
+          <span style="font-size:11px;opacity:.85">ใบร่างที่ Save ไว้</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">preso_no</b><span style="color:#7a8086">PRE-260907-0042 UNIQUE</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">cart_id · sales_user_id</b><span style="color:#7a8086">FK</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">customer_user_id</b><span style="color:#7a8086">FK users NULL</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">snapshot_json</b><span style="color:#7a8086">JSONB — รายการ+ราคา+โปร ณ วันนั้น</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">status</b><span style="color:#7a8086">draft / quoted / expired / cancelled</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">note</b><span style="color:#7a8086">บันทึกของเซลล์ เช่น รอลูกค้าวัดห้อง</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #c8102e;border-radius:12px;overflow:hidden">
+        <div style="background:#c8102e;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">quotations</b>
+          <span style="font-size:11px;opacity:.85">จุดส่งต่อไป SAP</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">quotation_no</b><span style="color:#7a8086">QT-260907-0055 UNIQUE</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">preso_id</b><span style="color:#7a8086">FK presos</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">subtotal · discount_total · shipping_fee · vat · grand_total</b><span style="color:#7a8086">NUMERIC(12,2) ล็อกค่าไว้</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">valid_until</b><span style="color:#7a8086">DATE (ยืนราคา 7 วัน)</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">pdf_url</b><span style="color:#7a8086">ไฟล์ที่ส่งอีเมล/SMS</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">sap_so_no · sap_sync_status</b><span style="color:#a00c22">เลข SO ที่ service ส่งกลับ + pending/ok/failed</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">status</b><span style="color:#7a8086">issued / paid / converted / expired</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+        <div style="background:#16181a;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">quotation_lines</b>
+          <span style="font-size:11px;opacity:.75">บรรทัดที่ล็อกราคาแล้ว</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">quotation_id · matnr</b><span style="color:#7a8086">FK · รหัสวัสดุ</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">qty · unit_price · line_discount</b><span style="color:#7a8086">NUMERIC</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">supply_mode · plant_code</b><span style="color:#7a8086">ยกกลับ/ส่ง · สาขาหรือคลังที่จ่ายของ</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">added_by</b><span style="color:#7a8086">ยกมาจาก cart_items (ดูว่าเซลล์ช่วยขายได้เท่าไร)</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+        <div style="background:#16181a;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">applied_discounts</b>
+          <span style="font-size:11px;opacity:.75">ใครให้ส่วนลด ใครอนุมัติ</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">cart_id / quotation_id</b><span style="color:#7a8086">ผูกได้ทั้งสองระดับ</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">kind</b><span style="color:#7a8086">promotion / member_price / staff_manual</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">promo_code · amount</b><span style="color:#7a8086">SEP-SOFA15 · จำนวนบาทที่ลด</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">applied_by_user_id</b><span style="color:#7a8086">FK users</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">approved_by_user_id · approved_at</b><span style="color:#a00c22">กรณีเกินโควตา 3%</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+        <div style="background:#16181a;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">stock_checks</b>
+          <span style="font-size:11px;opacity:.75">log ของเราเอง ไม่ใช่ mirror</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">user_id · matnr</b><span style="color:#7a8086">ใครกดเช็ค แมทไหน</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">plant_code · qty_returned</b><span style="color:#7a8086">สาขา/คลัง · จำนวนที่ SAP ตอบ</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">atp_date · source</b><span style="color:#7a8086">วันพร้อมส่ง · sap / cache</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">checked_at</b><span style="color:#a00c22">ใช้อ้างอิงเมื่อลูกค้าเคลม “ตอนนั้นบอกว่ามีของ”</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+        <div style="background:#16181a;color:#fff;padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between">
+          <b style="font:600 14px/1.2 'IBM Plex Mono',monospace">audit_logs</b>
+          <span style="font-size:11px;opacity:.75">PDPA + ตรวจย้อนหลัง</span>
+        </div>
+        <div style="padding:4px 0">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">actor_user_id · role</b><span style="color:#7a8086">ใครทำ</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">action</b><span style="color:#7a8086">cart.item_add · customer.view · discount.apply</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;border-bottom:1px solid #f2f2ee;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">target_type · target_id</b><span style="color:#7a8086">cart / preso / quotation</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:8px;padding:7px 14px;font-size:12.5px;overflow-wrap:anywhere"><b style="font-weight:600">payload · created_at</b><span style="color:#7a8086">JSONB · TIMESTAMPTZ</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:11px;flex-wrap:wrap">
+      <span style="font-size:11.5px;font-weight:700;letter-spacing:.14em;color:#0b6b58">GROUP B</span>
+      <h2 style="margin:0;font-size:clamp(19px,2.3vw,27px);font-weight:700">ตาราง mirror จาก SAP (sync เป็นรอบ)</h2>
+    </div>
+    <p style="margin:0;font-size:14.5px;line-height:1.65;color:#43484d;max-width:66ch">เก็บไว้เพื่อให้หน้าค้นหา MATNR เร็วและใช้งานได้แม้ service ช้า — <b>ราคาและสต็อกที่ใช้ตัดสินใจจริงต้องยิงสดตอนกดเช็คสต็อก</b></p>
+
+    <div style="background:#fff;border:1px solid #e2e2de;border-left:4px solid #0b6b58;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+      <b style="font:700 14.5px/1.35 'Noto Sans Thai',sans-serif">มีฟังก์ชันเช็คสต็อกของ SAP อยู่แล้ว ยังต้องเก็บไหม?</b>
+      <p style="margin:0;font-size:13.5px;line-height:1.7;color:#43484d">ไม่ต้องเก็บเป็น “ตัวจริง” — SAP เป็นเจ้าของจำนวนสต็อกเสมอ แต่ยังต้องมีที่เก็บ 3 อย่างฝั่งเรา:</p>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;line-height:1.65;color:#43484d">
+        <span><b style="color:#111">1. cache ระยะสั้น (stock_cache)</b> — เพื่อให้หน้าค้นหาโชว์ “มีของ/หมด” ได้ทันทีโดยไม่ยิง SAP ทุก keystroke เก็บ <span style="font-family:'IBM Plex Mono',monospace">fetched_at</span> ไว้โชว์ว่าข้อมูลเก่ากี่นาที และตั้ง TTL 5–15 นาที</span>
+        <span><b style="color:#111">2. log การเช็ค (stock_checks)</b> — บันทึกทุกครั้งที่เซลล์กดเช็ค: ใครเช็ค แมทไหน SAP ตอบเท่าไร เวลาไหน ใช้ตอนลูกค้าเคลมว่า “ตอนนั้นบอกว่ามีของ”</span>
+        <span><b style="color:#111">3. snapshot ในตะกร้า/ใบเสนอราคา</b> — ตอนลงตะกร้าเก็บ plant ที่จะจ่ายของ + atp_date ที่ SAP ตอบมา เพื่อให้ใบเสนอราคายืนยันวันส่งได้ แม้สต็อกเปลี่ยนภายหลัง</span>
+      </div>
+      <p style="margin:0;font-size:12.5px;line-height:1.65;color:#8a6a17">กฎ: ปุ่ม “เช็คสต็อก” และตอนกดสร้าง Quotation ต้องยิง SAP สดทุกครั้ง (ห้ามใช้ cache) — cache ใช้แค่ตอนแสดงผลรายการค้นหา</p>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:11px 15px;background:#0f2c25;color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.06em"><span>ตาราง</span><span>เก็บอะไร</span><span>รอบ sync</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">materials</b><span style="color:#5a6067">matnr, sku, barcode, ชื่อ TH/EN, หมวด, แบรนด์, รูป, ต้องติดตั้งไหม, ยกกลับได้ไหม, ปริมาตร/น้ำหนัก</span><span style="color:#7a8086">รายวัน + webhook เมื่อแก้</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">material_prices</b><span style="color:#5a6067">ราคาปกติ, ราคาสมาชิกแต่ละ tier, ช่วงวันที่มีผล</span><span style="color:#7a8086">รายวัน</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">plants</b><span style="color:#5a6067">สาขา/คลัง: รหัส, ชื่อ, ประเภท (store/warehouse), เขตจัดส่งที่รับผิดชอบ</span><span style="color:#7a8086">นาน ๆ ครั้ง</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">stock_cache</b><span style="color:#5a6067">matnr + plant → on_hand, reserved, atp_date, fetched_at</span><span style="color:#a00c22">5–15 นาที (โชว์เวลาที่ดึง)</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">promotions</b><span style="color:#5a6067">code, ชื่อ, เงื่อนไข (JSONB), ประเภทส่วนลด, ใช้ร่วมกับโปรอื่นได้ไหม, ช่วงวันที่</span><span style="color:#7a8086">รายวัน</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">delivery_zones</b><span style="color:#5a6067">รหัสไปรษณีย์ → เขต, ค่าขนส่งฐาน, ค่าติดตั้ง</span><span style="color:#7a8086">นาน ๆ ครั้ง</span></div>
+      <div style="display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.5fr) minmax(0,.8fr);gap:10px;padding:12px 15px;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">delivery_slots</b><span style="color:#5a6067">วัน, รอบ (เช้า/บ่าย), โซน, โควตาคิว, จำนวนที่จองแล้ว</span><span style="color:#a00c22">เรียลไทม์ตอนจอง</span></div>
+    </div>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:baseline;gap:11px;flex-wrap:wrap">
+      <span style="font-size:11.5px;font-weight:700;letter-spacing:.14em;color:#8a6a17">GROUP C</span>
+      <h2 style="margin:0;font-size:clamp(19px,2.3vw,27px);font-weight:700">ประวัติการใช้งาน · ประวัติซื้อ · สินค้าขายดี</h2>
+    </div>
+    <p style="margin:0;font-size:14.5px;line-height:1.65;color:#43484d;max-width:68ch">แยกเป็น 2 ชั้น: <b>ชั้นดิบ (events)</b> เก็บทุกการกดแบบละเอียด และ <b>ชั้นสรุป (rollup)</b> ที่คำนวณรายวันไว้ล่วงหน้า เพราะถ้าคิวรีสินค้าขายดีจาก event ดิบทุกครั้งหน้าเว็บจะช้า</p>
+
+    <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:11px 15px;background:#16181a;color:#fff;font-size:11.5px;font-weight:700;letter-spacing:.06em"><span>ตาราง</span><span>เก็บอะไร</span><span>ชั้น / เก็บนานแค่ไหน</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">user_events</b><span style="color:#5a6067">ทุก event ในเว็บ: user_id (หรือ anon_token), session_id, event_type (page_view / product_view / search / add_to_cart / remove_from_cart / checkout_start / purchase), matnr, ค่าอื่นใน payload JSONB, device, branch_id, created_at</span><span style="color:#a00c22">ดิบ · 12–24 เดือน แล้ว archive</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere;background:#fbfbf9"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">search_queries</b><span style="color:#5a6067">คำค้น, จำนวนผลลัพธ์, กดผลลัพธ์ไหน, ค้นแล้วไม่พบ (zero-result) — ใช้ปรับ synonym และรู้ว่าลูกค้าหาอะไรแต่เราไม่มี</span><span style="color:#7a8086">ดิบ · 12 เดือน</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">cart_item_history</b><span style="color:#5a6067">ประวัติการใส่/ลบ/แก้จำนวนของทุกตะกร้า: cart_id, matnr, action (add/update/remove), qty_before, qty_after, added_by (customer/sales), actor_user_id, created_at</span><span style="color:#a00c22">ดิบ · ถาวร (ใช้ตรวจย้อนหลัง)</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere;background:#fbfbf9"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">order_history</b><span style="color:#5a6067">mirror จาก SAP: sap_so_no, quotation_no, customer_user_id, sales_user_id, วันที่, ยอด, ช่องทาง (online / in_store_assisted), สถานะจัดส่ง — ให้ลูกค้าดู “ประวัติการสั่งซื้อ” ได้เร็วโดยไม่ยิง SAP</span><span style="color:#7a8086">mirror · ถาวร</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">order_history_lines</b><span style="color:#5a6067">matnr, ชื่อ, qty, ราคาที่ขายจริง, ส่วนลดที่ได้ — เป็นแหล่งคำนวณ “ขายดี” ที่แม่นที่สุด (ยอดขายจริง ไม่ใช่ยอดคลิก)</span><span style="color:#7a8086">mirror · ถาวร</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere;background:#fef7f8"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">material_daily_stats</b><span style="color:#5a6067">สรุปรายวันต่อแมท (และต่อสาขา): views, add_to_cart, units_sold, revenue, conversion_rate — PK (date, matnr, branch_id) คำนวณทุกคืนจาก events + order lines</span><span style="color:#a00c22">rollup · 24 เดือน</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">best_sellers</b><span style="color:#5a6067">materialized view: จัดอันดับจาก units_sold 7/30/90 วัน แยกตามหมวด/สาขา — ใช้ป้อนแถบ “สินค้าขายดี” หน้าแรกและหน้าค้นหาของเซลล์</span><span style="color:#7a8086">rollup · refresh ทุกคืน</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;border-bottom:1px solid #f0f0ec;font-size:12.5px;overflow-wrap:anywhere;background:#fbfbf9"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">recently_viewed</b><span style="color:#5a6067">user_id + matnr + last_viewed_at (upsert เก็บล่าสุด 20 ชิ้น) — โชว์ “ดูล่าสุด” และให้เซลล์เห็นว่าลูกค้าสนใจอะไรมาก่อนเข้าร้าน</span><span style="color:#7a8086">สรุป · 6 เดือน</span></div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.6fr) minmax(0,.75fr);gap:10px;padding:12px 15px;font-size:12.5px;overflow-wrap:anywhere"><b style="font:600 12.5px/1.4 'IBM Plex Mono',monospace">wishlists</b><span style="color:#5a6067">user_id, matnr, note, created_at — ปุ่ม “ย้ายไปรายการโปรด” ในตะกร้าเก็บลงตารางนี้</span><span style="color:#7a8086">ถาวร</span></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:14px">
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+        <b style="font:700 14px/1.35 'Noto Sans Thai',sans-serif">“ขายดี” นับจากอะไร (ต้องเคาะ)</b>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;line-height:1.6;color:#43484d">
+          <span>· <b style="color:#111">units_sold</b> — จำนวนชิ้นที่ขายได้ (ค่าเริ่มต้นที่แนะนำ)</span>
+          <span>· <b style="color:#111">revenue</b> — ยอดเงิน เหมาะกับของชิ้นใหญ่ราคาสูง</span>
+          <span>· <b style="color:#111">add_to_cart rate</b> — ความนิยม ใช้จัดเรียงหน้าเว็บ</span>
+          <span style="color:#8a6a17">ควรตัดออเดอร์ที่ถูกยกเลิก/คืนสินค้าออกจากการนับ</span>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e2de;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+        <b style="font:700 14px/1.35 'Noto Sans Thai',sans-serif">Index / partition</b>
+        <div style="display:flex;flex-direction:column;gap:6px;font:500 12px/1.7 'IBM Plex Mono',monospace;color:#43484d;overflow-wrap:anywhere">
+          <span>user_events — partition by month</span>
+          <span>user_events (user_id, created_at)</span>
+          <span>user_events (event_type, matnr, created_at)</span>
+          <span>material_daily_stats (matnr, date)</span>
+          <span>order_history (customer_user_id, date)</span>
+          <span>order_history (sales_user_id, date)</span>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e2de;border-left:4px solid #c8102e;border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:9px">
+        <b style="font:700 14px/1.35 'Noto Sans Thai',sans-serif">PDPA</b>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:12.5px;line-height:1.6;color:#43484d">
+          <span>· ขอ consent ก่อนเก็บพฤติกรรมเพื่อการตลาด (แยกจาก consent การใช้งานทั่วไป)</span>
+          <span>· event ของคนไม่ล็อกอินผูกกับ anon_token เมื่อล็อกอินให้ merge เข้า user_id</span>
+          <span>· ต้องมีคำสั่งลบข้อมูลรายบุคคล (ลบ/ทำให้ระบุตัวไม่ได้ในตาราง events + recently_viewed)</span>
+          <span>· ตาราง rollup เก็บเป็นตัวเลขรวม ไม่ผูกตัวบุคคล จึงเก็บได้ยาว</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+    <div style="background:#16181a;color:#fff;border-radius:14px;padding:clamp(18px,2.6vw,26px);display:flex;flex-direction:column;gap:11px">
+      <span style="font-size:11.5px;font-weight:700;letter-spacing:.14em;color:#ff7a8c">GROUP D</span>
+      <b style="font:700 16px/1.35 'Noto Sans Thai',sans-serif">ไม่ต้องสร้าง — ให้ SAP เป็นเจ้าของ</b>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:13.5px;line-height:1.6;opacity:.9">
+        <span>· Sales Order, Delivery Order, ใบกำกับภาษี</span>
+        <span>· สต็อกจริงและการตัดสต็อก (เราเก็บแค่ cache)</span>
+        <span>· Master ลูกค้าเชิงบัญชี / เครดิตเทอม</span>
+        <span>· การรับชำระเงินและกระทบยอด</span>
+      </div>
+      <span style="font-size:12px;opacity:.7;line-height:1.6;border-top:1px solid rgba(255,255,255,.18);padding-top:11px">ฝั่งเราเก็บแค่ <b>sap_so_no</b> + สถานะ sync ไว้อ้างอิงและโชว์ให้ลูกค้าติดตาม</span>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e2de;border-radius:14px;padding:clamp(18px,2.6vw,26px);display:flex;flex-direction:column;gap:11px">
+      <b style="font:700 16px/1.35 'Noto Sans Thai',sans-serif">Index ที่ควรมี</b>
+      <div style="display:flex;flex-direction:column;gap:7px;font:500 12.5px/1.7 'IBM Plex Mono',monospace;color:#43484d;overflow-wrap:anywhere">
+        <span>carts (owner_sales_id, status)</span>
+        <span>cart_items (cart_id) · (cart_id, pending_ack)</span>
+        <span>materials — GIN triggm บน name_th + matnr</span>
+        <span>stock_cache (matnr, plant_code) PK ร่วม</span>
+        <span>presos (sales_user_id, status, updated_at)</span>
+        <span>quotations (quotation_no) · (sap_sync_status)</span>
+        <span>audit_logs (actor_user_id, created_at)</span>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #e2e2de;border-radius:14px;padding:clamp(18px,2.6vw,26px);display:flex;flex-direction:column;gap:11px">
+      <b style="font:700 16px/1.35 'Noto Sans Thai',sans-serif">กฎสำคัญ 4 ข้อ</b>
+      <div style="display:flex;flex-direction:column;gap:9px;font-size:13.5px;line-height:1.6;color:#43484d">
+        <span><b style="color:#111">1.</b> ราคาในตะกร้าเป็น snapshot เสมอ — ห้าม join ราคาปัจจุบันตอนแสดงใบเสนอราคา</span>
+        <span><b style="color:#111">2.</b> ทุกการแก้ตะกร้าเขียน audit_logs พร้อม role ผู้ทำ</span>
+        <span><b style="color:#111">3.</b> เซลล์เห็นตะกร้าลูกค้าได้เฉพาะตอน cart.owner_sales_id = ตัวเอง (ตัดสิทธิ์เมื่อปิดตะกร้า)</span>
+        <span><b style="color:#111">4.</b> Quotation เมื่อ issued แล้วห้ามแก้ — ต้อง cancel แล้วออกใหม่ เพื่อให้ตรงกับ SO ใน SAP</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1180,&quot;height&quot;:900}}"></script>
+</body>
+</html>

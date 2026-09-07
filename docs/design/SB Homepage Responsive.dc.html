@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#fff;font-family:"Noto Sans Thai",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#111;text-decoration:none}a:hover{color:#555}
+.om-noscrollbar{scrollbar-width:none;-ms-overflow-style:none}
+.om-noscrollbar::-webkit-scrollbar{display:none}
+</style>
+</helmet>
+
+<div style="width:100%;min-height:100vh;background:#fff;display:flex;flex-direction:column">
+
+  <!-- ============ NAVBAR : one block, 3 rows ============ -->
+  <div style="background:#fff;color:#111;border-bottom:1px solid #e4e4e2">
+
+    <!-- row 1 : utility, right aligned -->
+    <div style="padding:clamp(8px,1.2vw,6px) clamp(16px,4vw,80px) clamp(6px,1vw,5px);min-height:34px;display:flex;flex-wrap:nowrap;align-items:center;justify-content:flex-end;gap:clamp(8px,1.6vw,22px);font-size:clamp(10px,1.05vw,13px);border-bottom:1px solid #ededeb;overflow-x:auto" class="om-noscrollbar">
+      <sc-for list="{{ utilLinks }}" as="u" hint-placeholder-count="4">
+        <span style="flex:none;display:flex;align-items:center;gap:4px;white-space:nowrap;color:#111">
+          <i style="font-family:'Material Symbols Outlined';font-size:clamp(15px,1.4vw,17px);font-style:normal;line-height:1;color:#111">{{ u.icon }}</i>{{ u.label }}
+          <sc-if value="{{ u.caret }}" hint-placeholder-val="{{ false }}">
+            <i style="font-family:'Material Symbols Outlined';font-size:16px;font-style:normal;line-height:1;color:#555">expand_more</i>
+          </sc-if>
+        </span>
+      </sc-for>
+      <span style="flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding-left:2px">
+        <b style="font-weight:700;color:#111;border-bottom:1.5px solid #111;padding-bottom:1px">TH</b>
+        <i style="color:#c0c0be;font-style:normal">|</i>
+        <span style="color:#8a8a88">EN</span>
+      </span>
+    </div>
+
+    <!-- row 2 : logo · pickers · search · icons -->
+    <div style="padding:10px clamp(16px,4vw,80px) 12px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px clamp(8px,1.8vw,26px);min-width:0">
+      <div style="width:clamp(66px,10vw,150px);height:clamp(30px,3.6vw,50px);flex:none;border:1px solid #c9c9c7;background:repeating-linear-gradient(135deg,#ececea 0 8px,#f6f6f4 8px 16px);display:flex;align-items:center;justify-content:center;font:600 clamp(9px,1.15vw,15px)/1 'IBM Plex Mono',monospace;color:#444;letter-spacing:.03em;cursor:pointer" onClick="{{ goHome }}">SB LOGO</div>
+
+      <div style="display:flex;flex-wrap:nowrap;align-items:center;gap:clamp(2px,1.4vw,20px);flex:0 1 auto;min-width:0;margin-left:auto;justify-content:flex-end;flex-wrap:nowrap">
+        <sc-for list="{{ navIcons }}" as="ic" hint-placeholder-count="4">
+          <span style="position:relative;flex:0 1 auto;display:flex;align-items:center;justify-content:center;min-width:clamp(28px,2.6vw,40px);min-height:44px;color:#111;cursor:pointer" onClick="{{ ic.onClick }}">
+            <i style="font-family:'Material Symbols Outlined';font-size:clamp(19px,2.2vw,27px);font-style:normal;line-height:1">{{ ic.icon }}</i>
+            <sc-if value="{{ ic.badge }}" hint-placeholder-val="{{ false }}">
+              <b style="position:absolute;top:-4px;right:-6px;min-width:17px;height:17px;border-radius:50%;background:#111;color:#fff;font:700 10px/17px 'IBM Plex Mono',monospace;text-align:center;display:block">{{ ic.badgeCount }}</b>
+            </sc-if>
+          </span>
+        </sc-for>
+        <sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
+          <span style="flex:none;display:flex;align-items:center;justify-content:center;gap:4px;border:1px solid #111;border-radius:999px;min-height:40px;padding:7px clamp(8px,1.2vw,16px);font-size:clamp(11px,1.1vw,12.5px);font-weight:600;color:#111;white-space:nowrap;cursor:pointer" onClick="{{ openLogin }}"><i style="font-family:'Material Symbols Outlined';font-size:clamp(17px,1.8vw,19px);font-style:normal;line-height:1">login</i>เข้าสู่ระบบ</span>
+        </sc-if>
+        <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+          <span style="flex:none;display:flex;align-items:center;gap:7px;border:1px solid #e0e0de;background:#f5f5f3;border-radius:999px;min-height:40px;padding:5px clamp(9px,1.2vw,14px) 5px 8px;white-space:nowrap">
+            <i style="font-family:'Material Symbols Outlined';font-size:22px;font-style:normal;line-height:1;color:#111">account_circle</i>
+            <span style="display:flex;flex-direction:column;gap:1px">
+              <b style="font:600 12.5px/1.2 'Noto Sans Thai',sans-serif;color:#111">{{ authName }}</b>
+              <span style="font-size:10.5px;color:#5a5a58">{{ authRoleLabel }}</span>
+            </span>
+            <span style="font-size:11.5px;font-weight:600;color:#5a5a58;text-decoration:underline;cursor:pointer" onClick="{{ logout }}">ออก</span>
+          </span>
+        </sc-if>
+      </div>
+      </div>
+
+      <div style="width:100%;display:flex;height:44px;min-width:0;background:#f2f2f0;border:1px solid #e0e0de;border-radius:4px;overflow:hidden">
+        <div style="width:clamp(88px,9vw,108px);flex:none;display:flex;align-items:center;justify-content:center;gap:3px;font-size:clamp(12px,1.1vw,13px);color:#333;white-space:nowrap">ทั้งหมด<i style="font-family:'Material Symbols Outlined';font-size:16px;font-style:normal;line-height:1;color:#555">expand_more</i></div>
+        <div style="flex:1;display:flex;align-items:center;gap:8px;padding:0 14px;background:#fff;border-left:1px solid #e0e0de;font-size:clamp(13px,1.2vw,14px);color:#9a9a98;overflow:hidden;white-space:nowrap">ค้นหา</div>
+        <div style="flex:none;background:#fff;display:flex;align-items:center;gap:10px;padding:0 12px 0 4px">
+          <span style="display:flex;align-items:center;gap:3px;border:1px solid #111;padding:5px 8px;border-radius:3px;white-space:nowrap"><i style="font-family:'Material Symbols Outlined';font-size:17px;font-style:normal;line-height:1;color:#111">auto_awesome</i><b style="font:700 12px/1 'Noto Sans Thai',sans-serif;color:#111">AI</b></span>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:flex-start;gap:clamp(10px,1.6vw,22px);width:100%;min-width:0;border-top:1px solid #f0f0ee;padding-top:10px">
+        <div style="flex:0 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:11px;color:#8a8a88">ที่อยู่จัดส่ง</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:clamp(12px,1.15vw,14px);font-weight:500;color:#111;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">location_on</i>เลือกที่อยู่จัดส่ง<i style="font-family:'Material Symbols Outlined';font-size:17px;font-style:normal;line-height:1;color:#555">expand_more</i></span>
+        </div>
+        <span style="width:1px;height:34px;background:#dcdcda;display:block"></span>
+        <div style="flex:0 1 auto;min-width:0;display:flex;flex-direction:column;gap:3px">
+          <span style="font-size:11px;color:#8a8a88">รับที่สาขา</span>
+          <span style="display:flex;align-items:center;gap:4px;font-size:clamp(12px,1.15vw,14px);font-weight:500;color:#111;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">store</i>เลือกสาขา<i style="font-family:'Material Symbols Outlined';font-size:17px;font-style:normal;line-height:1;color:#555">expand_more</i></span>
+        </div>
+      </div>
+
+
+    </div>
+
+    <!-- row 3 : main nav + hover mega menu -->
+    <div style="border-top:1px solid #ededeb;position:relative" onMouseLeave="{{ closeMenu }}">
+      <div style="padding:0 clamp(16px,4vw,80px);min-height:48px;display:flex;align-items:stretch;gap:clamp(14px,2vw,30px);overflow-x:auto;font-size:clamp(13px,1.2vw,14.5px);font-weight:500;color:#111">
+        <span style="display:flex;align-items:center;gap:7px;white-space:nowrap;font-weight:600;border-bottom:2px solid {{ catUnderline }};cursor:pointer" onMouseEnter="{{ openCats }}">
+          <i style="font-family:'Material Symbols Outlined';font-size:21px;font-style:normal;line-height:1">grid_view</i>
+          เลือกหมวดสินค้า<i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1;color:#555">expand_more</i>
+        </span>
+        <sc-for list="{{ mainNavRows }}" as="n" hint-placeholder-count="6">
+          <span style="display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;border-bottom:2px solid {{ n.underline }}" onMouseEnter="{{ n.enter }}">{{ n.label }}
+            <sc-if value="{{ n.caret }}" hint-placeholder-val="{{ false }}">
+              <i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1;color:#555">expand_more</i>
+            </sc-if>
+          </span>
+        </sc-for>
+      </div>
+
+      <!-- mega panel : หมวดหมู่ทั้งหมด -->
+      <sc-if value="{{ catsOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:0;right:0;top:100%;z-index:40;background:#fff;border-top:1px solid #ededeb;border-bottom:1px solid #d6d6d4;box-shadow:0 14px 28px rgba(0,0,0,.12);padding:18px clamp(16px,4vw,80px) 24px;display:flex;flex-wrap:wrap;gap:24px">
+          <div style="flex:0 0 236px;max-width:100%;max-height:440px;overflow-y:auto;padding-right:8px;border-right:1px solid #ededeb;display:flex;flex-direction:column;gap:2px">
+            <sc-for list="{{ megaSide }}" as="m" hint-placeholder-count="14">
+              <span style="font-size:13.5px;padding:10px 12px;color:{{ m.color }};background:{{ m.bg }};font-weight:{{ m.weight }};cursor:pointer">{{ m.label }}</span>
+            </sc-for>
+          </div>
+          <div style="flex:1 1 420px;min-width:280px">
+            <div style="font-size:14px;font-weight:600;color:#111;border-bottom:2px solid #111;display:inline-block;padding-bottom:5px;margin-bottom:14px">หมวดหมู่ทั้งหมด</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px 20px">
+              <sc-for list="{{ megaItems }}" as="it" hint-placeholder-count="18">
+                <span style="display:flex;align-items:center;gap:11px;font-size:13.5px;color:#222;cursor:pointer">
+                  <i style="font-family:'Material Symbols Outlined';font-size:24px;font-style:normal;line-height:1;color:#333;flex:none">{{ it.icon }}</i>{{ it.label }}
+                </span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- simple dropdown for the other nav items -->
+      <sc-if value="{{ subOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;left:0;right:0;top:100%;z-index:40;background:#fff;border-top:1px solid #ededeb;border-bottom:1px solid #d6d6d4;box-shadow:0 14px 28px rgba(0,0,0,.12);padding:18px clamp(16px,4vw,80px) 22px">
+          <div style="font-size:14px;font-weight:600;color:#111;border-bottom:2px solid #111;display:inline-block;padding-bottom:5px;margin-bottom:14px">{{ subOpenLabel }}</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px 20px">
+            <sc-for list="{{ subOpenItems }}" as="si" hint-placeholder-count="6">
+              <span style="font-size:13.5px;color:#222;cursor:pointer">{{ si }}</span>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </div>
+
+  <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+  <!-- hero : 2 portrait banner slides (left) + 2×2 promo cards (right) -->
+  <div style="padding:clamp(14px,2vw,24px) clamp(16px,4vw,80px) 0;display:flex;flex-wrap:wrap;gap:16px">
+    <!-- main banner : 1 slide, arrows both edges, dots + CTA in bottom bar -->
+    <div style="flex:1 1 460px;min-width:300px;aspect-ratio:1/1;position:relative;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:18px">
+      <span style="font:500 clamp(11px,1.1vw,13px)/1 'IBM Plex Mono',monospace;color:#555">MAIN BANNER SLIDE</span>
+      <span style="font:400 clamp(10px,1vw,11.5px)/1 'IBM Plex Mono',monospace;color:#888">1:1 · art 1240 × 1240</span>
+      <span style="font-size:clamp(12px,1.1vw,13px);color:#8a8a8a;text-align:center;line-height:1.5;text-wrap:pretty">แคมเปญหลัก — เปลี่ยนได้ 5 สไลด์</span>
+
+      <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.9);border:1px solid #d6d6d4;display:flex;align-items:center;justify-content:center;color:#333"><i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1">chevron_left</i></span>
+      <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.9);border:1px solid #d6d6d4;display:flex;align-items:center;justify-content:center;color:#333"><i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1">chevron_right</i></span>
+
+      <div style="position:absolute;left:0;right:0;bottom:0;padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;background:linear-gradient(to top,rgba(255,255,255,.95),rgba(255,255,255,0))">
+        <span style="font-size:11.5px;color:#555;white-space:nowrap">1 ก.ย. 69 – 30 ก.ย. 69</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <i style="width:20px;height:5px;background:#111;display:block"></i>
+          <i style="width:7px;height:7px;border-radius:50%;background:#b8b8b6;display:block"></i>
+          <i style="width:7px;height:7px;border-radius:50%;background:#b8b8b6;display:block"></i>
+          <i style="width:7px;height:7px;border-radius:50%;background:#b8b8b6;display:block"></i>
+          <i style="width:7px;height:7px;border-radius:50%;background:#b8b8b6;display:block"></i>
+        </div>
+        <span style="display:flex;align-items:center;gap:5px;background:#111;color:#fff;font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:999px;white-space:nowrap">ช้อปเลย<i style="font-family:'Material Symbols Outlined';font-size:16px;font-style:normal;line-height:1">arrow_forward</i></span>
+      </div>
+    </div>
+
+    <!-- promo : 2 × 2, stretches to banner height -->
+    <div style="flex:1 1 380px;min-width:300px;display:grid;grid-template-columns:repeat(auto-fit,minmax(46%,1fr));grid-auto-rows:1fr;gap:16px">
+      <sc-for list="{{ promoCards }}" as="p" hint-placeholder-count="4">
+        <div style="min-height:190px;border:1px solid #d6d6d4;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span style="font:500 9.5px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:4px 6px;align-self:flex-start">{{ p.tag }}</span>
+            <span style="font-size:clamp(14px,1.4vw,18px);font-weight:700;color:#111;line-height:1.3;text-wrap:pretty">{{ p.title }}</span>
+          </div>
+          <div style="flex:1;min-height:56px;border:1px dashed #cfcfcd;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#8a8a8a">logo strip · fluid</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:11px;color:#777;line-height:1.4">{{ p.note }}</span>
+            <span style="display:flex;align-items:center;gap:4px;font-size:11px;color:#111;white-space:nowrap;border:1px solid #111;padding:6px 9px;border-radius:999px">ช้อปเลย<i style="font-family:'Material Symbols Outlined';font-size:14px;font-style:normal;line-height:1">arrow_forward</i></span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- services : 6 → 3 → 2 → 1 by auto-fit -->
+  <div style="padding:16px clamp(16px,4vw,80px) 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+    <sc-for list="{{ services }}" as="s" hint-placeholder-count="6">
+      <div style="min-height:72px;border:1px solid #e0e0de;background:#fafaf8;display:flex;align-items:center;gap:10px;padding:10px 14px">
+        <span style="width:32px;height:32px;border:1.5px solid #555;border-radius:3px;flex:none"></span>
+        <span style="font-size:clamp(12px,1.1vw,13px);font-weight:500;color:#222;line-height:1.3">{{ s }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <!-- หมวดหมู่สินค้า : auto-fit 4 → 3 → 2 → 1 -->
+  <div style="padding:clamp(24px,3vw,40px) clamp(16px,4vw,80px) 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px">
+      <span style="font-size:clamp(19px,2.1vw,24px);font-weight:700;color:#111">หมวดหมู่สินค้า</span>
+      <div style="display:flex;gap:10px;flex:none">
+        <span style="width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;color:#b0b0ae"><i style="font-family:'Material Symbols Outlined';font-size:22px;font-style:normal;line-height:1">chevron_left</i></span>
+        <span style="width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;color:#333"><i style="font-family:'Material Symbols Outlined';font-size:22px;font-style:normal;line-height:1">chevron_right</i></span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:20px">
+      <sc-for list="{{ catTiles }}" as="c" hint-placeholder-count="8">
+        <div style="min-height:112px;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.09);display:flex;align-items:center;gap:16px;padding:14px 18px 14px 14px">
+          <div style="width:84px;height:84px;flex:none;border:1px dashed #d8d8d6;border-radius:4px;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9.5px/1.3 'IBM Plex Mono',monospace;color:#a0a09e">1:1</div>
+          <span style="font-size:clamp(14px,1.3vw,16px);font-weight:700;color:#111;line-height:1.4;text-wrap:balance">{{ c }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- new collections : horizontal scroller, pill label over image -->
+  <div style="padding:clamp(24px,3vw,40px) clamp(16px,4vw,80px) 0">
+    <div style="font-size:clamp(19px,2.1vw,24px);font-weight:700;color:#111;margin-bottom:16px">ช้อปสินค้าใหม่จาก SB</div>
+    <div style="position:relative">
+    <span style="position:absolute;left:-6px;top:50%;transform:translateY(-50%);z-index:5;width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;color:#333;cursor:pointer" onClick="{{ scrollNewPrev }}"><i style="font-family:'Material Symbols Outlined';font-size:22px;font-style:normal;line-height:1">chevron_left</i></span>
+    <span style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);z-index:5;width:40px;height:40px;border-radius:50%;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;color:#333;cursor:pointer" onClick="{{ scrollNewNext }}"><i style="font-family:'Material Symbols Outlined';font-size:22px;font-style:normal;line-height:1">chevron_right</i></span>
+    <div ref="{{ newRef }}" class="om-noscrollbar" style="display:flex;gap:16px;overflow-x:auto;scroll-behavior:smooth">
+      <sc-for list="{{ newCollections }}" as="nc" hint-placeholder-count="6">
+        <div style="flex:0 0 clamp(200px,20vw,246px);aspect-ratio:3/4;position:relative;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);display:flex;align-items:flex-end;justify-content:center;padding:18px">
+          <span style="position:absolute;top:14px;left:14px;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#8f8f8f">3:4 · art 738 × 984</span>
+          <span style="background:#fff;color:#111;font-size:clamp(12.5px,1.2vw,14px);font-weight:600;padding:10px 18px;border-radius:999px;box-shadow:0 1px 6px rgba(0,0,0,.14);white-space:nowrap">{{ nc }}</span>
+        </div>
+      </sc-for>
+    </div>
+    </div>
+  </div>
+
+  <!-- rooms : 3 → 2 → 1 -->
+  <div style="padding:clamp(24px,3vw,36px) clamp(16px,4vw,80px) 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:16px">
+      <span style="font-size:clamp(17px,2vw,22px);font-weight:700;color:#111">ช้อปตามห้อง</span>
+      <span style="font-size:12.5px;color:#555">ดูทั้งหมด ›</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+      <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="3">
+        <div style="aspect-ratio:8/5;min-height:170px;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);position:relative;display:flex;align-items:flex-end;padding:16px">
+          <span style="position:absolute;top:14px;left:16px;font:400 10px/1 'IBM Plex Mono',monospace;color:#8f8f8f">ROOM SCENE · 8:5</span>
+          <span style="background:#111;color:#fff;font-size:clamp(13px,1.2vw,14px);font-weight:600;padding:9px 13px">{{ r }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- brands : 8 → 5 → 3 → 2 -->
+  <div style="padding:clamp(24px,3vw,36px) clamp(16px,4vw,80px) 0">
+    <div style="font-size:clamp(19px,2.1vw,24px);font-weight:700;color:#111;margin-bottom:16px">ช้อปตามแบรนด์</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:18px">
+      <sc-for list="{{ brands }}" as="b" hint-placeholder-count="5">
+        <div style="aspect-ratio:5/3;min-height:96px;background:#fff;border:1px solid #ededeb;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center;padding:16px">
+          <span style="width:100%;max-width:120px;aspect-ratio:3/1;border:1px dashed #dcdcda;background:repeating-linear-gradient(135deg,#f4f4f2 0 8px,#fafaf8 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#a0a09e">LOGO 3:1</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:18px">
+      <span style="background:#111;color:#fff;font-size:12.5px;font-weight:600;letter-spacing:.04em;padding:11px 22px;border-radius:999px">SEE MORE BRAND</span>
+    </div>
+  </div>
+
+  </sc-if>
+
+  <!-- cart page -->
+  <sc-if value="{{ isCart }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:clamp(20px,3vw,36px) clamp(16px,4vw,80px) clamp(28px,4vw,48px)">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:#555;cursor:pointer" onClick="{{ goHome }}"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">arrow_back</i>กลับไปช้อปต่อ</span>
+      </div>
+      <div style="font-size:clamp(21px,2.4vw,28px);font-weight:700;color:#111;margin-bottom:10px">{{ cartTitle }}</div>
+
+      <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ true }}">
+        <div style="border:1px solid #e8d9a8;background:#fdf9ee;border-radius:8px;padding:14px 16px;margin-bottom:18px;display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+          <i style="font-family:'Material Symbols Outlined';font-size:22px;font-style:normal;line-height:1;color:#8a6a17">lock</i>
+          <span style="flex:1 1 260px;min-width:220px;font-size:12.5px;color:#6b5410;line-height:1.6">คุณยังไม่ได้เข้าสู่ระบบ — เพิ่ม/ลบสินค้าในตะกร้าได้ แต่ต้องเข้าสู่ระบบก่อนชำระเงิน หรือให้พนักงานขายช่วยดูแลตะกร้านี้</span>
+          <span style="background:#111;color:#fff;font-size:12.5px;font-weight:600;padding:10px 18px;border-radius:999px;cursor:pointer" onClick="{{ openLogin }}">เข้าสู่ระบบ / ลงทะเบียน</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSalesRole }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #0f2c25;background:#0f2c25;color:#fff;border-radius:8px;padding:14px 16px;margin-bottom:18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <i style="font-family:'Material Symbols Outlined';font-size:21px;font-style:normal;line-height:1">support_agent</i>
+            <b style="font:600 13.5px/1.3 'Noto Sans Thai',sans-serif">โหมดพนักงานขาย · {{ authName }}</b>
+            <span style="font-size:11.5px;background:rgba(255,255,255,.16);padding:4px 10px;border-radius:999px">{{ sessionLabel }}</span>
+            <span style="margin-left:auto;display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.5);font-size:12px;font-weight:600;padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap" onClick="{{ newSession }}"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">add</i>เปิดตะกร้าใหม่</span>
+          </div>
+
+          <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:2px" class="om-noscrollbar">
+            <sc-for list="{{ sessionTabs }}" as="ss" hint-placeholder-count="3">
+              <span style="flex:none;display:flex;align-items:center;gap:10px;border-radius:8px;padding:9px 11px;cursor:pointer;background:{{ ss.bg }};border:1px solid {{ ss.border }};color:{{ ss.color }}" onClick="{{ ss.pick }}">
+                <i style="font-family:'Material Symbols Outlined';font-size:19px;font-style:normal;line-height:1">shopping_basket</i>
+                <span style="display:flex;flex-direction:column;gap:2px;white-space:nowrap">
+                  <b style="font:600 12.5px/1.2 'Noto Sans Thai',sans-serif">{{ ss.title }}</b>
+                  <span style="font-size:10.5px;opacity:.75">{{ ss.sub }}</span>
+                </span>
+                <i style="font-family:'Material Symbols Outlined';font-size:17px;font-style:normal;line-height:1;opacity:.6" onClick="{{ ss.close }}">close</i>
+              </span>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+            <span style="font-size:12px;opacity:.8">ตะกร้าของลูกค้า:</span>
+            <sc-if value="{{ custLinked }}" hint-placeholder-val="{{ false }}">
+              <span style="flex:1 1 240px;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:rgba(255,255,255,.12);border-radius:8px;padding:8px 12px">
+                <i style="font-family:'Material Symbols Outlined';font-size:19px;font-style:normal;line-height:1;color:#7fe0c4">how_to_reg</i>
+                <span style="flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:600;overflow-wrap:anywhere;line-height:1.4">{{ custLabel }}</span>
+                <span style="font-size:11.5px;text-decoration:underline;cursor:pointer;opacity:.75" onClick="{{ unlinkCust }}">ตัดการเชื่อมต่อ</span>
+              </span>
+            </sc-if>
+            <sc-if value="{{ custUnlinked }}" hint-placeholder-val="{{ true }}">
+              <span style="flex:1 1 240px;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;border:1px dashed rgba(255,255,255,.5);border-radius:8px;padding:8px 12px;cursor:pointer" onClick="{{ linkCust }}">
+                <i style="font-family:'Material Symbols Outlined';font-size:19px;font-style:normal;line-height:1">person_search</i>
+                <span style="flex:1 1 auto;min-width:0;font-size:12.5px;font-weight:600;line-height:1.4">ค้นหาลูกค้า (เลขสมาชิก / เบอร์ / อีเมล)</span>
+              </span>
+            </sc-if>
+            <span style="margin-left:auto;flex:1 1 240px;display:flex;align-items:center;justify-content:center;gap:7px;background:#c8102e;color:#fff;font-size:12.5px;font-weight:600;padding:11px 16px;border-radius:999px;cursor:pointer;text-align:center;line-height:1.35" onClick="{{ openSearch }}"><i style="font-family:'Material Symbols Outlined';font-size:19px;font-style:normal;line-height:1">search</i>ค้นหาสินค้า (MATNR) เพื่อเพิ่มให้ลูกค้า</span>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCustomerRole }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #cfe3dc;background:#f4fbf8;border-radius:8px;padding:12px 16px;margin-bottom:18px;display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+          <i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1;color:#0b6b58">verified_user</i>
+          <span style="flex:1 1 240px;font-size:12.5px;color:#0b4c3f;line-height:1.6">{{ customerBannerText }}</span>
+          <sc-if value="{{ staffHelping }}" hint-placeholder-val="{{ false }}">
+            <span style="font-size:11.5px;font-weight:600;background:#0b6b58;color:#fff;padding:6px 12px;border-radius:999px">สมชาย ก. กำลังช่วยดูแลตะกร้านี้</span>
+          </sc-if>
+          <span style="font-size:11.5px;font-weight:600;color:#0b4c3f;text-decoration:underline;cursor:pointer" onClick="{{ simulateStaffAdd }}">จำลอง: พนักงานเพิ่มสินค้า</span>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ hasPending }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1.5px solid #0b6b58;background:#f4fbf8;border-radius:10px;padding:14px 16px;margin-bottom:18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:9px">
+            <i style="font-family:'Material Symbols Outlined';font-size:21px;font-style:normal;line-height:1;color:#0b6b58">add_shopping_cart</i>
+            <b style="font:700 13.5px/1.3 'Noto Sans Thai',sans-serif;color:#0b4c3f">{{ pendingHead }}</b>
+            <span style="font-size:11.5px;color:#0b6b58">คุณเลือกได้ว่าจะเก็บไว้หรือลบออก</span>
+          </div>
+          <sc-for list="{{ pendingItems }}" as="pi" hint-placeholder-count="1">
+            <div style="background:#fff;border:1px solid #cfe3dc;border-radius:9px;padding:11px 12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+              <span style="width:52px;height:52px;flex:none;border:1px dashed #dcdcda;background:repeating-linear-gradient(135deg,#f2f2f0 0 8px,#fafaf8 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9px/1 'IBM Plex Mono',monospace;color:#a0a09e">1:1</span>
+              <span style="flex:1 1 180px;min-width:0;display:flex;flex-direction:column;gap:3px">
+                <b style="font:600 13px/1.35 'Noto Sans Thai',sans-serif;color:#111">{{ pi.name }}</b>
+                <span style="font-size:11.5px;color:#5a5a58">{{ pi.detail }}</span>
+                <span style="font-size:11px;color:#0b6b58;font-weight:600">{{ pi.who }}</span>
+              </span>
+              <span style="display:flex;gap:8px;flex:1 1 200px">
+                <span style="flex:1;text-align:center;background:#0b6b58;color:#fff;font-size:12.5px;font-weight:700;min-height:44px;padding:12px;border-radius:8px;cursor:pointer" onClick="{{ pi.keep }}">เก็บไว้</span>
+                <span style="flex:1;text-align:center;border:1.5px solid #b6c9c3;color:#0f2c25;font-size:12.5px;font-weight:700;min-height:44px;padding:12px;border-radius:8px;cursor:pointer" onClick="{{ pi.drop }}">ลบออก</span>
+              </span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="display:flex;flex-wrap:wrap;gap:clamp(20px,3vw,48px);align-items:flex-start">
+        <div style="flex:1 1 460px;min-width:300px">
+          <span style="font-size:12.5px;color:#3a3a38;line-height:1.7;display:block;margin-bottom:18px">สินค้ากำลังรอคุณอยู่ในตะกร้าทั้งหมด {{ cartCount }} ชิ้น ชำระเงินง่าย ๆ อีกเพียงไม่กี่ขั้นตอน เลือกใช้บริการจัดส่งแล้วรอรับสินค้าที่บ้านได้เลย!</span>
+
+          <sc-for list="{{ cartRows }}" as="ci" hint-placeholder-count="2">
+            <div style="border-top:1px solid #e0e0de;padding:18px 0;display:flex;gap:clamp(12px,1.5vw,18px)">
+              <div style="width:clamp(64px,8vw,104px);aspect-ratio:1/1;flex:none;border:1px dashed #dcdcda;background:repeating-linear-gradient(135deg,#f2f2f0 0 8px,#fafaf8 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#a0a09e">1:1</div>
+              <div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px">
+                  <span style="font-size:clamp(14px,1.4vw,16px);font-weight:700;color:#111">{{ ci.name }}</span>
+                  <span style="font-size:clamp(14px,1.4vw,16px);font-weight:700;color:#111;white-space:nowrap">{{ ci.lineTotal }}</span>
+                </div>
+                <span style="font-size:12.5px;color:#3a3a38">{{ ci.variant }}</span>
+                <span style="font-size:12px;color:#6a6a68">{{ ci.spec }}</span>
+                <sc-if value="{{ ci.byStaff }}" hint-placeholder-val="{{ false }}">
+                  <span style="align-self:flex-start;display:flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;background:#e8f3f0;color:#0b6b58;padding:4px 9px;border-radius:4px"><i style="font-family:'Material Symbols Outlined';font-size:14px;font-style:normal;line-height:1">support_agent</i>{{ ci.staffNote }}</span>
+                </sc-if>
+                <span style="font-size:12px;color:#6a6a68;margin-top:4px">{{ ci.unitNote }}</span>
+                <div style="display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin-top:10px">
+                  <div style="display:flex;align-items:center;border:1px solid #c9c9c7;border-radius:999px;height:44px">
+                    <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:{{ ci.minusColor }}" onClick="{{ ci.dec }}"><i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1">remove</i></span>
+                    <span style="min-width:34px;text-align:center;font-size:14px;font-weight:600;color:#111">{{ ci.qty }}</span>
+                    <span style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#111" onClick="{{ ci.inc }}"><i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1">add</i></span>
+                  </div>
+                  <span style="font-size:13px;font-weight:600;color:#111;text-decoration:underline;cursor:pointer" onClick="{{ ci.remove }}">ลบ</span>
+                  <sc-if value="{{ ci.staffTools }}" hint-placeholder-val="{{ false }}">
+                    <span style="display:flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid #0f2c25;color:#0f2c25;font-size:12.5px;font-weight:700;min-height:44px;padding:9px 16px;border-radius:999px;cursor:pointer;white-space:nowrap" onClick="{{ ci.checkStock }}"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">inventory_2</i>เช็คสต็อก</span>
+                  </sc-if>
+                  <sc-if value="{{ ci.noStaffTools }}" hint-placeholder-val="{{ true }}">
+                    <span style="font-size:13px;font-weight:600;color:#111;text-decoration:underline;cursor:pointer">ย้ายไปที่รายการโปรด</span>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ cartEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border-top:1px solid #e0e0de;padding:48px 0;display:flex;flex-direction:column;align-items:center;gap:12px">
+              <i style="font-family:'Material Symbols Outlined';font-size:44px;font-style:normal;line-height:1;color:#b0b0ae">shopping_cart</i>
+              <span style="font-size:14px;color:#555">ยังไม่มีสินค้าในตะกร้า</span>
+              <span style="background:#111;color:#fff;font-size:13px;font-weight:600;padding:11px 22px;border-radius:999px;cursor:pointer" onClick="{{ goHome }}">เลือกซื้อสินค้า</span>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="flex:1 1 320px;min-width:290px;max-width:420px;display:flex;flex-direction:column;gap:14px">
+          <span style="font-size:clamp(15px,1.5vw,17px);font-weight:700;color:#111">สรุปคำสั่งซื้อ</span>
+          <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#111"><span>สินค้า ({{ cartCount }})</span><b style="font-weight:700">{{ subtotal }}</b></div>
+          <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#111"><span>ราคาค่าจัดส่ง</span><span>เริ่มต้น 350 บาท</span></div>
+          <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#111"><span style="font-style:italic">หรือ <u>ใช้บริการรับที่สาขา</u></span><span>ไม่มีค่าบริการ</span></div>
+
+          <sc-if value="{{ isSalesRole }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #ededeb;border-radius:8px;padding:13px 14px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                <span style="font-size:12px;font-weight:700;color:#111">โปรโมชั่น / ส่วนลด</span>
+                <span style="font-size:11.5px;font-weight:600;color:#0f2c25;text-decoration:underline;cursor:pointer" onClick="{{ openPromo }}">{{ promoLinkLabel }}</span>
+              </div>
+              <sc-for list="{{ appliedPromos }}" as="ap" hint-placeholder-count="1">
+                <div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;color:#0b6b58"><span style="min-width:0;overflow-wrap:anywhere">{{ ap.label }}</span><b style="font-weight:700;white-space:nowrap">{{ ap.amount }}</b></div>
+              </sc-for>
+              <sc-if value="{{ noPromoApplied }}" hint-placeholder-val="{{ true }}">
+                <span style="font-size:11.5px;color:#8a6a17;line-height:1.55">ยังไม่ได้เช็คโปรโมชั่น — กดเพื่อดูโปรที่ลูกค้ารายนี้ใช้ได้และเงื่อนไขที่ยังไม่ครบ</span>
+              </sc-if>
+            </div>
+          </sc-if>
+          <div style="border-top:1px solid #111;padding-top:14px;display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px">
+            <span style="font-size:clamp(14px,1.4vw,16px);font-weight:600;color:#111">ยอดรวม (ไม่รวมค่าประกอบสินค้า)</span>
+            <span style="font-size:clamp(22px,2.6vw,30px);font-weight:700;color:#111;white-space:nowrap">{{ cartTotal }}</span>
+          </div>
+          <span style="font-size:11.5px;color:#5a5a58;line-height:1.6">เมื่อคลิก "ชำระเงิน" แสดงว่าคุณยอมรับ <u>นโยบายความเป็นส่วนตัว</u></span>
+
+          <sc-if value="{{ canPay }}" hint-placeholder-val="{{ false }}">
+            <span style="background:#111;color:#fff;font-size:14px;font-weight:700;padding:15px 20px;border-radius:999px;text-align:center;cursor:pointer" onClick="{{ goCheckout }}">ชำระเงิน</span>
+          </sc-if>
+
+          <sc-if value="{{ isGuest }}" hint-placeholder-val="{{ true }}">
+            <span style="display:flex;align-items:center;justify-content:center;gap:8px;background:#111;color:#fff;font-size:14px;font-weight:700;padding:15px 20px;border-radius:999px;text-align:center;cursor:pointer" onClick="{{ openLogin }}"><i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1">lock</i>เข้าสู่ระบบเพื่อชำระเงิน</span>
+          </sc-if>
+
+          <sc-if value="{{ isSalesRole }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <span style="border:1px solid #c9c9c7;background:#fff;color:#111;font-size:13px;font-weight:600;min-height:46px;padding:13px 20px;border-radius:999px;text-align:center;cursor:pointer;line-height:1.4" onClick="{{ savePreso }}">{{ presoLabel }}</span>
+              <span style="font-size:14px;font-weight:700;padding:15px 20px;border-radius:999px;text-align:center;cursor:pointer;background:{{ quoteBtnBg }};color:{{ quoteBtnColor }}" onClick="{{ makeQuote }}">สร้างใบเสนอราคา</span>
+              <span style="font-size:11.5px;color:#8a6a17;line-height:1.6">{{ salesHint }}</span>
+            </div>
+          </sc-if>
+
+          <div style="border:1px solid #ededeb;border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:9px">
+            <span style="font-size:12px;font-weight:700;color:#111;letter-spacing:.04em">สิทธิ์ของบัญชีที่ใช้อยู่ · {{ authRoleLabel }}</span>
+            <sc-for list="{{ permRows }}" as="pr" hint-placeholder-count="4">
+              <span style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:#3a3a38;line-height:1.55">
+                <i style="font-family:'Material Symbols Outlined';font-size:17px;font-style:normal;line-height:1.3;color:{{ pr.color }}">{{ pr.icon }}</i>{{ pr.label }}
+              </span>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px">
+            <sc-for list="{{ payments }}" as="pm" hint-placeholder-count="6">
+              <span style="width:52px;height:34px;border:1px solid #dcdcda;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font:500 7px/1 'IBM Plex Mono',monospace;color:#8a8a88">{{ pm }}</span>
+            </sc-for>
+          </div>
+          <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#111;margin-top:6px"><i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1">volunteer_activism</i><u>365 วันในการเปลี่ยนความคิดของคุณ</u></span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- checkout page -->
+  <sc-if value="{{ isCheckout }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#f5f5f3;padding:clamp(18px,2.5vw,32px) clamp(16px,4vw,80px) clamp(28px,4vw,48px)">
+      <span style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:#555;cursor:pointer;margin-bottom:14px" onClick="{{ goCart }}"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">arrow_back</i>กลับไปที่ตะกร้า</span>
+
+      <div style="display:flex;flex-wrap:wrap;gap:clamp(16px,2vw,24px);align-items:flex-start">
+
+        <!-- left : address form -->
+        <div style="flex:1 1 440px;min-width:300px;background:#fff;border-radius:10px;padding:clamp(18px,2.5vw,32px)">
+          <div style="font-size:clamp(21px,2.4vw,28px);font-weight:700;color:#111;margin-bottom:20px">สั่งซื้อสินค้า</div>
+          <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:6px">ที่อยู่จัดส่ง</div>
+          <div style="font-size:11.5px;color:#8a8a88;margin-bottom:18px">*กรุณากรอกข้อมูลให้ครบถ้วน เพื่อความรวดเร็วในการจัดส่งสินค้า</div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+            <sc-for list="{{ addressFields }}" as="af" hint-placeholder-count="8">
+              <label style="display:flex;flex-direction:column;gap:7px;grid-column:{{ af.span }}">
+                <span style="font-size:12.5px;color:#3a3a38">{{ af.label }}</span>
+                <span style="min-height:46px;border:1px solid #d6d6d4;border-radius:6px;background:#fff;display:flex;align-items:center;padding:0 14px;font-size:13px;color:#a8a8a6">{{ af.placeholder }}</span>
+              </label>
+            </sc-for>
+            <label style="display:flex;flex-direction:column;gap:7px;grid-column:1/-1">
+              <span style="font-size:12.5px;color:#3a3a38">ที่อยู่ (Address) *</span>
+              <span style="min-height:92px;border:1px solid #d6d6d4;border-radius:6px;background:#fff;display:block;padding:13px 14px;font-size:13px;color:#a8a8a6">เลขที่, หมู่บ้าน/โครงการ/คอนโด, ตึก</span>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:7px;grid-column:1/-1">
+              <span style="font-size:12.5px;color:#3a3a38">ประเทศ (Country) *</span>
+              <span style="min-height:46px;border:1px solid #d6d6d4;border-radius:6px;background:#f2f2f0;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:13px;color:#111">ไทย<i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1;color:#555">expand_more</i></span>
+            </label>
+          </div>
+
+          <div style="border-top:1px solid #ededeb;margin-top:24px;padding-top:20px">
+            <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:6px">ค่าจัดส่ง</div>
+            <div style="font-size:11.5px;color:#8a8a88;margin-bottom:14px">{{ shipHint }}</div>
+            <div style="border:1px solid #ededeb;border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:0">
+              <span style="font-size:13.5px;font-weight:700;color:#111;margin-bottom:12px">ร้าน SB Design Square</span>
+              <div style="display:flex;flex-direction:column;gap:3px;padding-bottom:12px;border-bottom:1px dashed #e4e4e2">
+                <span style="font-size:12.5px;color:#3a3a38">ยอดสั่งซื้อรวม (รวมภาษีมูลค่าเพิ่ม)</span>
+                <b style="font-size:14px;font-weight:700;color:#111">{{ subtotal }}</b>
+              </div>
+              <sc-for list="{{ shipLines }}" as="sl" hint-placeholder-count="2">
+                <div style="display:flex;flex-direction:column;gap:3px;padding:12px 0;border-bottom:1px dashed #e4e4e2">
+                  <span style="font-size:12.5px;color:#3a3a38;line-height:1.4">{{ sl.label }}</span>
+                  <b style="font-size:14px;font-weight:700;color:#111">{{ sl.value }}</b>
+                </div>
+              </sc-for>
+              <sc-if value="{{ hasPromoDiscount }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:3px;padding:12px 0;border-bottom:1px dashed #e4e4e2">
+                  <span style="font-size:12.5px;color:#0b6b58">ส่วนลดโปรโมชั่น / ส่วนลดพนักงาน</span>
+                  <b style="font-size:14px;font-weight:700;color:#0b6b58">{{ promoTotalText }}</b>
+                </div>
+              </sc-if>
+              <div style="display:flex;flex-direction:column;gap:3px;padding:12px 0;border-bottom:1px dashed #e4e4e2">
+                <span style="font-size:12.5px;color:#3a3a38">ค่าจัดส่ง</span>
+                <b style="font-size:14px;font-weight:700;color:#111">{{ shipFee }}</b>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px;padding-top:14px">
+                <span style="font-size:13.5px;font-weight:700;color:#111">ยอดรวมทั้งหมด</span>
+                <b style="font-size:clamp(16px,1.7vw,19px);font-weight:700;color:#111">{{ grandTotal }}</b>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- right : payment + summary -->
+        <div style="flex:1 1 340px;min-width:300px;max-width:460px;background:#fff;border-radius:10px;padding:clamp(18px,2.5vw,28px);display:flex;flex-direction:column;gap:18px">
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:12px">วิธีการชำระเงิน</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ payMethods }}" as="pm" hint-placeholder-count="3">
+                <div style="border:1.5px solid {{ pm.border }};background:{{ pm.bg }};border-radius:8px;padding:13px 15px;display:flex;align-items:center;gap:14px;cursor:pointer" onClick="{{ pm.pick }}">
+                  <i style="font-family:'Material Symbols Outlined';font-size:24px;font-style:normal;line-height:1;color:#111;flex:none">{{ pm.icon }}</i>
+                  <span style="flex:1;display:flex;flex-direction:column;gap:3px">
+                    <b style="font-size:13.5px;font-weight:700;color:#111">{{ pm.title }}</b>
+                    <span style="font-size:12px;color:#6a6a68">{{ pm.note }}</span>
+                  </span>
+                  <i style="font-family:'Material Symbols Outlined';font-size:22px;font-style:normal;line-height:1;color:{{ pm.tick }}">check_circle</i>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="border-top:1px solid #ededeb;padding-top:16px">
+            <div style="font-size:15px;font-weight:700;color:#111;margin-bottom:12px">สรุปใบสั่งซื้อ</div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ checkoutRows }}" as="cr" hint-placeholder-count="2">
+                <div style="display:flex;gap:12px;align-items:flex-start">
+                  <span style="width:52px;height:52px;flex:none;border:1px dashed #dcdcda;border-radius:4px;background:repeating-linear-gradient(135deg,#f2f2f0 0 8px,#fafaf8 8px 16px);display:flex;align-items:center;justify-content:center;font:400 8px/1 'IBM Plex Mono',monospace;color:#a0a09e">1:1</span>
+                  <span style="flex:1;display:flex;flex-direction:column;gap:3px">
+                    <b style="font-size:12.5px;font-weight:600;color:#111;line-height:1.4">{{ cr.name }}</b>
+                    <span style="font-size:11px;color:#8a8a88">SKU: {{ cr.sku }}</span>
+                    <span style="font-size:11px;color:#8a8a88">จำนวน: {{ cr.qty }}</span>
+                  </span>
+                  <b style="font-size:12.5px;font-weight:700;color:#111;white-space:nowrap">{{ cr.lineTotal }}</b>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- discount code -->
+          <div style="border-top:1px solid #ededeb;padding-top:16px;display:flex;flex-direction:column;gap:10px">
+            <span style="font-size:13.5px;font-weight:700;color:#111">โค้ดส่วนลด</span>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <span style="flex:1 1 160px;min-height:46px;border:1px solid #d6d6d4;border-radius:6px;display:flex;align-items:center;padding:0 14px;font-size:13px;color:#a8a8a6">กรอกโค้ดส่วนลด</span>
+              <span style="flex:none;min-height:46px;background:#111;color:#fff;font-size:13px;font-weight:600;padding:0 20px;border-radius:6px;display:flex;align-items:center;cursor:pointer" onClick="{{ applyCode }}">ใช้โค้ด</span>
+            </div>
+            <sc-if value="{{ codeApplied }}" hint-placeholder-val="{{ false }}">
+              <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#111"><i style="font-family:'Material Symbols Outlined';font-size:17px;font-style:normal;line-height:1">check_circle</i>ใช้โค้ด SB300 แล้ว — ลด 300 บาท</span>
+            </sc-if>
+          </div>
+
+          <div style="border-top:1px solid #ededeb;padding-top:16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;gap:12px;font-size:13.5px;font-weight:700;color:#111"><span>ยอดสั่งซื้อ</span><span>{{ subtotal }}</span></div>
+            <div style="display:flex;justify-content:space-between;gap:12px;font-size:13.5px;color:#111"><span>ค่าจัดส่ง</span><span>{{ shipFee }}</span></div>
+            <sc-if value="{{ codeApplied }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;justify-content:space-between;gap:12px;font-size:13.5px;color:#111"><span>ส่วนลด (SB300)</span><span>−300 บาท</span></div>
+            </sc-if>
+            <div style="border-top:1px solid #111;padding-top:12px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline">
+              <span style="font-size:clamp(14px,1.4vw,16px);font-weight:700;color:#111">ยอดสั่งซื้อทั้งหมด</span>
+              <span style="font-size:clamp(19px,2.2vw,24px);font-weight:700;color:#111;white-space:nowrap">{{ grandTotal }}</span>
+            </div>
+          </div>
+
+          <span style="display:flex;align-items:flex-start;gap:9px;font-size:12px;color:#3a3a38;line-height:1.5"><i style="font-family:'Material Symbols Outlined';font-size:19px;font-style:normal;line-height:1;color:#111">check_box</i>ที่อยู่สำหรับออกใบเสร็จ ใช้ที่อยู่ผู้จัดส่งสินค้า</span>
+          <span style="background:#2a2a2a;color:#fff;font-size:14px;font-weight:700;padding:15px 20px;border-radius:6px;text-align:center;cursor:pointer">ยืนยันการสั่งซื้อ</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- footer : promo cols → link cols → social/payment/lang → legal -->
+  <div style="margin-top:clamp(28px,4vw,56px);background:#f5f5f3;color:#111;padding:clamp(28px,4vw,56px) clamp(16px,4vw,80px) 22px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:32px clamp(24px,3vw,48px)">
+      <div style="display:flex;flex-direction:column;gap:34px">
+        <sc-for list="{{ footerPromos }}" as="fp" hint-placeholder-count="2">
+          <div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start">
+            <span style="font-size:15px;font-weight:700;color:#111">{{ fp.head }}</span>
+            <span style="font-size:12.5px;color:#3a3a38;line-height:1.75;text-wrap:pretty">{{ fp.body }}</span>
+            <span style="background:#111;color:#fff;font-size:12.5px;font-weight:600;padding:11px 20px;border-radius:999px">{{ fp.cta }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-for list="{{ footerCols }}" as="fc" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <span style="font-size:15px;font-weight:700;color:#111">{{ fc.head }}</span>
+          <sc-for list="{{ fc.items }}" as="fi" hint-placeholder-count="6">
+            <span style="font-size:12.5px;color:#3a3a38;line-height:1.4">{{ fi }}</span>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="margin-top:clamp(30px,4vw,52px);padding-bottom:22px;border-bottom:1px solid #e0e0de;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:18px 24px">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px">
+        <div style="display:flex;gap:10px">
+          <sc-for list="{{ socialIcons }}" as="si" hint-placeholder-count="6">
+            <span style="width:32px;height:32px;border-radius:50%;background:#e6e6e4;display:flex;align-items:center;justify-content:center;color:#111"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">{{ si }}</i></span>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ payments }}" as="pm" hint-placeholder-count="7">
+            <span style="width:46px;height:30px;border:1px solid #dcdcda;border-radius:3px;background:#fff;display:flex;align-items:center;justify-content:center;font:500 7px/1 'IBM Plex Mono',monospace;color:#8a8a88">{{ pm }}</span>
+          </sc-for>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px">
+        <span style="display:flex;align-items:center;gap:7px;border:1px solid #111;border-radius:999px;padding:10px 18px;font-size:12.5px;font-weight:500;color:#111;white-space:nowrap"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">settings</i>การตั้งค่าคุกกี้</span>
+        <span style="display:flex;align-items:center;gap:7px;border:1px solid #111;border-radius:999px;padding:10px 18px;font-size:12.5px;color:#111;white-space:nowrap"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1">language</i><b style="font-weight:700">TH</b><i style="width:1px;height:16px;background:#c9c9c7;display:block"></i>ไทย</span>
+      </div>
+    </div>
+
+    <div style="padding-top:22px;display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:16px 24px">
+      <div style="display:flex;flex-direction:column;gap:22px">
+        <span style="font-size:12px;color:#5a5a58">© SB Design Square 1999–2026</span>
+        <span style="font-size:12px;color:#5a5a58">บริษัท เอสบี ดีไซน์ สแควร์ จำกัด (ทะเบียนเลขที่ 0000000000000)</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px 22px">
+        <sc-for list="{{ legalLinks }}" as="ll" hint-placeholder-count="4">
+          <span style="font-size:12px;color:#3a3a38;white-space:nowrap">{{ ll }}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ searchOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:88;background:rgba(17,17,17,.5);display:flex;align-items:stretch;justify-content:flex-end;padding:0">
+      <div style="width:100%;max-width:560px;height:100%;max-height:100%;background:#fff;padding:clamp(16px,3vw,26px);display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:11.5px;font-weight:700;color:#0f2c25;letter-spacing:.06em">ขั้นที่ 1 · ค้นหาสินค้า (MATNR)</span>
+            <span style="font-size:16px;font-weight:700;color:#111">เพิ่มสินค้าให้ {{ searchTargetLabel }}</span>
+          </div>
+          <i style="font-family:'Material Symbols Outlined';font-size:24px;font-style:normal;line-height:1;color:#8a8a88;cursor:pointer" onClick="{{ closeSearch }}">close</i>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <span style="flex:1;display:flex;align-items:center;gap:9px;border:1.5px solid #111;border-radius:8px;padding:0 12px;min-height:46px">
+            <i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1">search</i>
+            <input value="{{ matQuery }}" onChange="{{ onMatQuery }}" placeholder="ชื่อสินค้า / MATNR / บาร์โค้ด" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13.5px;color:#111;font-family:inherit" />
+          </span>
+          <span style="display:flex;align-items:center;gap:6px;border:1px solid #d6d6d4;border-radius:8px;padding:0 14px;min-height:46px;font-size:12.5px;font-weight:600;color:#111;cursor:pointer" onClick="{{ scanMat }}"><i style="font-family:'Material Symbols Outlined';font-size:19px;font-style:normal;line-height:1">barcode_scanner</i>สแกน</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ matResults }}" as="mr" hint-placeholder-count="3">
+            <div style="border:1px solid #ededeb;border-radius:8px;padding:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+              <span style="width:56px;height:56px;flex:none;border:1px dashed #dcdcda;background:repeating-linear-gradient(135deg,#f2f2f0 0 8px,#fafaf8 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9px/1 'IBM Plex Mono',monospace;color:#a0a09e">1:1</span>
+              <span style="flex:1 1 180px;min-width:150px;display:flex;flex-direction:column;gap:3px">
+                <b style="font:600 13.5px/1.35 'Noto Sans Thai',sans-serif;color:#111">{{ mr.name }}</b>
+                <span style="font-size:11px;color:#8a8a88;font-family:'IBM Plex Mono',monospace">{{ mr.mat }}</span>
+                <span style="font-size:11.5px;color:{{ mr.stockColor }};font-weight:600">{{ mr.stockNote }}</span>
+              </span>
+              <span style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex:none">
+                <b style="font:700 14px/1 'Noto Sans Thai',sans-serif;color:#111">{{ mr.price }}</b>
+                <span style="font-size:11px;color:#c8102e;font-weight:600">{{ mr.member }}</span>
+              </span>
+              <span style="display:flex;gap:7px;flex:1 1 200px">
+                <span style="flex:1;text-align:center;border:1.5px solid #0f2c25;color:#0f2c25;font-size:12px;font-weight:700;padding:11px 12px;border-radius:8px;cursor:pointer" onClick="{{ mr.checkStock }}">เช็คสต็อก</span>
+                <span style="flex:1;text-align:center;background:#c8102e;color:#fff;font-size:12px;font-weight:700;padding:11px 12px;border-radius:8px;cursor:pointer" onClick="{{ mr.add }}">{{ mr.addLabel }}</span>
+              </span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ matEmpty }}" hint-placeholder-val="{{ false }}">
+            <span style="padding:30px 0;text-align:center;font-size:13px;color:#8a8a88">ไม่พบสินค้าที่ตรงกับคำค้น</span>
+          </sc-if>
+        </div>
+
+        <span style="margin-top:auto;font-size:11.5px;color:#8a8a88;line-height:1.6">กด "เช็คสต็อก" ก่อนลงตะกร้าเสมอ เพื่อยืนยันว่าของมีจริงที่สาขาหรือคลัง (ATP)</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ promoOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:88;background:rgba(17,17,17,.5);display:flex;align-items:stretch;justify-content:flex-end;padding:0">
+      <div style="width:100%;max-width:520px;height:100%;max-height:100%;background:#fff;padding:clamp(16px,3vw,26px);display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:11.5px;font-weight:700;color:#0f2c25;letter-spacing:.06em">ขั้นที่ 6 · เช็คโปรโมชั่น</span>
+            <span style="font-size:16px;font-weight:700;color:#111">โปรที่ตรวจจากตะกร้าใบนี้</span>
+            <span style="font-size:11.5px;color:#8a8a88">{{ promoScope }}</span>
+          </div>
+          <i style="font-family:'Material Symbols Outlined';font-size:24px;font-style:normal;line-height:1;color:#8a8a88;cursor:pointer" onClick="{{ closePromo }}">close</i>
+        </div>
+
+        <sc-for list="{{ promoList }}" as="pl" hint-placeholder-count="3">
+          <div style="border-radius:9px;padding:13px 14px;display:flex;gap:11px;align-items:flex-start;border:1.5px solid {{ pl.border }};background:{{ pl.bg }}">
+            <i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1.1;color:{{ pl.iconColor }}">{{ pl.icon }}</i>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+              <b style="font:600 13px/1.35 'Noto Sans Thai',sans-serif;color:#111">{{ pl.title }}</b>
+              <span style="font-size:11.5px;color:#5a5a58;line-height:1.55;overflow-wrap:anywhere">{{ pl.cond }}</span>
+              <span style="font-size:11.5px;font-weight:600;color:{{ pl.noteColor }}">{{ pl.note }}</span>
+            </span>
+            <span style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex:none">
+              <b style="font:700 13px/1 'Noto Sans Thai',sans-serif;color:{{ pl.amountColor }}">{{ pl.amount }}</b>
+              <span style="font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:6px;cursor:pointer;border:1.5px solid {{ pl.btnBorder }};background:{{ pl.btnBg }};color:{{ pl.btnColor }}" onClick="{{ pl.toggle }}">{{ pl.btnLabel }}</span>
+            </span>
+          </div>
+        </sc-for>
+
+        <div style="border:1px solid #ededeb;border-radius:9px;padding:13px 14px;display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+            <b style="font:600 13px/1.3 'Noto Sans Thai',sans-serif;color:#111">ส่วนลดพนักงาน (manual)</b>
+            <span style="font-size:11px;color:#8a8a88">โควตาสูงสุด 3%</span>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ discSteps }}" as="ds" hint-placeholder-count="4">
+              <span style="font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:8px;cursor:pointer;border:1.5px solid {{ ds.border }};background:{{ ds.bg }};color:{{ ds.color }}" onClick="{{ ds.pick }}">{{ ds.label }}</span>
+            </sc-for>
+          </div>
+          <span style="font-size:11px;color:#c8102e;line-height:1.5">เกิน 3% ต้องส่งคำขออนุมัติผู้จัดการสาขาในแอป</span>
+        </div>
+
+        <div style="margin-top:auto;border-top:1px solid #ededeb;padding-top:14px;display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#111"><span>ยอดสินค้า</span><b style="font-weight:700">{{ subtotal }}</b></div>
+          <div style="display:flex;justify-content:space-between;gap:12px;font-size:13px;color:#0b6b58"><span>ส่วนลดรวม</span><b style="font-weight:700">{{ promoTotalText }}</b></div>
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline"><b style="font:700 14px/1.3 'Noto Sans Thai',sans-serif;color:#111">ยอดหลังส่วนลด</b><b style="font:700 22px/1 'Noto Sans Thai',sans-serif;color:#111">{{ netAfterPromo }}</b></div>
+          <span style="background:#0f2c25;color:#fff;font-size:13.5px;font-weight:700;padding:14px 20px;border-radius:999px;text-align:center;cursor:pointer" onClick="{{ closePromo }}">ยืนยันส่วนลด · ไปขั้นเช็คคิวจัดส่ง</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ stockOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:88;background:rgba(17,17,17,.5);display:flex;align-items:stretch;justify-content:flex-end;padding:0">
+      <div style="width:100%;max-width:430px;height:100%;max-height:100%;background:#fff;padding:clamp(16px,3vw,26px);display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:11.5px;font-weight:700;color:#0f2c25;letter-spacing:.06em">เช็คสต็อกเรียลไทม์</span>
+            <span style="font-size:16px;font-weight:700;color:#111;line-height:1.4">{{ stockName }}</span>
+            <span style="font-size:11.5px;color:#8a8a88;font-family:'IBM Plex Mono',monospace">{{ stockMat }}</span>
+          </div>
+          <i style="font-family:'Material Symbols Outlined';font-size:24px;font-style:normal;line-height:1;color:#8a8a88;cursor:pointer" onClick="{{ closeStock }}">close</i>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ stockRows }}" as="sr" hint-placeholder-count="3">
+            <div style="border:1px solid #ededeb;border-radius:8px;padding:13px 14px;display:flex;flex-direction:column;gap:5px">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                <span style="display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:#111"><i style="font-family:'Material Symbols Outlined';font-size:18px;font-style:normal;line-height:1;color:#8a8a88">{{ sr.icon }}</i>{{ sr.loc }}</span>
+                <b style="font:700 13.5px/1 'Noto Sans Thai',sans-serif;color:{{ sr.color }}">{{ sr.qty }}</b>
+              </div>
+              <span style="font-size:11.5px;color:#6a6a68;line-height:1.55">{{ sr.note }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="border:1px solid #ededeb;border-radius:8px;padding:13px 14px;display:flex;flex-direction:column;gap:9px">
+          <span style="font-size:12px;font-weight:700;color:#111">คิวจัดส่งที่ว่าง</span>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ slotRows }}" as="sl" hint-placeholder-count="3">
+              <span style="border:1px solid #dcdcda;border-radius:8px;padding:8px 12px;display:flex;flex-direction:column;gap:2px">
+                <b style="font:600 12px/1.3 'Noto Sans Thai',sans-serif;color:#111">{{ sl.day }}</b>
+                <span style="font-size:10.5px;color:{{ sl.color }}">{{ sl.note }}</span>
+              </span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:9px">
+          <span style="font-size:11.5px;color:#8a8a88;line-height:1.6">ข้อมูลจาก service ของระบบหลังบ้าน (SAP) · อัปเดตล่าสุด 09:46</span>
+          <span style="background:#0f2c25;color:#fff;font-size:13.5px;font-weight:700;padding:14px 20px;border-radius:999px;text-align:center;cursor:pointer" onClick="{{ closeStock }}">ปิดหน้าต่าง</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ authOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;inset:0;z-index:90;background:rgba(17,17,17,.55);display:flex;align-items:center;justify-content:center;padding:clamp(10px,3vw,24px);overflow-y:auto">
+      <div style="width:100%;max-width:430px;max-height:94vh;overflow-y:auto;background:#fff;border-radius:12px;padding:clamp(18px,3vw,30px);display:flex;flex-direction:column;gap:14px;margin:auto">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font-size:19px;font-weight:700;color:#111">{{ authTitle }}</span>
+            <span style="font-size:12px;color:#6a6a68;line-height:1.6">เลือกประเภทบัญชี ระบบจะเปิดสิทธิ์ในหน้าตะกร้าให้ตรงกับบทบาท</span>
+          </div>
+          <i style="font-family:'Material Symbols Outlined';font-size:24px;font-style:normal;line-height:1;color:#8a8a88;cursor:pointer" onClick="{{ closeLogin }}">close</i>
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <sc-for list="{{ roleTabs }}" as="rt" hint-placeholder-count="2">
+            <span style="flex:1;text-align:center;font-size:13px;font-weight:600;padding:11px 8px;border-radius:8px;cursor:pointer;border:1.5px solid {{ rt.border }};background:{{ rt.bg }};color:{{ rt.color }}" onClick="{{ rt.pick }}">{{ rt.label }}</span>
+          </sc-for>
+        </div>
+
+        <label style="display:flex;flex-direction:column;gap:7px">
+          <span style="font-size:12.5px;color:#3a3a38">{{ idLabel }}</span>
+          <input value="{{ loginId }}" onChange="{{ onLoginId }}" placeholder="{{ idPlaceholder }}" style="min-height:46px;border:1px solid #d6d6d4;border-radius:6px;padding:0 14px;font-size:13.5px;color:#111;font-family:inherit;outline:none;background:#fff" />
+        </label>
+        <label style="display:flex;flex-direction:column;gap:7px">
+          <span style="font-size:12.5px;color:#3a3a38">รหัสผ่าน</span>
+          <input value="{{ loginPass }}" onChange="{{ onLoginPass }}" type="password" placeholder="กรอกรหัสผ่าน" style="min-height:46px;border:1px solid #d6d6d4;border-radius:6px;padding:0 14px;font-size:13.5px;color:#111;font-family:inherit;outline:none;background:#fff" />
+        </label>
+
+        <sc-if value="{{ authError }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size:12px;color:#c8102e;line-height:1.5">{{ authError }}</span>
+        </sc-if>
+
+        <span style="font-size:14px;font-weight:700;padding:15px 20px;border-radius:999px;text-align:center;cursor:pointer;background:#111;color:#fff" onClick="{{ doLogin }}">เข้าสู่ระบบ</span>
+
+        <div style="border-top:1px solid #ededeb;padding-top:14px;display:flex;flex-direction:column;gap:9px">
+          <span style="font-size:11.5px;font-weight:600;color:#8a8a88;letter-spacing:.04em">บัญชีทดสอบ · กดเพื่อกรอกอัตโนมัติ</span>
+          <sc-for list="{{ demoAccounts }}" as="da" hint-placeholder-count="2">
+            <span style="display:flex;align-items:center;gap:10px;border:1px solid #ededeb;border-radius:8px;padding:10px 12px;cursor:pointer" onClick="{{ da.fill }}">
+              <i style="font-family:'Material Symbols Outlined';font-size:20px;font-style:normal;line-height:1;color:#111">{{ da.icon }}</i>
+              <span style="display:flex;flex-direction:column;gap:2px">
+                <b style="font:600 12.5px/1.3 'Noto Sans Thai',sans-serif;color:#111">{{ da.title }}</b>
+                <span style="font-size:11.5px;color:#6a6a68">{{ da.sub }}</span>
+              </span>
+            </span>
+          </sc-for>
+          <span style="font-size:12px;color:#3a3a38">ยังไม่มีบัญชี? <u style="cursor:pointer">ลงทะเบียนสมาชิกใหม่</u></span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  state = {
+    menu: null,
+    sideIdx: 0,
+    page: "home",
+    ship: 0,
+    pay: 0,
+    code: false,
+    auth: null,
+    authOpen: false,
+    authTab: "customer",
+    loginId: "",
+    loginPass: "",
+    authError: "",
+    stockFor: null,
+    searchOpen: false,
+    matQuery: "",
+    promoOpen: false,
+    activeSid: "s1",
+    sessions: [
+      {
+        id: "s1", no: "#8823", cust: "ณภัทร พงษ์ศรี · CUST 4400182 · Gold", preso: null,
+        cart: [
+          { id: 11, mat: "10023841", sku: "SOF-NRD-3S-GY", name: "โซฟา 3 ที่นั่ง รุ่น NORDIC", variant: "ผ้ากันเปื้อน, สีเทาอ่อน", spec: "กว้าง 210 ซม.", price: 24900, qty: 1 },
+          { id: 12, mat: "10031002", sku: "LGT-ARC-BRS", name: "โคมไฟตั้งพื้น รุ่น ARC BRASS", variant: "ทองเหลืองรมดำ", spec: "สูง 165 ซม.", price: 3590, qty: 2, byStaff: true }
+        ]
+      },
+      {
+        id: "s2", no: "#8824", cust: "คุณวีระ · ลูกค้าใหม่ ยังไม่มีสมาชิก", preso: "PRE-260906-0038",
+        cart: [
+          { id: 21, mat: "10044290", sku: "BED-SLP-6FT", name: "ที่นอนพ็อกเก็ตสปริง 6 ฟุต", variant: "รุ่น SLEEP PRO", spec: "180 × 200 ซม.", price: 18500, qty: 1, byStaff: true }
+        ]
+      },
+      { id: "s3", no: "#8826", cust: null, preso: null, promoOn: [], staffDisc: 0, cart: [] }
+    ],
+    cart: [
+      { id: 1, mat: "10023841", sku: "SOF-NRD-3S-GY", name: "โซฟา 3 ที่นั่ง รุ่น NORDIC", variant: "ผ้ากันเปื้อน, สีเทาอ่อน", spec: "กว้าง 210 ซม.", price: 24900, qty: 1 },
+      { id: 2, mat: "10052277", sku: "TBL-OAK-120", name: "โต๊ะกลาง รุ่น LOFT", variant: "ไม้โอ๊ค, ขาเหล็กดำ", spec: "110 × 60 ซม.", price: 6290, qty: 1 },
+      { id: 3, mat: "10031002", sku: "LGT-ARC-BRS", name: "โคมไฟตั้งพื้น รุ่น ARC BRASS", variant: "ทองเหลืองรมดำ", spec: "สูง 165 ซม.", price: 3590, qty: 1, byStaff: true, by: "สมชาย ก. (SA-104)", at: "09:46", pending: true }
+    ]
+  };
+
+  authVals() {
+    const a = this.state.auth;
+    const role = a ? a.role : "guest";
+    const isSales = role === "sales";
+    const linked = isSales ? (this.activeSession() || {}).cust : null;
+    const perms = {
+      guest: [
+        { icon: "check_circle", color: "#0b6b58", label: "ดู / แก้ไขสินค้าในตะกร้าได้" },
+        { icon: "block", color: "#c8102e", label: "ชำระเงินไม่ได้ — ต้องเข้าสู่ระบบหรือลงทะเบียนก่อน" },
+        { icon: "block", color: "#c8102e", label: "ไม่เห็นราคาสมาชิกและโปรเฉพาะสมาชิก" },
+        { icon: "info", color: "#8a8a88", label: "ตะกร้าจะถูกโอนเข้าบัญชีเมื่อเข้าสู่ระบบ" }
+      ],
+      customer: [
+        { icon: "check_circle", color: "#0b6b58", label: "แก้ไขตะกร้า + ชำระเงินได้เอง" },
+        { icon: "check_circle", color: "#0b6b58", label: "เห็นราคาสมาชิกและโปรที่ใช้ได้" },
+        { icon: "check_circle", color: "#0b6b58", label: "ลบสินค้าที่พนักงานเพิ่มให้ได้ทุกเมื่อ" },
+        { icon: "block", color: "#c8102e", label: "ไม่เห็นต้นทุน สต็อกข้ามสาขา และเครื่องมือของพนักงาน" }
+      ],
+      sales: [
+        { icon: "check_circle", color: "#0b6b58", label: "เพิ่ม / แก้ไขสินค้าในตะกร้าลูกค้าได้" },
+        { icon: "check_circle", color: "#0b6b58", label: "เช็คสต็อกข้ามสาขา · โปรโมชั่น · คิวจัดส่ง" },
+        { icon: "check_circle", color: "#0b6b58", label: "Save Preso และออกใบเสนอราคา (Quotation)" },
+        { icon: "block", color: "#c8102e", label: "รับเงินเองไม่ได้ — ลูกค้าจ่ายผ่าน QR / ลิงก์ / แคชเชียร์" }
+      ]
+    };
+    return { a, role, isSales, linked, perms: perms[role] };
+  }
+
+  login() {
+    const tab = this.state.authTab;
+    if (!this.state.loginId.trim() || !this.state.loginPass.trim()) {
+      this.setState({ authError: "กรอกข้อมูลให้ครบทั้ง 2 ช่อง (บัญชีทดสอบกดปุ่มด้านล่างได้)" });
+      return;
+    }
+    const auth = tab === "sales"
+      ? { role: "sales", name: "สมชาย ก.", code: "SA-104" }
+      : { role: "customer", name: "ณภัทร พงษ์ศรี", tier: "Gold", cust: "CUST 4400182" };
+    this.setState({ auth, authOpen: false, authError: "", loginPass: "", loginId: "" });
+  }
+
+  fmt(n) { return n.toLocaleString("en-US") + " บาท"; }
+  pickShip(i) { this.setState({ ship: i }); }
+  salesMode() { return !!this.state.auth && this.state.auth.role === "sales"; }
+  activeSession() {
+    return this.state.sessions.find(x => x.id === this.state.activeSid) || this.state.sessions[0];
+  }
+  mutateCart(fn) {
+    this.setState(s => this.salesMode()
+      ? { sessions: s.sessions.map(x => x.id === s.activeSid ? { ...x, cart: fn(x.cart) } : x) }
+      : { cart: fn(s.cart) });
+  }
+  mutateSession(patch) {
+    this.setState(s => ({ sessions: s.sessions.map(x => x.id === s.activeSid ? { ...x, ...patch } : x) }));
+  }
+  newSession() {
+    const id = "s" + Date.now();
+    this.setState(s => ({
+      sessions: s.sessions.concat([{ id, no: "#" + (8825 + s.sessions.length), cust: null, cart: [], preso: null, promoOn: [], staffDisc: 0 }]),
+      activeSid: id,
+      stockFor: null
+    }));
+  }
+  closeSession(id) {
+    this.setState(s => {
+      const left = s.sessions.filter(x => x.id !== id);
+      const keep = left.length ? left : [{ id: "s" + Date.now(), no: "#8830", cust: null, cart: [], preso: null }];
+      return { sessions: keep, activeSid: s.activeSid === id ? keep[0].id : s.activeSid, stockFor: null };
+    });
+  }
+  setQty(id, d) {
+    this.mutateCart(c => c.map(x => x.id === id ? { ...x, qty: Math.max(1, x.qty + d) } : x));
+  }
+
+  renderVals() {
+    const navDefs = [
+      { label: "ช้อปตามห้อง", items: ["ห้องนอน", "ห้องนั่งเล่น", "ห้องทานอาหาร", "ห้องครัว", "โฮมออฟฟิศ", "ห้องน้ำ", "ห้องเด็ก", "พื้นที่ขนาดเล็ก"] },
+      { label: "ช้อปตามแบรนด์", items: ["SB Design Square", "SB Furniture", "Koncept Furniture", "Fina Living", "Bedism", "Brand Fair"] },
+      { label: "ตกแต่ง–ออกแบบ", items: ["ออกแบบห้องฟรี", "จัดบ้านครบชุด", "ปรับปรุงพื้นที่", "นัดคุยกับดีไซเนอร์", "ผลงานที่ผ่านมา"] },
+      { label: "ไอเดียแต่งบ้าน", items: ["ไอเดียห้องนอน", "ไอเดียห้องนั่งเล่น", "ไอเดียห้องทำงาน", "สไตล์มินิมอล", "สไตล์โมเดิร์นลักซ์", "ทิปส์จัดบ้าน"] },
+      { label: "ช่างและติดตั้ง", items: ["บริการติดตั้ง", "บริการซ่อมแซม", "ตรวจเช็กสภาพเฟอร์นิเจอร์", "นัดหมายช่าง", "ค่าบริการ"] },
+      { label: "โปรเด็ด", items: ["ดีลวันนี้", "ผ่อน 0%", "สินค้าลดล้างสต็อก", "คูปองส่วนลด", "โปรสมาชิก"] }
+    ];
+    const sideList = [
+      "หมวดหมู่ทั้งหมด", "ห้องนอน", "ห้องนั่งเล่น", "โซฟาและเก้าอี้พักผ่อน", "ห้องทานอาหาร",
+      "ห้องครัวและอุปกรณ์", "ตู้เก็บของและอุปกรณ์จัดเก็บ", "โฮมออฟฟิศ และ เกมมิ่ง", "ที่นอนและเครื่องนอน",
+      "ตกแต่งผนัง", "โคมไฟและของแต่งบ้าน", "พรมและผ้าม่าน", "เฟอร์นิเจอร์นอกบ้าน & สวน",
+      "เฟอร์นิเจอร์สำนักงาน", "Small Spaces", "สินค้าเด็กและครอบครัว"
+    ];
+    this.newRef = this.newRef || React.createRef();
+    const scrollNew = dir => () => {
+      const el = this.newRef.current;
+      if (el) el.scrollBy({ left: dir * Math.round(el.clientWidth * 0.8), behavior: "smooth" });
+    };
+    const sess = this.activeSession() || { cart: [], no: "", cust: null, preso: null };
+    const cart = this.salesMode() ? sess.cart : this.state.cart;
+    const count = cart.reduce((n, c) => n + c.qty, 0);
+    const sum = cart.reduce((n, c) => n + c.qty * c.price, 0);
+    const shipFeeVal = this.state.ship === 0 ? 399 : 0;
+    const discount = this.state.code ? 300 : 0;
+    const open = this.state.menu;
+    const subDef = navDefs.find(n => n.label === open);
+    const av = this.authVals();
+    const staffCount = cart.filter(c => c.byStaff).length;
+    const catalog = [
+      { mat: "10023841", sku: "SOF-NRD-3S-GY", name: "โซฟา 3 ที่นั่ง รุ่น NORDIC", variant: "ผ้ากันเปื้อน, สีเทาอ่อน", spec: "กว้าง 210 ซม.", price: 24900, stock: 2, wh: 18 },
+      { mat: "10025117", sku: "SOF-VRN-3S-BR", name: "โซฟา 3 ที่นั่ง รุ่น VERONA", variant: "หนัง PU, สีน้ำตาล", spec: "กว้าง 205 ซม.", price: 45900, stock: 0, wh: 6 },
+      { mat: "10031002", sku: "LGT-ARC-BRS", name: "โคมไฟตั้งพื้น รุ่น ARC BRASS", variant: "ทองเหลืองรมดำ", spec: "สูง 165 ซม.", price: 3590, stock: 5, wh: 40 },
+      { mat: "10044290", sku: "BED-SLP-6FT", name: "ที่นอนพ็อกเก็ตสปริง 6 ฟุต", variant: "รุ่น SLEEP PRO", spec: "180 × 200 ซม.", price: 18500, stock: 1, wh: 12 },
+      { mat: "10052277", sku: "TBL-OAK-120", name: "โต๊ะกลาง รุ่น OAK 120", variant: "ไม้โอ๊ค, ขาเหล็กดำ", spec: "120 × 60 ซม.", price: 8900, stock: 3, wh: 22 }
+    ];
+    const promoDefs = [
+      { code: "SEP-SOFA15", title: "โซฟาลด 15%", cond: "มีสินค้าหมวดโซฟาในบิล และยอด ≥ 20,000 บาท", blockNote: "ยังไม่เข้าเงื่อนไข: ต้องมีโซฟาในบิล และยอด ≥ 20,000",
+        eligible: (s, c) => s >= 20000 && c.some(x => x.name.includes("โซฟา")), value: s => Math.round(s * 0.15) },
+      { code: "GOLD-FREESHIP", title: "ส่งฟรีในเขต กทม.", cond: "ลูกค้าสมาชิก Gold และยอด ≥ 30,000 บาท", blockNote: "ยังไม่เข้าเงื่อนไข: ต้องผูกลูกค้าสมาชิก Gold และยอด ≥ 30,000",
+        eligible: (s, c, cust) => s >= 30000 && !!cust && cust.includes("Gold"), value: () => 800 },
+      { code: "BUNDLE-BED", title: "ซื้อที่นอนแถมหมอน 2 ใบ", cond: "มีที่นอนในบิลอย่างน้อย 1 ชิ้น", blockNote: "ยังไม่เข้าเงื่อนไข: ขาดที่นอนในบิล 1 ชิ้น",
+        eligible: (s, c) => c.some(x => x.name.includes("ที่นอน")), value: () => 1290 }
+    ];
+    const pendingRows = cart.filter(c => c.byStaff && c.pending);
+    const salesNow = this.salesMode();
+    const sessPromo = salesNow ? (sess.promoOn || []) : [];
+    const sessDisc = salesNow ? (sess.staffDisc || 0) : 0;
+    const appliedList = [];
+    let promoTotal = 0;
+    promoDefs.forEach(p => {
+      if (sessPromo.includes(p.code) && p.eligible(sum, cart, av.linked)) {
+        const v = p.value(sum);
+        promoTotal += v;
+        appliedList.push({ label: p.code + " · " + p.title, amount: "−" + this.fmt(v) });
+      }
+    });
+    if (sessDisc > 0) {
+      const v = Math.round(sum * sessDisc / 100);
+      promoTotal += v;
+      appliedList.push({ label: "ส่วนลดพนักงาน " + sessDisc + "%", amount: "−" + this.fmt(v) });
+    }
+    const matStock = typeof this.state.stockFor === "string" && this.state.stockFor.indexOf("mat:") === 0;
+    const stockItem = av.role !== "sales" ? null
+      : matStock
+        ? { name: this.state.matPreview || "สินค้าที่เลือก", variant: "จากผลค้นหา MATNR", id: 0, matNo: this.state.stockFor.slice(4) }
+        : cart.find(c => c.id === this.state.stockFor);
+    return {
+      loggedOut: !av.a,
+      loggedIn: !!av.a,
+      authName: av.a ? av.a.name : "",
+      authRoleLabel: av.role === "sales" ? "พนักงานขาย · " + (av.a ? av.a.code : "") : av.role === "customer" ? "สมาชิก " + (av.a ? av.a.tier : "") : "ผู้เยี่ยมชม (ไม่ล็อกอิน)",
+      isGuest: !av.a,
+      isSalesRole: av.role === "sales",
+      isCustomerRole: av.role === "customer",
+      canPay: av.role === "customer",
+      cartTitle: av.role === "sales" ? "ตะกร้าที่กำลังดูแล" : "ตะกร้าสินค้าของคุณ",
+      customerBannerText: "เข้าสู่ระบบแล้ว — ใช้ราคาสมาชิก " + (av.a && av.a.tier ? av.a.tier : "") + " และชำระเงินได้ทันที",
+      staffHelping: staffCount > 0,
+      hasPending: av.role !== "sales" && pendingRows.length > 0,
+      pendingHead: "พนักงานเพิ่มสินค้าให้คุณ " + pendingRows.length + " รายการ",
+      pendingItems: pendingRows.map(c => ({
+        name: c.name,
+        detail: c.variant + " · " + this.fmt(c.price) + " × " + c.qty,
+        who: "เพิ่มโดย " + (c.by || "พนักงานขาย") + " · " + (c.at || "เมื่อสักครู่"),
+        keep: () => this.mutateCart(list => list.map(x => x.id === c.id ? { ...x, pending: false } : x)),
+        drop: () => this.mutateCart(list => list.filter(x => x.id !== c.id))
+      })),
+      simulateStaffAdd: () => this.mutateCart(list => list.concat([{
+        id: Date.now(), mat: "10044290", sku: "BED-SLP-6FT", name: "ที่นอนพ็อกเก็ตสปริง 6 ฟุต", variant: "รุ่น SLEEP PRO",
+        spec: "180 × 200 ซม.", price: 18500, qty: 1, byStaff: true, by: "สมชาย ก. (SA-104)", at: "เมื่อสักครู่", pending: true
+      }])),
+      sessionLabel: "SESSION " + sess.no,
+      sessionTabs: this.state.sessions.map(s => {
+        const n = s.cart.reduce((a, c) => a + c.qty, 0);
+        const on = s.id === this.state.activeSid;
+        return {
+          title: s.cust ? s.cust.split(" · ")[0] : "ตะกร้าใหม่ " + s.no,
+          sub: n > 0 ? n + " ชิ้น · " + this.fmt(s.cart.reduce((a, c) => a + c.qty * c.price, 0)) : "ยังไม่มีสินค้า",
+          bg: on ? "#fff" : "rgba(255,255,255,.10)",
+          color: on ? "#0f2c25" : "#fff",
+          border: on ? "#fff" : "rgba(255,255,255,.35)",
+          pick: () => this.setState({ activeSid: s.id, stockFor: null }),
+          close: e => { if (e && e.stopPropagation) e.stopPropagation(); this.closeSession(s.id); }
+        };
+      }),
+      newSession: () => this.newSession(),
+      custLinked: !!av.linked,
+      custUnlinked: !av.linked,
+      custLabel: av.linked || "",
+      linkCust: () => this.mutateSession({ cust: "ณภัทร พงษ์ศรี · CUST 4400182 · Gold" }),
+      unlinkCust: () => this.mutateSession({ cust: null, preso: null }),
+      staffAdd: () => this.mutateCart(c => c.concat([{ id: Date.now(), mat: "10031002", sku: "LGT-ARC-BRS", name: "โคมไฟตั้งพื้น รุ่น ARC BRASS", variant: "ทองเหลืองรมดำ", spec: "สูง 165 ซม.", price: 3590, qty: 1, byStaff: true }])),
+      presoLabel: sess.preso ? "บันทึกแล้ว · " + sess.preso : "Save Preso",
+      savePreso: () => this.mutateSession({ preso: "PRE-260907-00" + (40 + this.state.sessions.length) }),
+      makeQuote: () => { if (av.linked) this.setState({ page: "checkout", menu: null }); },
+      quoteBtnBg: av.linked ? "#c8102e" : "#e4e4e2",
+      quoteBtnColor: av.linked ? "#fff" : "#9a9a98",
+      salesHint: av.linked ? "ใบเสนอราคาจะยืนราคา 7 วัน แล้วส่งต่อให้ระบบหลังบ้าน convert เป็น SO ใน SAP" : "ต้องค้นหาและผูกลูกค้าก่อนจึงจะออกใบเสนอราคาได้",
+      permRows: av.perms,
+      authOpen: this.state.authOpen,
+      authError: this.state.authError,
+      authTitle: this.state.authTab === "sales" ? "เข้าสู่ระบบพนักงาน" : "เข้าสู่ระบบลูกค้า",
+      openLogin: () => this.setState({ authOpen: true, authError: "" }),
+      closeLogin: () => this.setState({ authOpen: false, authError: "" }),
+      logout: () => this.setState({ auth: null, page: "cart", stockFor: null }),
+      doLogin: () => this.login(),
+      loginId: this.state.loginId,
+      loginPass: this.state.loginPass,
+      onLoginId: e => this.setState({ loginId: e.target.value }),
+      onLoginPass: e => this.setState({ loginPass: e.target.value }),
+      idLabel: this.state.authTab === "sales" ? "รหัสพนักงาน" : "เบอร์โทร / อีเมล / เลขสมาชิก",
+      idPlaceholder: this.state.authTab === "sales" ? "เช่น SA-104" : "เช่น 089-234-4471",
+      roleTabs: [
+        { key: "customer", label: "ลูกค้า" },
+        { key: "sales", label: "พนักงานขาย" }
+      ].map(t => ({
+        label: t.label,
+        border: this.state.authTab === t.key ? "#111" : "#e0e0de",
+        bg: this.state.authTab === t.key ? "#111" : "#fff",
+        color: this.state.authTab === t.key ? "#fff" : "#3a3a38",
+        pick: () => this.setState({ authTab: t.key, authError: "" })
+      })),
+      demoAccounts: [
+        { icon: "person", title: "ลูกค้า — ณภัทร (Gold)", sub: "089-234-4471 · รหัส 1234", fill: () => this.setState({ authTab: "customer", loginId: "089-234-4471", loginPass: "1234", authError: "" }) },
+        { icon: "badge", title: "พนักงานขาย — สมชาย ก.", sub: "SA-104 · รหัส 1234", fill: () => this.setState({ authTab: "sales", loginId: "SA-104", loginPass: "1234", authError: "" }) }
+      ],
+      isHome: this.state.page === "home",
+      isCart: this.state.page === "cart",
+      isCheckout: this.state.page === "checkout",
+      goCheckout: () => this.setState({ page: "checkout", menu: null }),
+      goCart: () => this.setState({ page: "cart", menu: null }),
+      shipFee: shipFeeVal === 0 ? "ไม่มีค่าบริการ" : this.fmt(shipFeeVal),
+      grandTotal: this.fmt(Math.max(0, sum + shipFeeVal - discount - promoTotal)),
+      cartTotal: this.fmt(Math.max(0, sum - promoTotal)),
+      hasPromoDiscount: promoTotal > 0,
+      codeApplied: this.state.code,
+      applyCode: () => this.setState({ code: true }),
+      addressFields: [
+        { label: "อีเมล (E-mail) *", placeholder: "กรอกอีเมล", span: "1/-1" },
+        { label: "ชื่อ (First Name) *", placeholder: "กรอกชื่อ", span: "auto" },
+        { label: "นามสกุล (Last Name) *", placeholder: "กรอกนามสกุล", span: "auto" },
+        { label: "เบอร์โทรศัพท์ (Phone) *", placeholder: "08X-XXX-XXXX", span: "auto" },
+        { label: "ถนน *", placeholder: "เช่น พระราม 9", span: "auto" },
+        { label: "ซอย (Soi)", placeholder: "เช่น พระราม 9 ซอย 41", span: "auto" },
+        { label: "แขวง/ตำบล *", placeholder: "เช่น สวนหลวง", span: "auto" },
+        { label: "เขต/อำเภอ *", placeholder: "เช่น สวนหลวง", span: "auto" },
+        { label: "จังหวัด *", placeholder: "เช่น กรุงเทพมหานคร", span: "auto" },
+        { label: "รหัสไปรษณีย์ (Postal Code) *", placeholder: "เช่น 10250", span: "auto" }
+      ],
+      shipHint: "คิดค่าจัดส่งอัตโนมัติจากรหัสไปรษณีย์และปริมาตรสินค้าที่กรอกในที่อยู่จัดส่ง",
+      shipLines: cart.map(c => ({
+        label: c.name + " " + c.variant + " × " + c.qty,
+        value: this.fmt(c.price * c.qty)
+      })),
+      payMethods: [
+        { icon: "credit_card", title: "บัตรเครดิต/เดบิต", note: "Visa, Mastercard, JCB" },
+        { icon: "qr_code_2", title: "QR Code Payment", note: "PromptPay, Thai QR" },
+        { icon: "account_balance_wallet", title: "E-Wallet", note: "TrueMoney, LINE Pay" },
+        { icon: "schedule", title: "ผ่อน 0% 10 เดือน", note: "เฉพาะบัตรที่ร่วมรายการ" }
+      ].map((p, i) => ({
+        ...p,
+        border: this.state.pay === i ? "#111" : "#e0e0de",
+        bg: this.state.pay === i ? "#f5f5f3" : "#fff",
+        tick: this.state.pay === i ? "#111" : "#d0d0ce",
+        pick: () => this.setState({ pay: i })
+      })),
+      checkoutRows: cart.map(c => ({
+        name: c.name + " " + c.variant,
+        sku: "19" + (240000 + c.id * 137),
+        qty: c.qty,
+        lineTotal: this.fmt(c.price * c.qty)
+      })),
+      goHome: () => this.setState({ page: "home", menu: null }),
+      cartCount: count,
+      cartEmpty: cart.length === 0,
+      subtotal: this.fmt(sum),
+      searchOpen: this.state.searchOpen && av.role === "sales",
+      openSearch: () => this.setState({ searchOpen: true }),
+      closeSearch: () => this.setState({ searchOpen: false }),
+      searchTargetLabel: av.linked ? av.linked.split(" · ")[0] : "ตะกร้า " + sess.no,
+      matQuery: this.state.matQuery,
+      onMatQuery: e => this.setState({ matQuery: e.target.value }),
+      scanMat: () => this.setState({ matQuery: "10023841" }),
+      matResults: catalog.filter(m => {
+        const q = this.state.matQuery.trim().toLowerCase();
+        return !q || m.name.toLowerCase().includes(q) || m.mat.includes(q);
+      }).map(m => ({
+        name: m.name,
+        mat: "MATNR " + m.mat + " · " + m.sku,
+        price: this.fmt(m.price),
+        member: "สมาชิก " + this.fmt(Math.round(m.price * 0.94)),
+        stockNote: m.stock > 0 ? "สาขานี้ " + m.stock + " ชิ้น · คลัง " + m.wh + " ชิ้น" : "สาขานี้หมด · คลัง " + m.wh + " ชิ้น",
+        stockColor: m.stock > 0 ? "#0b6b58" : "#c8102e",
+        checkStock: () => this.setState({ searchOpen: false, stockFor: "mat:" + m.mat, matPreview: m.name }),
+        addLabel: "ลงตะกร้า",
+        add: () => { this.mutateCart(c => c.concat([{ id: Date.now(), mat: m.mat, sku: m.sku, name: m.name, variant: m.variant, spec: m.spec, price: m.price, qty: 1, byStaff: true }])); this.setState({ searchOpen: false }); }
+      })),
+      matEmpty: catalog.filter(m => {
+        const q = this.state.matQuery.trim().toLowerCase();
+        return !q || m.name.toLowerCase().includes(q) || m.mat.includes(q);
+      }).length === 0,
+      promoOpen: this.state.promoOpen && av.role === "sales",
+      openPromo: () => this.setState({ promoOpen: true }),
+      closePromo: () => this.setState({ promoOpen: false }),
+      promoScope: (av.linked ? av.linked : "ยังไม่ผูกลูกค้า") + " · " + count + " ชิ้น · " + this.fmt(sum),
+      promoLinkLabel: sessPromo.length || sessDisc ? "แก้ไขโปรโมชั่น" : "เช็คโปรโมชั่น",
+      promoList: promoDefs.map(p => {
+        const on = sessPromo.includes(p.code);
+        const ok = p.eligible(sum, cart, av.linked);
+        return {
+          title: p.code + " · " + p.title,
+          cond: "เงื่อนไข: " + p.cond,
+          note: ok ? (on ? "ใช้กับบิลนี้แล้ว" : "เข้าเงื่อนไข กดใช้ได้เลย") : p.blockNote,
+          noteColor: ok ? "#0b6b58" : "#8a6a17",
+          amount: ok ? "−" + this.fmt(p.value(sum)) : "—",
+          amountColor: ok ? "#0b6b58" : "#8a8a88",
+          icon: ok ? (on ? "check_circle" : "local_offer") : "error",
+          iconColor: ok ? "#0b6b58" : "#b08514",
+          bg: on ? "#f4fbf8" : ok ? "#fff" : "#fffcf3",
+          border: on ? "#0b6b58" : ok ? "#ededeb" : "#e8d9a8",
+          btnLabel: !ok ? "ดูเงื่อนไข" : on ? "ยกเลิก" : "กดใช้",
+          btnBg: on ? "#0b6b58" : "#fff",
+          btnColor: on ? "#fff" : "#111",
+          btnBorder: on ? "#0b6b58" : "#c9c9c7",
+          toggle: () => { if (!ok) return; this.mutateSession({ promoOn: on ? sessPromo.filter(x => x !== p.code) : sessPromo.concat([p.code]) }); }
+        };
+      }),
+      discSteps: [0, 1, 2, 3].map(v => ({
+        label: v === 0 ? "ไม่ใช้" : v + "%",
+        bg: sessDisc === v ? "#111" : "#fff",
+        color: sessDisc === v ? "#fff" : "#111",
+        border: sessDisc === v ? "#111" : "#c9c9c7",
+        pick: () => this.mutateSession({ staffDisc: v })
+      })),
+      appliedPromos: appliedList,
+      noPromoApplied: appliedList.length === 0,
+      promoTotalText: "−" + this.fmt(promoTotal),
+      netAfterPromo: this.fmt(Math.max(0, sum - promoTotal)),
+      stockOpen: !!stockItem,
+      stockName: stockItem ? stockItem.name : "",
+      stockMat: stockItem ? "MATNR " + (stockItem.matNo || stockItem.mat || "—") + (stockItem.sku ? " · " + stockItem.sku : "") + " · " + stockItem.variant : "",
+      closeStock: () => this.setState({ stockFor: null }),
+      stockRows: [
+        { icon: "storefront", loc: "สาขาบางนา (สาขานี้)", qty: "2 ชิ้น", color: "#0b6b58", note: "โชว์รูม 1 · พร้อมยกกลับวันนี้ 1 ชิ้น" },
+        { icon: "warehouse", loc: "คลังบางพลี", qty: "18 ชิ้น", color: "#0b6b58", note: "ATP: จัดส่งได้ 15 ก.ย. · จองแล้ว 3 ชิ้น" },
+        { icon: "storefront", loc: "สาขารามอินทรา", qty: "0 ชิ้น", color: "#c8102e", note: "ของหมด · ของเข้ารอบถัดไป 22 ก.ย." },
+        { icon: "storefront", loc: "สาขาเชียงใหม่", qty: "4 ชิ้น", color: "#0b6b58", note: "โยกของข้ามสาขาได้ · ใช้เวลา 5–7 วัน" }
+      ],
+      slotRows: [
+        { day: "15 ก.ย. เช้า", note: "คิวว่าง 4", color: "#0b6b58" },
+        { day: "15 ก.ย. บ่าย", note: "คิวเต็ม", color: "#c8102e" },
+        { day: "16 ก.ย. เช้า", note: "คิวว่าง 9", color: "#0b6b58" },
+        { day: "17 ก.ย. บ่าย", note: "คิวว่าง 12", color: "#0b6b58" }
+      ],
+      cartRows: cart.map(c => ({
+        byStaff: !!c.byStaff,
+        staffNote: av.role === "sales"
+          ? "เซลล์เพิ่ม"
+          : "พนักงานเพิ่มให้ · " + (c.by || "พนักงานขาย") + (c.at ? " · " + c.at : ""),
+        staffTools: av.role === "sales",
+        noStaffTools: av.role !== "sales",
+        checkStock: () => this.setState({ stockFor: c.id }),
+        name: c.name,
+        variant: c.variant,
+        spec: c.spec,
+        qty: c.qty,
+        unitNote: this.fmt(c.price) + " / ชิ้น",
+        lineTotal: this.fmt(c.price * c.qty),
+        minusColor: c.qty > 1 ? "#111" : "#c0c0be",
+        inc: () => this.setQty(c.id, 1),
+        dec: () => this.setQty(c.id, -1),
+        remove: () => this.mutateCart(list => list.filter(x => x.id !== c.id))
+      })),
+      newRef: this.newRef,
+      scrollNewPrev: scrollNew(-1),
+      scrollNewNext: scrollNew(1),
+      catsOpen: open === "__cats",
+      catUnderline: open === "__cats" ? "#111" : "transparent",
+      openCats: () => this.setState({ menu: "__cats" }),
+      closeMenu: () => this.setState({ menu: null }),
+      subOpen: !!subDef,
+      subOpenLabel: subDef ? subDef.label : "",
+      subOpenItems: subDef ? subDef.items : [],
+      mainNavRows: navDefs.map(n => ({
+        label: n.label,
+        caret: true,
+        underline: open === n.label ? "#111" : "transparent",
+        enter: () => this.setState({ menu: n.label })
+      })),
+      megaSide: sideList.map((label, i) => ({
+        label,
+        color: i === this.state.sideIdx ? "#fff" : "#333",
+        bg: i === this.state.sideIdx ? "#111" : "transparent",
+        weight: i === this.state.sideIdx ? 600 : 400
+      })),
+      megaItems: [
+        { icon: "bed", label: "ห้องนอน" }, { icon: "weekend", label: "ห้องนั่งเล่น" }, { icon: "chair", label: "โซฟาและเก้าอี้พักผ่อน" },
+        { icon: "table_restaurant", label: "ห้องทานอาหาร" }, { icon: "countertops", label: "ห้องครัวและอุปกรณ์" }, { icon: "shelves", label: "ตู้เก็บของและจัดเก็บ" },
+        { icon: "desktop_windows", label: "โฮมออฟฟิศ และ เกมมิ่ง" }, { icon: "king_bed", label: "ที่นอนและเครื่องนอน" }, { icon: "wallpaper", label: "ตกแต่งผนัง" },
+        { icon: "light", label: "โคมไฟและหลอดไฟ" }, { icon: "curtains", label: "พรมและผ้าม่าน" }, { icon: "yard", label: "เฟอร์นิเจอร์นอกบ้าน & สวน" },
+        { icon: "business_center", label: "เฟอร์นิเจอร์สำนักงาน" }, { icon: "crop_free", label: "Small Spaces" }, { icon: "child_care", label: "สินค้าเด็กและครอบครัว" },
+        { icon: "checkroom", label: "ตู้เสื้อผ้าและวอล์คอิน" }, { icon: "storage", label: "ชั้นวางของและหนังสือ" }, { icon: "home_work", label: "ของแต่งบ้าน" }
+      ],
+      utilLinks: [
+        { icon: "credit_card", label: "SB Member Card", caret: false },
+        { icon: "location_on", label: "ค้นหาสาขา", caret: false },
+        { icon: "support_agent", label: "ศูนย์ช่วยเหลือ", caret: true }
+      ],
+      navIcons: [
+        { icon: "notifications", badge: false, onClick: null },
+        { icon: "confirmation_number", badge: false, onClick: null },
+        { icon: "shopping_cart", badge: true, badgeCount: count, onClick: () => this.setState({ page: "cart", menu: null }) },
+        { icon: "group", badge: false, onClick: () => this.setState({ authOpen: true, authError: "" }) }
+      ],
+      heroSlides: [
+        { slot: "HERO SLIDE 1", note: "แคมเปญหลัก — ลดทันที 3% + ลดเพิ่มสูงสุด 500.-" },
+        { slot: "HERO SLIDE 2", note: "Brand Fair — แบรนด์ประจำเดือน" }
+      ],
+      promoCards: [
+        { tag: "NEW", title: "ผ่อน 0% นาน 10 เดือน", note: "ทั้งเว็บ · 1–30 ก.ย. 69" },
+        { tag: "MEMBER", title: "สมัครสมาชิกรับส่วนลด 3%", note: "เฉพาะสมาชิกใหม่" },
+        { tag: "SERVICE", title: "ออกแบบฟรี ทุกสาขา", note: "จองคิวออนไลน์" },
+        { tag: "DEAL", title: "ลดเพิ่มสูงสุด 4,000.-", note: "เมื่อช้อปตามเงื่อนไข" }
+      ],
+      services: ["ออกแบบห้องฟรี", "ผ่อน 0% 10 เดือน", "ส่ง–ติดตั้งทั่วไทย", "รับประกันสินค้า", "นัดชมสาขา", "SB Member"],
+      catTiles: [
+        "ชุดห้องนอน", "เตียงนอน", "โซฟา", "ตู้เสื้อผ้า",
+        "ที่นอนและเครื่องนอน", "ห้องนั่งเล่น", "ห้องอาหาร", "โฮมออฟฟิศ"
+      ],
+      catRows: [
+        { label: "ห้องนอน", items: ["ชุดห้องนอน", "เตียงนอน", "ตู้เสื้อผ้า", "ห้องวอล์คอิน คลอสเซ็ท", "โต๊ะเครื่องแป้ง", "กระจก"] },
+        { label: "ห้องนั่งเล่น", items: ["ชั้นวางทีวี", "ชุดวางทีวีและตู้โชว์", "ตู้โชว์", "ตู้และชั้นหนังสือ", "ชั้นแขวนและตู้ติดผนัง", "โต๊ะกลาง"] },
+        { label: "ห้องทานอาหาร / ห้องครัว", items: ["ครัว", "ของใช้บนโต๊ะอาหาร", "แก้วน้ำ แก้วไวน์ เหยือกน้ำ", "อุปกรณ์เครื่องครัว", "ของใช้ในครัว", "เครื่องใช้ไฟฟ้าในครัวและอุปกรณ์"] },
+        { label: "ห้องทำงาน / ห้องเกมมิ่ง", items: ["ชุดโต๊ะทำงาน", "โต๊ะทำงาน", "โต๊ะประชุม", "ตู้เอกสารและชั้นวาง", "เก้าอี้สำนักงาน", "เก้าอี้เกมมิ่ง"] }
+      ],
+      products: [
+        { brand: "SB DESIGN", name: "โซฟา 3 ที่นั่ง ผ้ากันเปื้อน รุ่น XXXX", price: "24,900.-", was: "32,900.-", off: "-24%" },
+        { brand: "SB SLEEP", name: "ที่นอนพ็อกเก็ตสปริง 6 ฟุต รุ่น XXXX", price: "18,500.-", was: "26,900.-", off: "-31%" },
+        { brand: "SB WORK", name: "โต๊ะทำงาน 120 ซม. พร้อมลิ้นชัก", price: "6,290.-", was: "8,900.-", off: "-29%" },
+        { brand: "SB LIVING", name: "ตู้เสื้อผ้าบานเลื่อน 180 ซม. พร้อมกระจก", price: "15,900.-", was: "21,900.-", off: "-27%" }
+      ],
+      newCollections: ["คอลเลกชันใหม่", "ห้องนั่งเล่นโมเดิร์น", "มินิมอลลิฟวิ่ง", "ของแต่งบ้านใหม่", "ชุดโต๊ะอาหารใหม่", "โฮมออฟฟิศซีรีส์"],
+      rooms: ["ห้องนั่งเล่น", "ห้องนอน", "ห้องทำงาน"],
+      brands: [1, 2, 3, 4, 5],
+      footerPromos: [
+        { head: "SB Member", body: "สมัครสมาชิก SB ฟรี รับสิทธิพิเศษ ส่วนลดประจำเดือน และสิทธิ์ผ่อน 0% พร้อมสะสมแต้มทุกครั้งที่ช้อป", cta: "สมัครฟรี" },
+        { head: "SB for Business", body: "งานโครงการ ออกแบบครบวงจร สั่งซื้อจำนวนมาก หรือใบเสนอราคาสำหรับองค์กร ทีมงาน SB for Business พร้อมดูแลทุกขั้นตอน", cta: "ดูเพิ่มเติม" }
+      ],
+      socialIcons: ["thumb_up", "chat", "photo_camera", "work", "smart_display", "music_note"],
+      payments: ["VISA", "3D", "VISA", "MC", "PromptPay", "TrueMoney", "LINE Pay"],
+      legalLinks: ["นโยบายการคุ้มครองข้อมูลส่วนบุคคล", "นโยบายการใช้งานคุกกี้", "ข้อตกลงการใช้งาน", "ข้อตกลงการซื้อสินค้า"],
+      footerCols: [
+        { head: "ช้อปที่ SB", items: ["สาขา SB Design Square", "สิทธิประโยชน์และบริการ", "โปรโมชัน", "ตัวเลือกชำระเงิน", "วิธีช้อปออนไลน์", "คู่มือการเลือกซื้อสินค้า"] },
+        { head: "บริการก่อน และหลังการขาย", items: ["การติดตามและค่าบริการจัดส่ง", "โปรแกรมออกแบบของ SB", "การรับประกันสินค้า", "บริการติดตั้งและซ่อมแซม", "นโยบายเปลี่ยนและคืนสินค้า", "ใบกำกับภาษีอิเล็กทรอนิกส์ (e-Tax)", "ติดต่อเรา / คำถามที่พบบ่อย"] },
+        { head: "มาเป็นครอบครัว SB", items: ["SB for Business", "SB Member", "SB Kids' Club"] },
+        { head: "เกี่ยวกับ SB", items: ["เพื่อนพนักงาน และการทำงานที่ SB", "ห้องข่าวสาร", "เกี่ยวกับ SB และความยั่งยืน"] }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

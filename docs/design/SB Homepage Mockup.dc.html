@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:#e9e9e7;font-family:"Noto Sans Thai",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#111;text-decoration:none}a:hover{color:#555}
+</style>
+</helmet>
+
+<div style="padding:40px;display:flex;flex-direction:column;gap:14px;align-items:flex-start">
+
+<!-- ==================== TURN 2 : LANDING SECTIONS ==================== -->
+<div style="display:flex;align-items:baseline;gap:12px">
+<span style="font:500 11px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:5px 8px;border-radius:4px">2a</span>
+<span style="font:600 14px/1.2 'Noto Sans Thai',sans-serif;color:#111">Landing — หมวดหมู่สินค้า (2 แถว) + ช้อปตามห้องแบบแถวเลื่อน</span>
+<span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#777">หมวดจาก sbdesignsquare.com/furniture · desktop 1440 · content 1280</span>
+</div>
+
+<div style="width:1440px;background:#fff;border:1px solid #d8d8d6;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden;padding:36px 0 40px">
+
+  <!-- หมวดหมู่สินค้า : 4 × 2 -->
+  <div style="padding:0 80px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <span style="font-size:22px;font-weight:700;color:#111">หมวดหมู่สินค้า</span>
+      <div style="display:flex;gap:10px">
+        <span style="width:38px;height:38px;border:1px solid #d0d0ce;border-radius:50%;background:#f7f7f6;display:flex;align-items:center;justify-content:center;font-size:14px;color:#8a8a88">‹</span>
+        <span style="width:38px;height:38px;border:1px solid #111;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#111">›</span>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,308px);grid-template-rows:112px 112px;gap:16px">
+      <sc-for list="{{ catTiles }}" as="c" hint-placeholder-count="8">
+        <div style="width:308px;border:1px solid #e2e2e0;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05);display:flex;align-items:center;gap:14px;padding:12px 16px">
+          <div style="width:88px;height:88px;flex:none;border:1px dashed #cfcfcd;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9px/1.3 'IBM Plex Mono',monospace;color:#8a8a8a;text-align:center">88<br>×88</div>
+          <span style="font-size:15px;font-weight:600;color:#111;line-height:1.35;text-wrap:pretty">{{ c }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ช้อปตามหมวดหมู่เพื่อบ้าน : label + strip -->
+  <div style="padding:40px 80px 0">
+    <div style="font-size:22px;font-weight:700;color:#111;margin-bottom:6px">ช้อปตามหมวดสินค้าเพื่อบ้าน</div>
+    <div style="border:1px solid #eaeae8;background:#fafaf8;padding:8px 0">
+      <sc-for list="{{ catRows }}" as="row" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;gap:0;padding:22px 0;border-bottom:1px solid #ededeb">
+          <div style="width:180px;flex:none;padding:0 20px;font-size:15px;font-weight:600;color:#111;line-height:1.4">{{ row.label }}</div>
+          <span style="width:36px;height:36px;flex:none;border:1px solid #d0d0ce;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;color:#8a8a88">‹</span>
+          <div style="flex:1;display:grid;grid-template-columns:repeat(6,1fr);gap:16px;padding:0 14px">
+            <sc-for list="{{ row.items }}" as="it" hint-placeholder-count="6">
+              <div style="display:flex;flex-direction:column;gap:9px;align-items:center">
+                <div style="width:100%;aspect-ratio:1/1;border:1px solid #ddddda;background:repeating-linear-gradient(135deg,#eaeae8 0 9px,#f4f4f2 9px 18px);display:flex;align-items:center;justify-content:center;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#8f8f8f">150 × 150</div>
+                <span style="font-size:13px;font-weight:600;color:#222;text-align:center;line-height:1.35;text-wrap:pretty">{{ it }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <span style="width:36px;height:36px;flex:none;border:1px solid #111;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;color:#111">›</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;gap:24px;align-items:flex-start">
+  <!-- 2b mobile category grid -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:5px 8px;border-radius:4px">2b</span>
+      <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#777">MOBILE 390 · หมวดหมู่ 2 คอลัมน์ × 4 แถว</span>
+    </div>
+    <div style="width:390px;background:#fff;border:1px solid #d8d8d6;padding:18px 16px 22px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-size:17px;font-weight:700;color:#111">หมวดหมู่สินค้า</span>
+        <span style="font-size:12px;color:#555">ทั้งหมด ›</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <sc-for list="{{ catTiles }}" as="c" hint-placeholder-count="8">
+          <div style="border:1px solid #e2e2e0;padding:10px;display:flex;flex-direction:column;gap:8px">
+            <div style="width:100%;height:78px;border:1px dashed #cfcfcd;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9px/1 'IBM Plex Mono',monospace;color:#8a8a8a">151 × 78</div>
+            <span style="font-size:12.5px;font-weight:600;color:#111;line-height:1.35">{{ c }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:22px;font-size:17px;font-weight:700;color:#111;margin-bottom:10px">ห้องนอน</div>
+      <div style="display:flex;gap:12px;overflow:hidden">
+        <sc-for list="{{ bedroomItems }}" as="it" hint-placeholder-count="3">
+          <div style="width:120px;flex:none;display:flex;flex-direction:column;gap:7px">
+            <div style="width:120px;height:120px;border:1px solid #ddddda;background:repeating-linear-gradient(135deg,#eaeae8 0 9px,#f4f4f2 9px 18px);display:flex;align-items:center;justify-content:center;font:400 9px/1 'IBM Plex Mono',monospace;color:#8f8f8f">120 × 120</div>
+            <span style="font-size:12px;font-weight:600;color:#222;line-height:1.3">{{ it }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2c tablet category grid -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div style="display:flex;align-items:baseline;gap:10px">
+      <span style="font:500 11px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:5px 8px;border-radius:4px">2c</span>
+      <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#777">TABLET 834 · หมวดหมู่ 3 คอลัมน์ · แถวห้องเลื่อน 4 ชิ้น</span>
+    </div>
+    <div style="width:834px;background:#fff;border:1px solid #d8d8d6;padding:20px 32px 24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <span style="font-size:19px;font-weight:700;color:#111">หมวดหมู่สินค้า</span>
+        <div style="display:flex;gap:8px">
+          <span style="width:34px;height:34px;border:1px solid #d0d0ce;border-radius:50%;background:#f7f7f6;display:flex;align-items:center;justify-content:center;color:#8a8a88">‹</span>
+          <span style="width:34px;height:34px;border:1px solid #111;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#111">›</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+        <sc-for list="{{ catTiles }}" as="c" hint-placeholder-count="6">
+          <div style="height:100px;border:1px solid #e2e2e0;display:flex;align-items:center;gap:12px;padding:10px 14px">
+            <div style="width:76px;height:76px;flex:none;border:1px dashed #cfcfcd;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9px/1.3 'IBM Plex Mono',monospace;color:#8a8a8a;text-align:center">76<br>×76</div>
+            <span style="font-size:14px;font-weight:600;color:#111;line-height:1.35">{{ c }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:24px;border:1px solid #eaeae8;background:#fafaf8">
+        <sc-for list="{{ catRowsTwo }}" as="row" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;padding:18px 12px;border-bottom:1px solid #ededeb">
+            <div style="width:120px;flex:none;font-size:14px;font-weight:600;color:#111;line-height:1.4">{{ row.label }}</div>
+            <span style="width:32px;height:32px;flex:none;border:1px solid #d0d0ce;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;color:#8a8a88">‹</span>
+            <div style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 12px">
+              <sc-for list="{{ row.four }}" as="it" hint-placeholder-count="4">
+                <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+                  <div style="width:100%;aspect-ratio:1/1;border:1px solid #ddddda;background:repeating-linear-gradient(135deg,#eaeae8 0 9px,#f4f4f2 9px 18px);display:flex;align-items:center;justify-content:center;font:400 9px/1 'IBM Plex Mono',monospace;color:#8f8f8f">130 × 130</div>
+                  <span style="font-size:12.5px;font-weight:600;color:#222;text-align:center;line-height:1.3">{{ it }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <span style="width:32px;height:32px;flex:none;border:1px solid #111;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#111">›</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;max-width:1440px">
+  <sc-for list="{{ catSpecs }}" as="sp" hint-placeholder-count="5">
+    <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#5a5a58;background:#fff;border:1px solid #d8d8d6;padding:6px 9px">{{ sp }}</span>
+  </sc-for>
+</div>
+
+<div style="height:1px;width:1440px;background:#d0d0ce;margin:14px 0"></div>
+
+<!-- ==================== TURN 1 : RESPONSIVE FRAMES ==================== -->
+<div style="display:flex;align-items:baseline;gap:12px">
+<span style="font:500 11px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:5px 8px;border-radius:4px">1b</span>
+<span style="font:600 14px/1.2 'Noto Sans Thai',sans-serif;color:#111">Responsive — Mobile 390 / Tablet 834</span>
+<span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#777">breakpoints: ≤599 mobile · 600–1023 tablet · ≥1024 desktop</span>
+</div>
+
+<div style="display:flex;gap:24px;align-items:flex-start">
+
+  <!-- ============ MOBILE 390 ============ -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+  <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#777">MOBILE · 390 × auto · gutter 16 · content 358</span>
+  <div style="width:390px;background:#fff;border:1px solid #d8d8d6;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden">
+
+    <div style="height:32px;background:#111;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:11px">
+      <span>ส่งฟรีเมื่อช้อปครบ 3,000.-</span><span style="font-weight:600">TH | EN</span>
+    </div>
+
+    <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid #e4e4e2;background:#f7f7f6">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px;width:22px">
+            <i style="height:2px;background:#111;display:block"></i><i style="height:2px;background:#111;display:block"></i><i style="height:2px;background:#111;display:block"></i>
+          </div>
+          <div style="width:92px;height:34px;border:1px solid #c9c9c7;background:repeating-linear-gradient(135deg,#ececea 0 8px,#f6f6f4 8px 16px);display:flex;align-items:center;justify-content:center;font:600 11px/1 'IBM Plex Mono',monospace;color:#444">SB LOGO</div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <span style="width:28px;height:28px;border:1.5px solid #333;border-radius:3px;display:block"></span>
+          <span style="width:28px;height:28px;border:1.5px solid #333;border-radius:3px;display:block"></span>
+        </div>
+      </div>
+      <div style="display:flex;height:44px;border:1.5px solid #111;background:#fff">
+        <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-size:13px;color:#9a9a98">ค้นหาสินค้า</div>
+        <div style="width:46px;background:#111;display:flex;align-items:center;justify-content:center"><span style="width:14px;height:14px;border:2px solid #fff;border-radius:50%;display:block"></span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:#333"><span style="width:12px;height:12px;border:1.5px solid #111;border-radius:50% 50% 50% 0;display:block"></span>ส่งถึง: เลือกที่อยู่จัดส่ง ⌄</div>
+    </div>
+
+    <div style="display:flex;gap:8px;padding:10px 16px;overflow:hidden;border-bottom:1px solid #e4e4e2">
+      <sc-for list="{{ subNav }}" as="s" hint-placeholder-count="5">
+        <span style="white-space:nowrap;font-size:12.5px;color:#333;border:1px solid #d6d6d4;background:#f7f7f6;padding:7px 11px;height:34px;display:flex;align-items:center">{{ s }}</span>
+      </sc-for>
+    </div>
+
+    <div style="padding:12px 16px 0">
+      <div style="width:358px;height:240px;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;position:relative">
+        <span style="font:500 11.5px/1 'IBM Plex Mono',monospace;color:#555">HERO BANNER</span>
+        <span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:#888">358 × 240 px · 3:2</span>
+        <div style="position:absolute;bottom:12px;display:flex;gap:5px"><i style="width:18px;height:4px;background:#333;display:block"></i><i style="width:18px;height:4px;background:#c9c9c7;display:block"></i><i style="width:18px;height:4px;background:#c9c9c7;display:block"></i></div>
+      </div>
+    </div>
+
+    <div style="padding:12px 16px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <sc-for list="{{ promoCards }}" as="p" hint-placeholder-count="4">
+        <div style="height:190px;border:1px solid #d6d6d4;padding:11px;display:flex;flex-direction:column;justify-content:space-between">
+          <span style="font:500 9px/1 'IBM Plex Mono',monospace;color:#999">{{ p.tag }}</span>
+          <span style="font-size:13.5px;font-weight:600;color:#111;line-height:1.35">{{ p.title }}</span>
+          <div style="height:66px;border:1px dashed #cfcfcd;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#8a8a8a">151 × 66</div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding:14px 16px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <sc-for list="{{ services }}" as="s" hint-placeholder-count="4">
+        <div style="height:64px;border:1px solid #e0e0de;background:#fafaf8;display:flex;align-items:center;gap:9px;padding:0 11px">
+          <span style="width:28px;height:28px;border:1.5px solid #555;border-radius:3px;flex:none"></span>
+          <span style="font-size:12px;font-weight:500;color:#222;line-height:1.3">{{ s }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding:22px 16px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px">
+        <span style="font-size:17px;font-weight:700;color:#111">ดีลพิเศษวันนี้</span>
+        <span style="font-size:12px;color:#555">ดูทั้งหมด ›</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <sc-for list="{{ products }}" as="pr" hint-placeholder-count="4">
+          <div style="border:1px solid #e0e0de">
+            <div style="height:171px;border-bottom:1px solid #eeeeec;background:repeating-linear-gradient(135deg,#eeeeec 0 9px,#f7f7f5 9px 18px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+              <span style="font:500 10px/1 'IBM Plex Mono',monospace;color:#666">PRODUCT</span>
+              <span style="font:400 9.5px/1 'IBM Plex Mono',monospace;color:#8f8f8f">1:1 · 171 × 171</span>
+            </div>
+            <div style="padding:10px;display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 9px/1 'IBM Plex Mono',monospace;color:#999">{{ pr.brand }}</span>
+              <span style="font-size:12.5px;color:#222;line-height:1.4;height:35px;overflow:hidden">{{ pr.name }}</span>
+              <span style="font-size:16px;font-weight:700;color:#111">{{ pr.price }}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font:500 10px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:3px 5px">{{ pr.off }}</span>
+                <span style="font-size:11.5px;color:#9a9a98;text-decoration:line-through">{{ pr.was }}</span>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="padding:22px 16px 0">
+      <div style="border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:12px;font-size:17px;font-weight:700;color:#111">ช้อปตามห้อง</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="3">
+          <div style="height:170px;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);position:relative;display:flex;align-items:flex-end;padding:14px">
+            <span style="position:absolute;top:12px;left:14px;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#8f8f8f">358 × 170</span>
+            <span style="background:#111;color:#fff;font-size:13px;font-weight:600;padding:8px 12px">{{ r }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;background:#111;color:#fff;padding:22px 16px 16px;display:flex;flex-direction:column">
+      <sc-for list="{{ footerCols }}" as="fc" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid #333;font-size:13.5px;font-weight:600">
+          <span>{{ fc.head }}</span><span style="color:#9a9a98">＋</span>
+        </div>
+      </sc-for>
+      <span style="font-size:12px;color:#9a9a98;padding-top:16px;line-height:1.6">ศูนย์บริการลูกค้า 1234 · ทุกวัน 09:00–20:00</span>
+    </div>
+
+    <div style="height:60px;border-top:1px solid #e4e4e2;background:#fff;display:grid;grid-template-columns:repeat(5,1fr)">
+      <sc-for list="{{ tabBar }}" as="t" hint-placeholder-count="5">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+          <span style="width:20px;height:20px;border:1.5px solid #333;border-radius:3px;display:block"></span>
+          <span style="font-size:10px;color:#444">{{ t }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </div>
+
+  <!-- ============ TABLET 834 ============ -->
+  <div style="display:flex;flex-direction:column;gap:8px">
+  <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#777">TABLET / iPAD · 834 × auto · gutter 32 · content 770</span>
+  <div style="width:834px;background:#fff;border:1px solid #d8d8d6;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden">
+
+    <div style="height:34px;background:#111;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 32px;font-size:12px">
+      <span>ส่งฟรีเมื่อช้อปครบ 3,000.-</span>
+      <span style="display:flex;gap:20px"><span>ค้นหาสาขา</span><span>ศูนย์ช่วยเหลือ</span><span style="font-weight:600">TH | EN</span></span>
+    </div>
+
+    <div style="height:76px;background:#f7f7f6;border-bottom:1px solid #e4e4e2;display:flex;align-items:center;gap:18px;padding:0 32px">
+      <div style="display:flex;flex-direction:column;gap:4px;width:22px;flex:none">
+        <i style="height:2px;background:#111;display:block"></i><i style="height:2px;background:#111;display:block"></i><i style="height:2px;background:#111;display:block"></i>
+      </div>
+      <div style="width:110px;height:40px;flex:none;border:1px solid #c9c9c7;background:repeating-linear-gradient(135deg,#ececea 0 8px,#f6f6f4 8px 16px);display:flex;align-items:center;justify-content:center;font:600 12px/1 'IBM Plex Mono',monospace;color:#444">SB LOGO</div>
+      <div style="flex:1;display:flex;height:42px;border:1.5px solid #111;background:#fff">
+        <div style="flex:1;display:flex;align-items:center;padding:0 12px;font-size:13.5px;color:#9a9a98">ค้นหาสินค้า แบรนด์ หรือห้อง</div>
+        <div style="width:50px;background:#111;display:flex;align-items:center;justify-content:center"><span style="width:14px;height:14px;border:2px solid #fff;border-radius:50%;display:block"></span></div>
+      </div>
+      <div style="display:flex;gap:14px;flex:none">
+        <sc-for list="{{ headerIcons }}" as="ic" hint-placeholder-count="3">
+          <span style="width:28px;height:28px;border:1.5px solid #333;border-radius:3px;display:flex;align-items:center;justify-content:center;font:500 7.5px/1 'IBM Plex Mono',monospace;color:#555">{{ ic }}</span>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="height:44px;background:#f2f2f0;border-bottom:1px solid #e4e4e2;display:flex;align-items:center;gap:20px;padding:0 32px;font-size:13px;color:#333;overflow:hidden">
+      <sc-for list="{{ mainNav }}" as="n" hint-placeholder-count="6">
+        <span style="white-space:nowrap">{{ n }}</span>
+      </sc-for>
+    </div>
+
+    <div style="padding:20px 32px 0;display:flex;gap:16px">
+      <div style="width:500px;height:340px;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative">
+        <span style="font:500 12px/1 'IBM Plex Mono',monospace;color:#555">HERO BANNER</span>
+        <span style="font:400 11px/1 'IBM Plex Mono',monospace;color:#888">500 × 340 px</span>
+        <div style="position:absolute;bottom:14px;display:flex;gap:6px"><i style="width:22px;height:4px;background:#333;display:block"></i><i style="width:22px;height:4px;background:#c9c9c7;display:block"></i><i style="width:22px;height:4px;background:#c9c9c7;display:block"></i></div>
+      </div>
+      <div style="width:254px;display:grid;grid-template-rows:162px 162px;gap:16px">
+        <sc-for list="{{ promoTwo }}" as="p" hint-placeholder-count="2">
+          <div style="border:1px solid #d6d6d4;padding:12px;display:flex;gap:10px;align-items:center">
+            <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+              <span style="font:500 9px/1 'IBM Plex Mono',monospace;color:#999">{{ p.tag }}</span>
+              <span style="font-size:14px;font-weight:600;color:#111;line-height:1.35">{{ p.title }}</span>
+              <span style="font-size:11px;color:#777">{{ p.note }}</span>
+            </div>
+            <div style="width:74px;height:100px;flex:none;border:1px dashed #cfcfcd;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 9px/1 'IBM Plex Mono',monospace;color:#8a8a8a">74×100</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="padding:16px 32px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+      <sc-for list="{{ services }}" as="s" hint-placeholder-count="6">
+        <div style="height:76px;border:1px solid #e0e0de;background:#fafaf8;display:flex;align-items:center;gap:10px;padding:0 12px">
+          <span style="width:30px;height:30px;border:1.5px solid #555;border-radius:3px;flex:none"></span>
+          <span style="font-size:12.5px;font-weight:500;color:#222;line-height:1.3">{{ s }}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="padding:28px 32px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:9px;margin-bottom:14px">
+        <span style="font-size:19px;font-weight:700;color:#111">ดีลพิเศษวันนี้</span>
+        <span style="font-size:12.5px;color:#555">ดูทั้งหมด ›</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,246px);gap:16px">
+        <sc-for list="{{ productsThree }}" as="pr" hint-placeholder-count="3">
+          <div style="width:246px;border:1px solid #e0e0de">
+            <div style="height:246px;border-bottom:1px solid #eeeeec;background:repeating-linear-gradient(135deg,#eeeeec 0 9px,#f7f7f5 9px 18px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px">
+              <span style="font:500 10.5px/1 'IBM Plex Mono',monospace;color:#666">PRODUCT SHOT</span>
+              <span style="font:400 10px/1 'IBM Plex Mono',monospace;color:#8f8f8f">1:1 · 246 × 246</span>
+            </div>
+            <div style="padding:12px;display:flex;flex-direction:column;gap:6px">
+              <span style="font:500 9.5px/1 'IBM Plex Mono',monospace;color:#999">{{ pr.brand }}</span>
+              <span style="font-size:13px;color:#222;line-height:1.4;height:36px;overflow:hidden">{{ pr.name }}</span>
+              <div style="display:flex;align-items:baseline;gap:8px">
+                <span style="font-size:18px;font-weight:700;color:#111">{{ pr.price }}</span>
+                <span style="font-size:12px;color:#9a9a98;text-decoration:line-through">{{ pr.was }}</span>
+              </div>
+              <span style="font:500 10.5px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:4px 6px;align-self:flex-start">{{ pr.off }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="padding:28px 32px 0">
+      <div style="border-bottom:2px solid #111;padding-bottom:9px;margin-bottom:14px;font-size:19px;font-weight:700;color:#111">ช้อปตามห้อง</div>
+      <div style="display:grid;grid-template-columns:repeat(2,377px);gap:16px">
+        <sc-for list="{{ roomsTwo }}" as="r" hint-placeholder-count="2">
+          <div style="width:377px;height:230px;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);position:relative;display:flex;align-items:flex-end;padding:16px">
+            <span style="position:absolute;top:14px;left:16px;font:400 10px/1 'IBM Plex Mono',monospace;color:#8f8f8f">377 × 230</span>
+            <span style="background:#111;color:#fff;font-size:13.5px;font-weight:600;padding:8px 13px">{{ r }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="padding:28px 32px 0">
+      <div style="border-bottom:2px solid #111;padding-bottom:9px;margin-bottom:14px;font-size:19px;font-weight:700;color:#111">ช้อปตามแบรนด์</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px">
+        <sc-for list="{{ brandsFive }}" as="b" hint-placeholder-count="5">
+          <div style="height:66px;border:1px solid #e0e0de;background:#fafaf8;display:flex;align-items:center;justify-content:center;font:400 9.5px/1 'IBM Plex Mono',monospace;color:#8f8f8f">138 × 66</div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;background:#111;color:#fff;padding:30px 32px 22px;display:grid;grid-template-columns:repeat(2,1fr);gap:26px 40px">
+      <sc-for list="{{ footerCols }}" as="fc" hint-placeholder-count="4">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="font-size:13.5px;font-weight:600;color:#fff">{{ fc.head }}</span>
+          <sc-for list="{{ fc.items }}" as="fi" hint-placeholder-count="4">
+            <span style="font-size:12.5px;color:#9a9a98">{{ fi }}</span>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:10px;max-width:1440px">
+  <sc-for list="{{ rules }}" as="ru" hint-placeholder-count="6">
+    <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#5a5a58;background:#fff;border:1px solid #d8d8d6;padding:6px 9px">{{ ru }}</span>
+  </sc-for>
+</div>
+
+<div style="height:1px;width:1440px;background:#d0d0ce;margin:14px 0"></div>
+
+<div style="display:flex;align-items:baseline;gap:12px">
+<span style="font:500 11px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:5px 8px;border-radius:4px">1a</span>
+<span style="font:600 14px/1.2 'Noto Sans Thai',sans-serif;color:#111">SB — หน้าแรก (Grayscale wireframe, 1440px)</span>
+<span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#777">content 1280 · gutter 80 · grid 12col/16gap</span>
+</div>
+
+<div style="width:1440px;background:#fff;border:1px solid #d8d8d6;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden">
+
+  <div style="height:40px;background:#111;display:flex;align-items:center;justify-content:flex-end;gap:26px;padding:0 80px;color:#fff;font-size:13px">
+    <span style="display:flex;align-items:center;gap:7px"><span style="width:14px;height:14px;border:1.5px solid #fff;border-radius:2px;display:block"></span>SB Member Card</span>
+    <span style="display:flex;align-items:center;gap:7px"><span style="width:14px;height:14px;border:1.5px solid #fff;border-radius:50%;display:block"></span>สมัครเป็นผู้ขาย</span>
+    <span style="display:flex;align-items:center;gap:7px"><span style="width:14px;height:14px;border:1.5px solid #fff;display:block"></span>ค้นหาสาขา</span>
+    <span style="display:flex;align-items:center;gap:7px"><span style="width:14px;height:14px;border:1.5px solid #fff;border-radius:2px;display:block"></span>ศูนย์ช่วยเหลือ</span>
+    <span style="width:1px;height:16px;background:#4a4a4a"></span>
+    <span style="display:flex;gap:8px;font-weight:600"><span>TH</span><span style="color:#8a8a8a">|</span><span style="color:#8a8a8a;font-weight:400">EN</span></span>
+  </div>
+
+  <div style="height:96px;background:#f7f7f6;border-bottom:1px solid #e4e4e2;display:flex;align-items:center;gap:28px;padding:0 80px">
+    <div style="width:132px;height:48px;border:1px solid #c9c9c7;background:repeating-linear-gradient(135deg,#ececea 0 8px,#f6f6f4 8px 16px);display:flex;align-items:center;justify-content:center;font:600 15px/1 'IBM Plex Mono',monospace;color:#444;letter-spacing:.06em">SB LOGO</div>
+
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:11px;color:#8a8a8a">ที่อยู่จัดส่ง</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#111"><span style="width:13px;height:13px;border:1.5px solid #111;border-radius:50% 50% 50% 0;display:block"></span>เลือกที่อยู่จัดส่ง ⌄</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:11px;color:#8a8a8a">รับที่สาขา</span>
+      <span style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:500;color:#111"><span style="width:13px;height:13px;border:1.5px solid #111;display:block"></span>เลือกสาขา ⌄</span>
+    </div>
+
+    <div style="flex:1;display:flex;height:46px;border:1.5px solid #111;background:#fff;border-radius:2px;overflow:hidden">
+      <div style="width:112px;display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;color:#333;border-right:1px solid #dcdcda;background:#f2f2f0">ทั้งหมด ⌄</div>
+      <div style="flex:1;display:flex;align-items:center;padding:0 14px;font-size:14px;color:#9a9a98">ค้นหาสินค้า แบรนด์ หรือห้องที่ต้องการ</div>
+      <div style="width:56px;background:#111;display:flex;align-items:center;justify-content:center"><span style="width:15px;height:15px;border:2px solid #fff;border-radius:50%;display:block"></span></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:20px">
+      <sc-for list="{{ headerIcons }}" as="ic" hint-placeholder-count="4">
+        <div style="width:30px;height:30px;border:1.5px solid #333;border-radius:3px;display:flex;align-items:center;justify-content:center;font:500 8px/1 'IBM Plex Mono',monospace;color:#555">{{ ic }}</div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="height:52px;background:#fff;border-bottom:1px solid #e4e4e2;display:flex;align-items:center;gap:30px;padding:0 80px;font-size:14.5px;font-weight:500;color:#111">
+    <span style="display:flex;align-items:center;gap:8px;font-weight:600"><span style="display:grid;grid-template-columns:repeat(2,5px);gap:2.5px"><i style="width:5px;height:5px;background:#111;display:block"></i><i style="width:5px;height:5px;background:#111;display:block"></i><i style="width:5px;height:5px;background:#111;display:block"></i><i style="width:5px;height:5px;background:#111;display:block"></i></span>เลือกหมวดสินค้า ⌄</span>
+    <sc-for list="{{ mainNav }}" as="n" hint-placeholder-count="7">
+      <span>{{ n }}</span>
+    </sc-for>
+  </div>
+
+  <div style="height:46px;background:#f2f2f0;border-bottom:1px solid #e4e4e2;display:flex;align-items:center;gap:26px;padding:0 80px;font-size:13px;color:#4a4a4a;overflow:hidden">
+    <sc-for list="{{ subNav }}" as="s" hint-placeholder-count="9">
+      <span style="white-space:nowrap">{{ s }}</span>
+    </sc-for>
+  </div>
+
+  <div style="padding:24px 80px 0;display:flex;gap:16px">
+    <div style="width:840px;height:520px;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;position:relative">
+      <span style="font:500 13px/1 'IBM Plex Mono',monospace;color:#555">HERO BANNER</span>
+      <span style="font:400 12px/1 'IBM Plex Mono',monospace;color:#888">840 × 520 px · @2x = 1680 × 1040</span>
+      <span style="font-size:12px;color:#8a8a8a">แคมเปญหลัก / โปรโมชันเดือน</span>
+      <div style="position:absolute;bottom:18px;display:flex;gap:7px">
+        <i style="width:26px;height:5px;background:#333;display:block"></i>
+        <i style="width:26px;height:5px;background:#c9c9c7;display:block"></i>
+        <i style="width:26px;height:5px;background:#c9c9c7;display:block"></i>
+        <i style="width:26px;height:5px;background:#c9c9c7;display:block"></i>
+      </div>
+    </div>
+
+    <div style="width:424px;display:grid;grid-template-columns:204px 204px;grid-template-rows:252px 252px;gap:16px">
+      <sc-for list="{{ promoCards }}" as="p" hint-placeholder-count="4">
+        <div style="border:1px solid #d6d6d4;background:#fff;padding:14px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:500 9.5px/1 'IBM Plex Mono',monospace;color:#999">{{ p.tag }}</span>
+            <span style="font-size:15px;font-weight:600;color:#111;line-height:1.35">{{ p.title }}</span>
+          </div>
+          <div style="height:96px;border:1px dashed #cfcfcd;background:repeating-linear-gradient(135deg,#efefed 0 8px,#f8f8f6 8px 16px);display:flex;align-items:center;justify-content:center;font:400 10px/1 'IBM Plex Mono',monospace;color:#8a8a8a">176 × 96</div>
+          <span style="font-size:11px;color:#777">{{ p.note }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding:20px 80px 0;display:grid;grid-template-columns:repeat(6,1fr);gap:16px">
+    <sc-for list="{{ services }}" as="s" hint-placeholder-count="6">
+      <div style="height:88px;border:1px solid #e0e0de;background:#fafaf8;display:flex;align-items:center;gap:11px;padding:0 14px">
+        <span style="width:34px;height:34px;border:1.5px solid #555;border-radius:3px;flex:none"></span>
+        <span style="font-size:13px;font-weight:500;color:#222;line-height:1.3">{{ s }}</span>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="padding:36px 80px 0">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px">
+      <div style="display:flex;align-items:baseline;gap:14px">
+        <span style="font-size:22px;font-weight:700;color:#111">ดีลพิเศษวันนี้</span>
+        <span style="display:flex;gap:5px;font:500 12px/1 'IBM Plex Mono',monospace;color:#fff"><i style="background:#111;padding:5px 7px;display:block">02</i><i style="background:#111;padding:5px 7px;display:block">44</i><i style="background:#111;padding:5px 7px;display:block">10</i></span>
+      </div>
+      <span style="font-size:13px;color:#555">ดูทั้งหมด ›</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,308px);gap:16px">
+      <sc-for list="{{ products }}" as="pr" hint-placeholder-count="4">
+        <div style="width:308px;border:1px solid #e0e0de;background:#fff">
+          <div style="height:308px;border-bottom:1px solid #eeeeec;background:repeating-linear-gradient(135deg,#eeeeec 0 9px,#f7f7f5 9px 18px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+            <span style="font:500 11.5px/1 'IBM Plex Mono',monospace;color:#666">PRODUCT SHOT</span>
+            <span style="font:400 10.5px/1 'IBM Plex Mono',monospace;color:#8f8f8f">1:1 · 308 × 308 px</span>
+          </div>
+          <div style="padding:14px;display:flex;flex-direction:column;gap:7px">
+            <span style="font:500 10px/1 'IBM Plex Mono',monospace;color:#999">{{ pr.brand }}</span>
+            <span style="font-size:14px;color:#222;line-height:1.4;height:39px;overflow:hidden">{{ pr.name }}</span>
+            <div style="display:flex;align-items:baseline;gap:9px">
+              <span style="font-size:20px;font-weight:700;color:#111">{{ pr.price }}</span>
+              <span style="font-size:12.5px;color:#9a9a98;text-decoration:line-through">{{ pr.was }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font:500 11px/1 'IBM Plex Mono',monospace;background:#111;color:#fff;padding:4px 6px">{{ pr.off }}</span>
+              <span style="font-size:11.5px;color:#777">ผ่อน 0% 10 เดือน</span>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding:36px 80px 0">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px">
+      <span style="font-size:22px;font-weight:700;color:#111">ช้อปตามห้อง</span>
+      <span style="font-size:13px;color:#555">ดูทั้งหมด ›</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,416px);gap:16px">
+      <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="3">
+        <div style="width:416px;height:260px;border:1px solid #d6d6d4;background:repeating-linear-gradient(135deg,#eaeae8 0 10px,#f4f4f2 10px 20px);position:relative;display:flex;align-items:flex-end;padding:18px">
+          <span style="position:absolute;top:16px;left:18px;font:400 10.5px/1 'IBM Plex Mono',monospace;color:#8f8f8f">ROOM SCENE · 416 × 260 px</span>
+          <span style="background:#111;color:#fff;font-size:14px;font-weight:600;padding:9px 14px">{{ r }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="padding:36px 80px 0">
+    <div style="border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:18px;font-size:22px;font-weight:700;color:#111">ช้อปตามแบรนด์</div>
+    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:16px">
+      <sc-for list="{{ brands }}" as="b" hint-placeholder-count="8">
+        <div style="height:72px;border:1px solid #e0e0de;background:#fafaf8;display:flex;align-items:center;justify-content:center;font:400 10px/1 'IBM Plex Mono',monospace;color:#8f8f8f">148 × 72</div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="margin-top:44px;background:#111;color:#fff;padding:40px 80px 28px;display:flex;gap:56px">
+    <div style="width:240px;display:flex;flex-direction:column;gap:14px">
+      <div style="width:120px;height:44px;border:1px solid #4a4a4a;display:flex;align-items:center;justify-content:center;font:500 13px/1 'IBM Plex Mono',monospace;color:#bbb">SB LOGO</div>
+      <span style="font-size:12.5px;color:#9a9a98;line-height:1.6">ศูนย์บริการลูกค้า 1234<br>ทุกวัน 09:00 – 20:00</span>
+      <div style="display:flex;gap:9px">
+        <sc-for list="{{ social }}" as="so" hint-placeholder-count="4">
+          <span style="width:30px;height:30px;border:1px solid #4a4a4a;border-radius:50%;display:block"></span>
+        </sc-for>
+      </div>
+    </div>
+    <sc-for list="{{ footerCols }}" as="fc" hint-placeholder-count="4">
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <span style="font-size:13.5px;font-weight:600;color:#fff">{{ fc.head }}</span>
+        <sc-for list="{{ fc.items }}" as="fi" hint-placeholder-count="4">
+          <span style="font-size:12.5px;color:#9a9a98">{{ fi }}</span>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+</div>
+
+<div style="width:1440px;display:flex;flex-wrap:wrap;gap:10px;padding-top:4px">
+  <sc-for list="{{ specs }}" as="sp" hint-placeholder-count="6">
+    <span style="font:400 11px/1.4 'IBM Plex Mono',monospace;color:#5a5a58;background:#fff;border:1px solid #d8d8d6;padding:6px 9px">{{ sp }}</span>
+  </sc-for>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  renderVals() {
+    const products = [
+      { brand: "SB DESIGN", name: "โซฟา 3 ที่นั่ง ผ้ากันเปื้อน รุ่น XXXX", price: "24,900.-", was: "32,900.-", off: "-24%" },
+      { brand: "SB SLEEP", name: "ที่นอนพ็อกเก็ตสปริง 6 ฟุต รุ่น XXXX", price: "18,500.-", was: "26,900.-", off: "-31%" },
+      { brand: "SB WORK", name: "โต๊ะทำงาน 120 ซม. พร้อมลิ้นชัก", price: "6,290.-", was: "8,900.-", off: "-29%" },
+      { brand: "SB LIVING", name: "ตู้เสื้อผ้าบานเลื่อน 180 ซม. พร้อมกระจก", price: "15,900.-", was: "21,900.-", off: "-27%" }
+    ];
+    const promo = [
+      { tag: "NEW", title: "ผ่อน 0% นาน 10 เดือน", note: "ทั้งเว็บ · 1–30 ก.ย. 69" },
+      { tag: "MEMBER", title: "สมัครสมาชิกรับส่วนลด 3%", note: "เฉพาะสมาชิกใหม่" },
+      { tag: "SERVICE", title: "ออกแบบฟรี ทุกสาขา", note: "จองคิวออนไลน์" },
+      { tag: "DEAL", title: "ลดเพิ่มสูงสุด 4,000.-", note: "เมื่อช้อปตามเงื่อนไข" }
+    ];
+    const catRows = [
+      { label: "ห้องนอน", items: ["ชุดห้องนอน", "เตียงนอน", "ตู้เสื้อผ้า", "ห้องวอล์คอิน คลอสเซ็ท", "โต๊ะเครื่องแป้ง", "กระจก"] },
+      { label: "ห้องนั่งเล่น", items: ["ชั้นวางทีวี", "ชุดวางทีวีและตู้โชว์", "ตู้โชว์", "ตู้และชั้นหนังสือ", "ชั้นแขวนและตู้ติดผนัง", "โต๊ะกลาง"] },
+      { label: "ห้องทานอาหาร / ห้องครัว", items: ["ชุดโต๊ะอาหาร", "โต๊ะอาหาร", "เก้าอี้ทานอาหาร", "ตู้โชว์ถ้วยชาม", "เคาน์เตอร์ครัว", "อุปกรณ์เครื่องครัว"] }
+    ];
+    return {
+      catTiles: [
+        "ห้องนอน", "ห้องนั่งเล่น", "โซฟาและเก้าอี้พักผ่อน", "ห้องทานอาหาร",
+        "ตู้เก็บของและอุปกรณ์จัดเก็บ", "โฮมออฟฟิศ และ เกมมิ่ง", "ตกแต่งผนัง", "Small Spaces"
+      ],
+      catRows,
+      catRowsTwo: catRows.slice(0, 2).map(r => ({ label: r.label, four: r.items.slice(0, 4) })),
+      bedroomItems: catRows[0].items,
+      catSpecs: [
+        "หมวดหมู่: desktop 4×2 tile 308×112 (icon 88×88) · tablet 3 คอลัมน์ 76×76 · mobile 2 คอลัมน์ ภาพ 151×78",
+        "แถวตามห้อง: label 180px + arrow 36 + strip 6 ชิ้น ภาพ 1:1 150×150",
+        "tablet strip 4 ชิ้น 130×130 · mobile strip เลื่อนแนวนอน 120×120",
+        "หมวดสินค้าดึงจาก sbdesignsquare.com/furniture (8 หมวดหลัก)",
+        "ไอคอนหมวด: ส่ง PNG พื้นโปร่ง 176×176 (@2x ของ 88×88)"
+      ],
+      headerIcons: ["AI", "ALERT", "COMP", "CART"],
+      mainNav: ["ช้อปตามห้อง", "ช้อปตามแบรนด์", "SB Mall", "ตกแต่ง–ออกแบบ", "โปรเด็ด", "บริการพิเศษ", "แคตตาล็อก"],
+      subNav: ["โซฟา", "เตียง–ที่นอน", "โต๊ะทำงาน", "ตู้เสื้อผ้า", "โต๊ะอาหาร", "เก้าอี้", "ชุดครัว", "ของแต่งบ้าน", "โคมไฟ", "พรม–ผ้าม่าน", "เฟอร์นิเจอร์สำนักงาน"],
+      promoCards: promo,
+      promoTwo: promo.slice(0, 2),
+      services: ["ออกแบบห้องฟรี", "ผ่อน 0% 10 เดือน", "ส่ง–ติดตั้งทั่วไทย", "รับประกันสินค้า", "นัดชมสาขา", "SB Member"],
+      products,
+      productsThree: products.slice(0, 3),
+      rooms: ["ห้องนั่งเล่น", "ห้องนอน", "ห้องทำงาน"],
+      roomsTwo: ["ห้องนั่งเล่น", "ห้องนอน"],
+      brands: [1, 2, 3, 4, 5, 6, 7, 8],
+      brandsFive: [1, 2, 3, 4, 5],
+      social: [1, 2, 3, 4],
+      tabBar: ["หน้าแรก", "หมวดสินค้า", "ค้นหา", "ตะกร้า", "บัญชี"],
+      footerCols: [
+        { head: "เกี่ยวกับ SB", items: ["เกี่ยวกับเรา", "สาขาทั้งหมด", "ร่วมงานกับเรา", "ข่าวสาร"] },
+        { head: "ช่วยเหลือ", items: ["วิธีสั่งซื้อ", "การจัดส่ง–ติดตั้ง", "เปลี่ยน–คืนสินค้า", "การรับประกัน"] },
+        { head: "บริการ", items: ["ออกแบบห้องฟรี", "ผ่อนชำระ", "SB Member", "สั่งซื้อจำนวนมาก"] },
+        { head: "ช่องทางชำระเงิน", items: ["บัตรเครดิต/เดบิต", "โอนผ่านธนาคาร", "ผ่อน 0%", "ชำระที่สาขา"] }
+      ],
+      rules: [
+        "breakpoints: ≤599 mobile · 600–1023 tablet · ≥1024 desktop · ≥1440 max content 1280",
+        "columns: mobile 4col/16gap · tablet 8col/16gap · desktop 12col/16gap",
+        "gutter: 16 / 32 / 80",
+        "product grid: 2-up → 3-up → 4-up (image always 1:1)",
+        "room tile: 1-up 358×170 → 2-up 377×230 → 3-up 416×260",
+        "nav: hamburger + bottom tab bar → hamburger + scrolling top nav → full mega nav",
+        "footer: accordion → 2 col → 4 col + brand block",
+        "hit target ≥44px on mobile · body text ≥12.5px",
+        "hero art: ship 3 crops — 358×240 (3:2) / 500×340 / 840×520"
+      ],
+      specs: [
+        "canvas 1440 · content 1280 · gutter 80",
+        "grid 12 col · gap 16",
+        "hero 840×520 / promo 204×252 (img 176×96)",
+        "product card 308×420 · img 1:1 308×308",
+        "room tile 416×260 · brand tile 148×72",
+        "type: Noto Sans Thai 11/13/14.5/22 · mono = spec labels",
+        "greys: #111 #333 #777 #d6d6d4 #f2f2f0 #fff"
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
