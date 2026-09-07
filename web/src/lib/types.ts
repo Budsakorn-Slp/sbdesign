@@ -102,6 +102,60 @@ export type StockOut = {
   error: string | null;
 };
 
+// ---------- cart ----------
+export type SupplyMode = "takeaway" | "ship" | "install" | "pickup";
+
+export type CartItem = {
+  id: string;
+  matnr: string;
+  sku: string;
+  name: string;
+  variant: string | null;
+  spec: string | null;
+  image_url: string | null;
+  category_id: string | null;
+  qty: number;
+  unit_price: string;
+  price_tier: string;
+  line_total: string;
+  added_by: "customer" | "sales";
+  added_by_name: string | null;
+  added_by_code: string | null;
+  added_at: string;
+  pending_ack: boolean;
+  supply_mode: SupplyMode;
+  plant_code: string | null;
+  atp_date: string | null;
+  requires_install: boolean;
+  note: string | null;
+};
+
+export type CartPerson = {
+  id: string;
+  name: string;
+  tier: string | null;
+  sap_customer_no: string | null;
+  staff_code: string | null;
+  phone: string | null;
+  branch_id: string | null;
+};
+
+export type Cart = {
+  id: string;
+  no: string;
+  label: string | null;
+  status: "open" | "merged" | "converted" | "abandoned";
+  customer: CartPerson | null;
+  owner_sales: CartPerson | null;
+  is_guest: boolean;
+  items: CartItem[];
+  count: number;
+  subtotal: string;
+  pending_count: number;
+  expires_at: string | null;
+  updated_at: string;
+};
+
 // ---------- home content ----------
 export type NavLink = { label: string; href: string };
 export type HomeContent = {

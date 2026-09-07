@@ -1,12 +1,16 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import { AuthProvider } from "./lib/auth";
+import { CartProvider } from "./lib/cart";
 import { ContentProvider } from "./lib/content";
+import CartPage from "./pages/CartPage";
+import CheckoutPage from "./pages/CheckoutPage";
 import HomePage from "./pages/HomePage";
 import ProductPage from "./pages/ProductPage";
 import SearchPage from "./pages/SearchPage";
 import "./styles/layout.css";
 import "./styles/pages.css";
+import "./styles/cart.css";
 
 function NotFound() {
   return (
@@ -20,16 +24,20 @@ export default function App() {
   return (
     <AuthProvider>
       <ContentProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/search" element={<SearchPage />} />
-              <Route path="/p/:matnr" element={<ProductPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
+        <CartProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/search" element={<SearchPage />} />
+                <Route path="/p/:matnr" element={<ProductPage />} />
+                <Route path="/cart" element={<CartPage />} />
+                <Route path="/checkout" element={<CheckoutPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </CartProvider>
       </ContentProvider>
     </AuthProvider>
   );

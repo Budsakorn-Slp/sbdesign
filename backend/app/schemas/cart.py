@@ -1,0 +1,74 @@
+from datetime import date, datetime
+from decimal import Decimal
+
+from pydantic import BaseModel, Field
+
+
+class CartItemOut(BaseModel):
+    id: str
+    matnr: str
+    sku: str
+    name: str
+    variant: str | None = None
+    spec: str | None = None
+    image_url: str | None = None
+    category_id: str | None = None
+    qty: int
+    unit_price: Decimal
+    price_tier: str
+    line_total: Decimal
+    added_by: str
+    added_by_name: str | None = None
+    added_by_code: str | None = None
+    added_at: datetime
+    pending_ack: bool
+    supply_mode: str
+    plant_code: str | None = None
+    atp_date: date | None = None
+    requires_install: bool
+    note: str | None = None
+
+
+class CartPersonOut(BaseModel):
+    id: str
+    name: str
+    tier: str | None = None
+    sap_customer_no: str | None = None
+    staff_code: str | None = None
+    phone: str | None = None
+    branch_id: str | None = None
+
+
+class CartOut(BaseModel):
+    id: str
+    no: str
+    label: str | None = None
+    status: str
+    customer: CartPersonOut | None = None
+    owner_sales: CartPersonOut | None = None
+    is_guest: bool
+    items: list[CartItemOut]
+    count: int
+    subtotal: Decimal
+    pending_count: int
+    expires_at: datetime | None = None
+    updated_at: datetime
+
+
+class AddItemIn(BaseModel):
+    matnr: str = Field(min_length=1)
+    qty: int = Field(default=1, ge=1, le=999)
+    supply_mode: str | None = Field(default=None, pattern="^(takeaway|ship|install|pickup)$")
+    plant_code: str | None = None
+    note: str | None = None
+
+
+class UpdateItemIn(BaseModel):
+    qty: int | None = Field(default=None, ge=1, le=999)
+    supply_mode: str | None = Field(default=None, pattern="^(takeaway|ship|install|pickup)$")
+    plant_code: str | None = None
+    note: str | None = None
+
+
+class MergeIn(BaseModel):
+    source_cart_id: str

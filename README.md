@@ -25,6 +25,31 @@ docker compose up --build
 | api | http://localhost:8000 · OpenAPI ที่ http://localhost:8000/docs |
 | postgres | localhost:5432 (sb / sb_secret / sbdesign) |
 
+## ไฟล์ .env
+
+| ไฟล์ | ใช้เมื่อ | หมายเหตุ |
+|---|---|---|
+| `.env` (root) | `docker compose up` | ค่า Postgres + backend ทั้งหมด (ไม่ commit — copy จาก `.env.example`) |
+| `backend/.env` | รัน backend ในเครื่องด้วย python ตรง ๆ | ตั้ง `DATABASE_URL=sqlite:///./sbdesign.db` ไว้ให้รันได้ทันทีโดยไม่มี Postgres · มี Postgres เมื่อไหร่สลับเป็นบรรทัด postgresql ที่คอมเมนต์ไว้ |
+
+## เช็คว่าเชื่อมต่อ DB ติดไหม
+
+```bash
+cd backend && .venv/Scripts/python -m app.dbcheck
+```
+
+จะพิมพ์ URL (ซ่อนรหัสผ่าน), เวลาที่ใช้ต่อ, เวอร์ชัน DB, จำนวนตาราง และ alembic revision ปัจจุบัน · exit 0 = ติด, 1 = ไม่ติดพร้อมบอกสาเหตุ
+เช็ค DB อื่นโดยไม่แก้ .env: `python -m app.dbcheck --url postgresql+psycopg://sb:sb_secret@localhost:5432/sbdesign`
+
+แบบ pytest:
+
+```bash
+cd backend && .venv/Scripts/python -m pytest tests/test_db_connection.py -v
+```
+
+- `test_engine_connects` — DB ที่ test ใช้ (sqlite) ต้องต่อได้เสมอ
+- `test_external_db_connects` — ต่อ DB จริงเมื่อตั้ง env `DBCHECK_URL` (ไม่ตั้งจะ skip) เช่น PowerShell: `$env:DBCHECK_URL="postgresql+psycopg://sb:sb_secret@localhost:5432/sbdesign"; .venv/Scripts/python -m pytest tests/test_db_connection.py -v -s`
+
 ## รันในเครื่องโดยไม่ใช้ Docker
 
 backend (ใช้ SQLite แทน Postgres ได้ทันที):
@@ -93,3 +118,16 @@ cd web && npm test
    - ล็อกอินเป็นลูกค้า Gold จะเห็นราคาสมาชิก (ต่ำกว่าราคาปกติ 6%) · guest เห็นราคาปกติอย่างเดียว
 4. จำลอง SAP ล่ม: ใน test ใช้ `get_sap_client().fail_next(2)` → response `source=cache, stale=true` พร้อมเวลาที่ cache ถูกดึง
 5. test: `pytest tests/test_step2_catalog.py` (7 เคส)
+
+### STEP 3 — ตะกร้าลูกค้า (customer / guest)
+- guest ได้ cookie `sb_anon` อัตโนมัติเมื่อเรียก `GET /cart` ครั้งแรก → ตะกร้าผูกกับ token นี้
+- ล็อกอินเมื่อไหร่ (login / register / OTP) ของในตะกร้า guest ถูก **merge เข้าตะกร้าลูกค้า** และคิดราคาใหม่ตาม tier (hook ใน `cart_service.merge_guest_cart_on_login`)
+- ทุกการแก้ตะกร้าเขียน `audit_logs` + `cart_item_history` · ราคาเป็น snapshot (`unit_price_snapshot`, `price_tier`)
+- guest กด "ชำระเงิน" ไม่ได้ — backend คืน 401 ที่ `POST /cart/checkout-check` (UI โชว์ปุ่ม "เข้าสู่ระบบเพื่อชำระเงิน")
+
+วิธีลอง
+1. ไม่ต้องล็อกอิน เปิดหน้าสินค้า → เลือกวิธีรับ (ยกกลับจากสาขา / จัดส่ง / ส่ง+ติดตั้ง) → **ลงตะกร้า** → ไอคอนตะกร้าขึ้นจำนวน
+2. เปิด /cart แก้จำนวน / ลบ / ดูยอดรวม → กดชำระเงินจะถูกบังคับให้ล็อกอิน
+3. ล็อกอินเป็น ณภัทร (089-234-4471) → ของยังอยู่ในตะกร้าเดิม แต่ราคาเปลี่ยนเป็นราคาสมาชิก Gold
+4. API: `GET /cart` · `POST /cart/items {matnr, qty, supply_mode?, plant_code?}` · `PATCH /cart/items/{id}` · `DELETE /cart/items/{id}` · `POST /cart/items/{id}/ack` · `POST /carts/{id}/merge {source_cart_id}`
+5. test: `pytest tests/test_step3_cart.py` (5 เคส: guest→login ของยังอยู่, history/audit, ข้ามตะกร้าคนอื่น 403, พนักงานใช้ /cart ไม่ได้, แมทไม่มี 404)

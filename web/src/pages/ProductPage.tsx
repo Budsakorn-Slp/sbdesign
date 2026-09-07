@@ -4,25 +4,43 @@ import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
 import { apiGet, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { baht, num, thDate, thTime } from "../lib/format";
-import type { MaterialDetail, StockOut } from "../lib/types";
+import type { MaterialDetail, StockOut, SupplyMode } from "../lib/types";
 
 export default function ProductPage() {
   const { matnr = "" } = useParams();
   const auth = useAuth();
+  const cart = useCart();
   const { plant } = useContent();
   const [item, setItem] = useState<MaterialDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stock, setStock] = useState<StockOut | null>(null);
   const [checking, setChecking] = useState(false);
+  const [qty, setQty] = useState(1);
+  const [mode, setMode] = useState<SupplyMode>("ship");
+  const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const isStaff = auth.role === "sales" || auth.role === "manager" || auth.role === "admin";
 
   useEffect(() => {
     setItem(null);
     setStock(null);
-    apiGet<MaterialDetail>(`/materials/${matnr}`).then(setItem).catch((e) => setError(errorMessage(e)));
+    setError(null);
+    apiGet<MaterialDetail>(`/materials/${matnr}`)
+      .then((m) => {
+        setItem(m);
+        setMode(m.requires_install ? "install" : plant && m.is_takeaway_ok ? "takeaway" : "ship");
+      })
+      .catch((e) => setError(errorMessage(e)));
   }, [matnr, auth.user?.id]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const checkStock = async () => {
     setChecking(true);
@@ -36,8 +54,27 @@ export default function ProductPage() {
     }
   };
 
+  const addToCart = async () => {
+    if (!item) return;
+    setAdding(true);
+    try {
+      await cart.add(item.matnr, { qty, supply_mode: mode, plant_code: mode === "takeaway" || mode === "pickup" ? plant?.plant_code || null : null });
+      setToast(`เพิ่ม ${item.name_th} × ${qty} ลงตะกร้าแล้ว`);
+    } catch (e) {
+      setToast("เพิ่มไม่สำเร็จ: " + errorMessage(e));
+    } finally {
+      setAdding(false);
+    }
+  };
+
   if (error) return <main className="container sec"><div className="note err">{error}</div></main>;
   if (!item) return <main className="container sec"><div className="ph" style={{ height: 420 }}>กำลังโหลดสินค้า…</div></main>;
+
+  const modes: { key: SupplyMode; label: string; sub: string; ok: boolean }[] = [
+    { key: "takeaway", label: "ยกกลับจากสาขา", sub: plant ? `รับที่ ${plant.name} · ไม่มีค่าส่ง` : "ต้องเลือกสาขาก่อน (รับที่สาขา ด้านบน)", ok: item.is_takeaway_ok && !!plant },
+    { key: "ship", label: "จัดส่งถึงบ้าน", sub: "จากคลัง · คิดค่าส่งตามเขต", ok: !item.requires_install },
+    { key: "install", label: "จัดส่ง + ติดตั้งโดยช่าง", sub: item.requires_install ? "สินค้านี้ต้องติดตั้ง · มีค่าติดตั้ง" : "เลือกได้ถ้าต้องการช่างประกอบ", ok: true },
+  ];
 
   return (
     <main className="container sec product">
@@ -78,15 +115,44 @@ export default function ProductPage() {
             {item.weight_kg && <li><Icon name="scale" size={18} /> น้ำหนัก {num(item.weight_kg)} กก. · ปริมาตร {num(item.volume_m3)} ลบ.ม.</li>}
           </ul>
 
-          <div className="product-actions">
-            <button className="btn primary lg" disabled title="เพิ่มลงตะกร้าจะเปิดใช้ใน STEP 3">
-              <Icon name="add_shopping_cart" size={20} /> ลงตะกร้า
-            </button>
-            <button className="btn lg" onClick={checkStock} disabled={checking}>
-              <Icon name="inventory_2" size={20} /> {checking ? "กำลังเช็ค…" : "เช็คสต็อก"}
-            </button>
-          </div>
-          <p className="small muted" style={{ marginTop: 4 }}>
+          {isStaff ? (
+            <div className="note">โหมดพนักงาน: เพิ่มสินค้าให้ลูกค้าได้จากหน้า <Link to="/sales" className="strong">ตะกร้าที่กำลังดูแล</Link> (ค้นหา MATNR → ลงตะกร้า)</div>
+          ) : (
+            <div className="add-box">
+              <div className="row between">
+                <b>วิธีรับสินค้า</b>
+                <div className="qty">
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} aria-label="ลด"><Icon name="remove" size={18} /></button>
+                  <span>{qty}</span>
+                  <button onClick={() => setQty(qty + 1)} aria-label="เพิ่ม"><Icon name="add" size={18} /></button>
+                </div>
+              </div>
+              <div className="opts">
+                {modes.map((m) => (
+                  <label key={m.key} className={"opt" + (mode === m.key ? " on" : "") + (m.ok ? "" : " off")}>
+                    <input type="radio" name="mode" checked={mode === m.key} disabled={!m.ok} onChange={() => setMode(m.key)} />
+                    <span className="grow">{m.label}<small>{m.sub}</small></span>
+                  </label>
+                ))}
+              </div>
+              <div className="product-actions">
+                <button className="btn primary lg" onClick={addToCart} disabled={adding || !modes.find((m) => m.key === mode)?.ok}>
+                  <Icon name="add_shopping_cart" size={20} /> {adding ? "กำลังเพิ่ม…" : "ลงตะกร้า"}
+                </button>
+                <button className="btn lg" onClick={checkStock} disabled={checking}>
+                  <Icon name="inventory_2" size={20} /> {checking ? "กำลังเช็ค…" : "เช็คสต็อก"}
+                </button>
+              </div>
+            </div>
+          )}
+          {isStaff && (
+            <div className="product-actions">
+              <button className="btn lg" onClick={checkStock} disabled={checking}>
+                <Icon name="inventory_2" size={20} /> {checking ? "กำลังเช็ค…" : "เช็คสต็อกทุกสาขา"}
+              </button>
+            </div>
+          )}
+          <p className="small muted" style={{ marginTop: 6 }}>
             {plant ? `สาขาที่เลือก: ${plant.name}` : "ยังไม่ได้เลือกสาขา (เลือกได้ที่ “รับที่สาขา” ด้านบน)"}
           </p>
 
@@ -111,14 +177,12 @@ export default function ProductPage() {
                 </ul>
               ) : (
                 <div className="stock-summary">
-                  {stock.rows.length ? (
-                    stock.rows.map((r) => (
-                      <div key={r.plant_code} className="row between">
-                        <span><Icon name="storefront" size={18} /> {r.plant_name}</span>
-                        <b className={r.available > 0 ? "green" : "red"}>{r.available > 0 ? `มีของ ${r.available} ชิ้น` : "ของหมดที่สาขานี้"}</b>
-                      </div>
-                    ))
-                  ) : null}
+                  {stock.rows.map((r) => (
+                    <div key={r.plant_code} className="row between">
+                      <span><Icon name="storefront" size={18} /> {r.plant_name}</span>
+                      <b className={r.available > 0 ? "green" : "red"}>{r.available > 0 ? `มีของ ${r.available} ชิ้น` : "ของหมดที่สาขานี้"}</b>
+                    </div>
+                  ))}
                   <div className="row between">
                     <span><Icon name="local_shipping" size={18} /> จัดส่งถึงบ้าน</span>
                     <b className={stock.available ? "green" : "red"}>{stock.available ? (stock.earliest_atp ? `ส่งได้เร็วสุด ${thDate(stock.earliest_atp)}` : "พร้อมส่ง") : "สั่งจอง / รอของเข้า"}</b>
@@ -135,6 +199,12 @@ export default function ProductPage() {
           <h3>รายละเอียดสินค้า</h3>
           <p>{item.description}</p>
         </section>
+      )}
+
+      {toast && (
+        <div className="toast" role="status">
+          <Icon name="check_circle" size={20} /> {toast} <Link to="/cart">ดูตะกร้า</Link>
+        </div>
       )}
     </main>
   );
