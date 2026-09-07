@@ -146,3 +146,13 @@ cd web && npm test
 4. กลับแท็บ 1 รีเฟรช `/cart` → เห็นการ์ด "พนักงานเพิ่มสินค้าให้คุณ N รายการ" (เรียลไทม์มาใน STEP 5)
 5. API: `GET/POST /sales/carts` · `GET/DELETE /sales/carts/{id}` · `POST/PATCH/DELETE /sales/carts/{id}/items[/{item_id}]` · `POST/DELETE /sales/carts/{id}/attach-customer` · `GET /customers/search?q=`
 6. test: `pytest tests/test_step4_sales.py` (5 เคส: ถือ 3 ตะกร้าไม่ปน, เซลล์อื่น 403, ผูกลูกค้า+merge+ack+ปิดเซสชัน, ตัดการเชื่อมต่อคืนของลูกค้า, ลูกค้าที่มีเฉพาะใน SAP)
+
+### STEP 5 — Realtime + การยืนยันของลูกค้า
+- WebSocket `WS /ws/cart/{cart_id}?token=<access_token>` (ลูกค้า/เซลล์) หรือ `?anon=<sb_anon>` (guest) — ใช้กฎสิทธิ์เดียวกับ REST, ไม่มีสิทธิ์ปิดด้วย code 1008
+- เหตุการณ์: `item_added` / `item_updated` / `item_removed` / `item_acked` / `cart_merged` / `customer_attached` / `customer_detached` / `session_closed` (ส่งจาก `cart_service.emit` → `app/realtime.py`)
+- ลูกค้ากด **เก็บไว้** = `POST /cart/items/{id}/ack` · **ลบออก** = `DELETE /cart/items/{id}` · ป้าย "พนักงานเพิ่มให้ · ชื่อเซลล์ · เวลา" ค้างบนบรรทัดสินค้า
+
+วิธีลอง
+1. แท็บ 1 ล็อกอินลูกค้า ณภัทร เปิด `/cart` · แท็บ 2 ล็อกอิน SA-104 เปิด `/sales` → ผูกลูกค้า 4400182 → "เพิ่มสินค้าให้ลูกค้า"
+2. แท็บ 1 เด้งการ์ด "พนักงานเพิ่มสินค้าให้คุณ 1 รายการ" ภายใน 1 วินาที → กด เก็บไว้ / ลบออก → แท็บ 2 เห็นผลทันที
+3. test: `pytest tests/test_step5_realtime.py` (3 เคส: เซลล์เพิ่ม→ลูกค้าได้ event/ack/remove, ไม่มีสิทธิ์ถูกปิด 1008, guest ใช้ anon token)

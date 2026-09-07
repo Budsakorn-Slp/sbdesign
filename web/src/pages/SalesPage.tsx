@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth";
 import { SUPPLY_LABEL } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { baht, bahtWord, relTime, thDate, thTime } from "../lib/format";
+import { useCartSocket } from "../lib/realtime";
 import { useSales, type CustomerHit } from "../lib/sales";
 import type { CartItem, MaterialCard, StockOut } from "../lib/types";
 
@@ -18,6 +19,21 @@ export default function SalesPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [stockFor, setStockFor] = useState<{ matnr: string; name: string } | null>(null);
+  const [live, setLive] = useState<string | null>(null);
+
+  // realtime: ลูกค้ากดเก็บไว้/ลบออก/แก้จำนวนจากมือถือ → เซลล์เห็นทันที
+  useCartSocket(sales.active?.id, (evt) => {
+    if (evt.type === "hello") return;
+    sales.reloadActive();
+    if (evt.type === "item_acked") setLive("ลูกค้ากด “เก็บไว้” สินค้าที่คุณเพิ่ม");
+    else if (evt.type === "item_removed" && evt.added_by !== "sales") setLive("ลูกค้าลบสินค้าออกจากตะกร้า");
+    else if (evt.type === "item_added" && evt.added_by === "customer") setLive("ลูกค้าเพิ่มสินค้าเองจากมือถือ");
+  });
+  useEffect(() => {
+    if (!live) return;
+    const t = setTimeout(() => setLive(null), 5000);
+    return () => clearTimeout(t);
+  }, [live]);
 
   if (!sales.enabled) {
     return (
@@ -136,6 +152,7 @@ export default function SalesPage() {
         onAdd={(m, mode, plant) => run("add", async () => { await sales.addItem(m.matnr, 1, mode, plant); setSearchOpen(false); })}
         onStock={(m) => { setSearchOpen(false); setStockFor({ matnr: m.matnr, name: m.name_th }); }} />}
       {stockFor && <StockDrawer matnr={stockFor.matnr} name={stockFor.name} onClose={() => setStockFor(null)} />}
+      {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
     </main>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
@@ -7,15 +7,31 @@ import { ROLE_PERMS, useAuth } from "../lib/auth";
 import { SUPPLY_LABEL, useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { bahtWord, thTime } from "../lib/format";
+import { useCartSocket } from "../lib/realtime";
 import type { CartItem } from "../lib/types";
 
 export default function CartPage() {
   const auth = useAuth();
-  const { cart, loading, error, update, remove, ack } = useCart();
+  const { cart, loading, error, update, remove, ack, refresh } = useCart();
   const { plants } = useContent();
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [live, setLive] = useState<string | null>(null);
+
+  // realtime: เซลล์เพิ่ม/แก้ของ → รีเฟรชทันที + เด้งข้อความ
+  useCartSocket(cart?.id, (evt) => {
+    if (evt.type === "hello") return;
+    refresh();
+    if (evt.type === "item_added" && evt.added_by === "sales") setLive(`${evt.by_name || "พนักงานขาย"} เพิ่มสินค้าให้คุณ 1 รายการ — ตรวจสอบด้านล่าง`);
+    else if (evt.type === "customer_attached") setLive(`${evt.sales_name || "พนักงานขาย"} เริ่มช่วยดูแลตะกร้าของคุณ`);
+    else if (evt.type === "session_closed") setLive("พนักงานขายจบการดูแลตะกร้านี้แล้ว — ตะกร้ายังเป็นของคุณ");
+  });
+  useEffect(() => {
+    if (!live) return;
+    const t = setTimeout(() => setLive(null), 6000);
+    return () => clearTimeout(t);
+  }, [live]);
 
   if (auth.role === "sales" || auth.role === "manager") {
     return (
@@ -154,6 +170,7 @@ export default function CartPage() {
             <div className="row small" style={{ marginTop: 12 }}><Icon name="volunteer_activism" size={18} /> <u>365 วันในการเปลี่ยนความคิดของคุณ</u></div>
           </div>
 
+          {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
           <div className="card flat" style={{ marginTop: 14 }}>
             <div className="small muted">สิทธิ์ของบัญชีที่ใช้อยู่ · {auth.user ? `${auth.user.name}${auth.user.tier ? " · สมาชิก " + auth.user.tier : ""}` : "ผู้เยี่ยมชม (ไม่ล็อกอิน)"}</div>
             <ul className="perm-list">

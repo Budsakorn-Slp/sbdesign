@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, cart, catalog, health, sales
+from app.api import admin, auth, cart, catalog, health, sales, ws
 from app.core.config import get_settings
 from app.realtime import manager, on_cart_event
 from app.services import cart_service
@@ -30,6 +30,7 @@ def create_app() -> FastAPI:
     app.include_router(catalog.router)
     app.include_router(cart.router)
     app.include_router(sales.router)
+    app.include_router(ws.router)
     app.include_router(admin.router)
     if on_cart_event not in cart_service._change_hooks:
         cart_service.register_change_hook(on_cart_event)
