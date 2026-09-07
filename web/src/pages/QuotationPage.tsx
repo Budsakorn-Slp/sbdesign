@@ -130,7 +130,7 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
                 <p className="tiny muted" style={{ margin: 0 }}>{isStaff ? "QR PromptPay ที่แท็บเล็ต · ส่งลิงก์จ่ายเข้ามือถือ · บัตร/ผ่อนที่แคชเชียร์ · มัดจำ 20%" : "ชำระผ่าน QR PromptPay / บัตร / ผ่อน 0% · เมื่อจ่ายสำเร็จจะได้เลข SO ทันที"}</p>
               </div>
             ) : q.status === "paid" || q.status === "converted" ? (
-              <Link to={q.sap_so_no ? `/orders/${q.sap_so_no}` : payHref} className="btn green block" style={{ marginTop: 12 }}>ติดตามสถานะ</Link>
+              <div className="note ok" style={{ marginTop: 12 }}>{q.sap_so_no ? <>ชำระเงินแล้ว · คำสั่งซื้อ <b className="mono">SO {q.sap_so_no}</b></> : "ชำระเงินแล้ว · กำลังส่งคำสั่งซื้อเข้าระบบ SAP"}</div>
             ) : null}
           </div>
         </aside>

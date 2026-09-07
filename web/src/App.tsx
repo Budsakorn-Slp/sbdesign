@@ -9,9 +9,11 @@ import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import HomePage from "./pages/HomePage";
 import PresosPage from "./pages/PresosPage";
+import PayPage from "./pages/PayPage";
 import ProductPage from "./pages/ProductPage";
 import QuotationPage from "./pages/QuotationPage";
 import SalesPage from "./pages/SalesPage";
+import SapSyncPage from "./pages/SapSyncPage";
 import SearchPage from "./pages/SearchPage";
 import "./styles/layout.css";
 import "./styles/pages.css";
@@ -45,7 +47,9 @@ export default function App() {
                   <Route path="/sales/quotations/:no" element={<QuotationPage mode="sales" />} />
                   <Route path="/q/:no" element={<QuotationPage mode="customer" />} />
                   <Route path="/quotations/:no" element={<QuotationPage mode="customer" />} />
+                  <Route path="/pay/:no" element={<PayPage />} />
                   <Route path="/manager/approvals" element={<ApprovalsPage />} />
+                  <Route path="/manager/sap-sync" element={<SapSyncPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

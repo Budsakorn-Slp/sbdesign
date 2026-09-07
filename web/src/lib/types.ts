@@ -342,6 +342,37 @@ export type Quotation = {
   link_token: string | null;
 };
 
+// ---------- payment ----------
+export type PaymentMethod = "qr_promptpay" | "card" | "installment" | "link";
+
+export type Payment = {
+  payment_no: string;
+  quotation_no: string;
+  method: PaymentMethod;
+  kind: "full" | "deposit";
+  amount: string;
+  status: "pending" | "paid" | "failed" | "expired" | "cancelled";
+  qr_payload: string | null;
+  pay_url: string | null;
+  expires_at: string;
+  paid_at: string | null;
+  sap_so_no: string | null;
+  sap_sync_status: "pending" | "ok" | "failed";
+  quotation_status: Quotation["status"];
+};
+
+export type SyncJob = {
+  quotation_no: string;
+  customer_name: string | null;
+  grand_total: string;
+  status: "pending" | "ok" | "failed";
+  attempts: number;
+  last_error: string | null;
+  next_retry_at: string;
+  sap_so_no: string | null;
+  paid_at: string | null;
+};
+
 // ---------- home content ----------
 export type NavLink = { label: string; href: string };
 export type HomeContent = {

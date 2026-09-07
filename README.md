@@ -193,3 +193,19 @@ cd web && npm test
 3. กด **สร้าง Quotation** → ถ้าของไม่พอจะถามยืนยันก่อน → ได้หน้าใบเสนอราคา `/sales/quotations/{no}`: กด PDF / ส่ง SMS / คัดลอกลิงก์ → เปิดลิงก์ `/q/{no}?t=...` ในหน้าต่าง incognito ก็เห็นใบ
 4. กด **ยกเลิก + ออกใหม่** → เด้งกลับ `/sales` พร้อมตะกร้าเดิมที่แก้ได้
 5. test: `pytest tests/test_step8_quotation.py` (4 เคส)
+
+### STEP 9 — ชำระเงิน + ส่งต่อ SAP
+- `POST /quotations/{no}/payment-intent {method, kind}` — `method`: `qr_promptpay | card | installment | link` · `kind`: `full` หรือ `deposit` (มัดจำ 20%) → ได้ `payment_no` + QR payload + ลิงก์จ่าย อายุ 15 นาที (กดซ้ำได้ intent เดิม) · เปิดจากลิงก์ลูกค้า `?t=<token>` ได้โดยไม่ต้องล็อกอิน
+- **ไม่มีช่องทางเงินสด** — `method:"cash"` ตอบ 400 เสมอ (เซลล์รับเงินเองไม่ได้ตามข้อกำหนด)
+- `POST /webhooks/payment` — provider ยิงกลับ ต้องเซ็น `X-Signature` = HMAC-SHA256(body, `PAYMENT_WEBHOOK_SECRET`) · ลายเซ็นผิด 401 · ยิงซ้ำ idempotent (ไม่สร้าง SO ซ้ำ)
+- จ่ายสำเร็จ → ใบเป็น `paid` → เรียก `SapClient.create_sales_order` → ได้ `sap_so_no` แล้วใบเป็น `converted` · **SAP ล่ม: เงินไม่หาย** ใบค้างที่ `paid` + `sap_sync_status=failed` และเข้าคิว `sap_sync_jobs` (retry 1/5/15/60/240 นาที)
+- `GET /admin/sap-sync` · `POST /admin/sap-sync/run` · `POST /admin/sap-sync/{no}/retry` (manager/admin เท่านั้น — เซลล์ 403)
+- `POST /checkout/quotation` — ลูกค้าสั่งเองออนไลน์: เซฟ Preso จากตะกร้าตัวเอง + ออกใบ `channel="online"` แล้วไปหน้าชำระเงิน
+- `POST /payments/{no}/mock-confirm` — เฉพาะโหมด dev (`OTP_DEBUG=true`) จำลองว่า provider จ่ายสำเร็จ
+
+วิธีลอง
+1. ที่หน้าใบเสนอราคา กด **ไปหน้าชำระเงิน** → `/pay/{no}` เลือกเต็มจำนวน/มัดจำ 20% + ช่องทาง → กดชำระ → เห็น QR (mock) และหน้าจอรอผล
+2. กด **จำลองจ่ายสำเร็จ (dev)** → หน้าจอขึ้น "ชำระเงินสำเร็จ" พร้อม **เลข SO** และวันนัดส่ง
+3. ฝั่งลูกค้า: `/cart` → `/checkout` กรอกที่อยู่ + คำนวณค่าส่ง + เลือกคิว → **ยืนยันการสั่งซื้อ** → เด้งไปหน้าชำระเงิน
+4. จำลอง SAP ล่ม: ใน pytest ใช้ `get_sap_client().fail_next(1)` → ล็อกอิน MG-001 เปิดไอคอน sync ที่ header (`/manager/sap-sync`) เห็นใบค้าง กด **ส่งใหม่** ได้เลข SO
+5. test: `pytest tests/test_step9_payment.py` (5 เคส)

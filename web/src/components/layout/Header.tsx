@@ -110,7 +110,10 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
             {cartCount > 0 && <span className="badge">{cartCount}</span>}
           </Link>
           {auth.user && (auth.user.role === "manager" || auth.user.role === "admin") && (
-            <Link to="/manager/approvals" className="icon-btn" aria-label="อนุมัติส่วนลด" title="คำขออนุมัติส่วนลด"><Icon name="approval" /></Link>
+            <>
+              <Link to="/manager/approvals" className="icon-btn" aria-label="อนุมัติส่วนลด" title="คำขออนุมัติส่วนลด"><Icon name="approval" /></Link>
+              <Link to="/manager/sap-sync" className="icon-btn" aria-label="คิวส่ง SAP" title="คิวส่งข้อมูลเข้า SAP"><Icon name="sync_problem" /></Link>
+            </>
           )}
           {auth.user ? (
             <div className="hdr-user">

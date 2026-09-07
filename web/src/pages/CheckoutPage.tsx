@@ -4,9 +4,11 @@ import DeliveryPanel from "../components/DeliveryPanel";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
 import PromoPanel from "../components/PromoPanel";
+import { apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart";
 import { bahtWord, thDate } from "../lib/format";
+import type { Quotation } from "../lib/types";
 
 const PAY_METHODS = [
   { key: "card", icon: "credit_card", title: "บัตรเครดิต/เดบิต", note: "Visa, Mastercard, JCB" },
@@ -24,6 +26,8 @@ export default function CheckoutPage() {
   const [pay, setPay] = useState("card");
   const [promoOpen, setPromoOpen] = useState(false);
   const [taxSame, setTaxSame] = useState(true);
+  const [placing, setPlacing] = useState(false);
+  const [orderErr, setOrderErr] = useState<string | null>(null);
   const [addr, setAddr] = useState<Addr>({ email: "", first: "", last: "", phone: "", address: "", street: "", soi: "", sub: "", district: "", province: "", postcode: "" });
 
   useEffect(() => {
@@ -38,6 +42,23 @@ export default function CheckoutPage() {
   }, [auth.user]);
 
   if (!cart) return <main className="container sec"><div className="ph" style={{ height: 240 }}>กำลังโหลดตะกร้า…</div></main>;
+
+  const placeOrder = async () => {
+    setPlacing(true);
+    setOrderErr(null);
+    try {
+      const q = await apiPost<Quotation>("/checkout/quotation", { force: false });
+      await refresh();
+      nav(`/pay/${q.quotation_no}`);
+    } catch (e) {
+      const detail = (e as { detail?: { shortages?: { name: string; need: number; available: number }[]; message?: string } }).detail;
+      if (detail && typeof detail === "object" && detail.shortages) {
+        setOrderErr(`${detail.message} — ${detail.shortages.map((s) => `${s.name} เหลือ ${s.available}`).join(", ")}`);
+      } else setOrderErr(errorMessage(e));
+    } finally {
+      setPlacing(false);
+    }
+  };
   const t = cart.totals;
   const set = (k: keyof Addr) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setAddr({ ...addr, [k]: e.target.value });
   const fullAddress = [addr.address, addr.street && `ถ.${addr.street}`, addr.soi && `ซ.${addr.soi}`, addr.sub, addr.district, addr.province].filter(Boolean).join(" ");
@@ -118,7 +139,10 @@ export default function CheckoutPage() {
               </>
             )}
             <label className="row small" style={{ marginTop: 10 }}><input type="checkbox" checked={taxSame} onChange={(e) => setTaxSame(e.target.checked)} /> ที่อยู่สำหรับออกใบเสร็จจะใช้ที่อยู่ผู้รับสินค้า</label>
-            <button className="btn dark lg block square" style={{ marginTop: 12 }} disabled title="ออกใบเสนอราคา + ชำระเงิน จะเปิดใช้ใน STEP 8–9">ยืนยันการสั่งซื้อ</button>
+            {orderErr && <div className="note err small" style={{ marginTop: 10 }}>{orderErr}</div>}
+            <button className="btn dark lg block square" style={{ marginTop: 12 }} disabled={placing || cart.items.length === 0 || !cart.delivery?.quoted_at} title={cart.delivery?.quoted_at ? "" : "กรุณาคำนวณค่าจัดส่งก่อน"} onClick={placeOrder}>
+              {placing ? "กำลังออกใบสั่งซื้อ…" : "ยืนยันการสั่งซื้อ"}
+            </button>
           </section>
         </aside>
       </div>
