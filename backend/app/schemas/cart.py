@@ -39,6 +39,22 @@ class CartPersonOut(BaseModel):
     staff_code: str | None = None
     phone: str | None = None
     branch_id: str | None = None
+    email: str | None = None
+    default_address: str | None = None
+    default_postcode: str | None = None
+
+
+class DeliveryInfoOut(BaseModel):
+    postcode: str | None = None
+    address: str | None = None
+    zone: str | None = None
+    zone_name: str | None = None
+    shipping_fee: Decimal | None = None
+    install_fee: Decimal | None = None
+    slot_id: str | None = None
+    slot_date: date | None = None
+    slot_period: str | None = None
+    quoted_at: datetime | None = None
 
 
 class CartOut(BaseModel):
@@ -56,6 +72,7 @@ class CartOut(BaseModel):
     expires_at: datetime | None = None
     updated_at: datetime
     totals: TotalsOut | None = None
+    delivery: DeliveryInfoOut | None = None
 
 
 class AddItemIn(BaseModel):

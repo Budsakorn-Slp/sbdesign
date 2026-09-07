@@ -62,6 +62,11 @@ class Totals:
     member_savings: Decimal
     discount_total: Decimal
     net_total: Decimal
+    shipping_fee: Decimal = Decimal(0)
+    install_fee: Decimal = Decimal(0)
+    shipping_discount: Decimal = Decimal(0)
+    grand_total: Decimal = Decimal(0)
+    vat_included: Decimal = Decimal(0)
     lines: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -103,9 +108,27 @@ def compute_totals(db: Session, cart: Cart, promo_result: PromoResult | None = N
             if d.status == "applied":
                 total += amt
     total = min(total, subtotal)
+    # ค่าขนส่ง (STEP 7): quote ล่าสุดบนตะกร้า · โปรส่งฟรี (free_shipping) หักจากค่าส่ง ไม่ใช่จากค่าสินค้า
+    from app.services import delivery_service  # import ตรงนี้กัน circular import
+
+    ship = delivery_service.shipping_summary(db, cart)
+    shipping_fee, install_fee = ship["shipping_fee"], ship["install_fee"]
+    shipping_discount = Decimal(0)
+    for line in lines:
+        if line["kind"] == "promotion" and line["status"] == "applied":
+            o = offers.get(line["code"] or "")
+            if o and o.eligible and (o.code or "").endswith("FREESHIP"):
+                shipping_discount += min(shipping_fee, line["amount"])
+                total -= line["amount"]  # ไม่หักซ้ำจากค่าสินค้า
+                line["title"] = f"{line['title']} (หักจากค่าส่ง)"
+                line["amount"] = min(shipping_fee, line["amount"])
+    total = max(Decimal(0), total)
+    net = subtotal - total
+    grand = net + shipping_fee + install_fee - shipping_discount
+    vat = q1(grand * 7 / 107)
     if db.dirty:
         db.commit()
-    return Totals(subtotal=subtotal, standard_subtotal=standard, member_savings=member_savings, discount_total=total, net_total=subtotal - total, lines=lines, warnings=warnings)
+    return Totals(subtotal=subtotal, standard_subtotal=standard, member_savings=member_savings, discount_total=total, net_total=net, shipping_fee=shipping_fee, install_fee=install_fee, shipping_discount=shipping_discount, grand_total=grand, vat_included=vat, lines=lines, warnings=warnings)
 
 
 def apply_promotion(db: Session, cart: Cart, actor: User | None, code: str) -> AppliedDiscount:

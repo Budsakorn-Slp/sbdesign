@@ -15,7 +15,11 @@ router = APIRouter(tags=["promotions"])
 
 def totals_out(db: Session, cart: Cart, promo_result=None) -> TotalsOut:
     t = promo_service.compute_totals(db, cart, promo_result)
-    return TotalsOut(subtotal=t.subtotal, standard_subtotal=t.standard_subtotal, member_savings=t.member_savings, discount_total=t.discount_total, net_total=t.net_total, lines=[DiscountLineOut(**line) for line in t.lines], warnings=t.warnings)
+    return TotalsOut(
+        subtotal=t.subtotal, standard_subtotal=t.standard_subtotal, member_savings=t.member_savings, discount_total=t.discount_total, net_total=t.net_total,
+        shipping_fee=t.shipping_fee, install_fee=t.install_fee, shipping_discount=t.shipping_discount, grand_total=t.grand_total, vat_included=t.vat_included,
+        lines=[DiscountLineOut(**line) for line in t.lines], warnings=t.warnings,
+    )
 
 
 @router.post("/promotions/evaluate", response_model=EvaluateOut)

@@ -26,6 +26,14 @@ class Cart(Base, TimestampMixin):
     merged_into_cart_id: Mapped[str | None] = mapped_column(ForeignKey("carts.id"), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # ตะกร้าที่เซลล์ถือหมดอายุอัตโนมัติ
     closed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # จัดส่ง (STEP 7) - quote ล่าสุด
+    ship_postcode: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    ship_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ship_zone: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    shipping_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    install_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    slot_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    delivery_quoted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     items: Mapped[list["CartItem"]] = relationship(back_populates="cart", cascade="all, delete-orphan", order_by="CartItem.added_at")
     customer = relationship("User", foreign_keys=[customer_user_id])

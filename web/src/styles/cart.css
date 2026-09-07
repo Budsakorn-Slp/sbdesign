@@ -28,6 +28,12 @@
 .sum-total b { font-size: 26px; }
 .pay-icons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 
+/* ===== checkout ===== */
+.checkout-grid { display: grid; grid-template-columns: 1fr 420px; gap: 32px; align-items: start; }
+.checkout-main h3, .checkout-side h3 { font-size: 16px; }
+.card.compact { padding: 12px 14px; }
+@media (max-width: 1023px) { .checkout-grid { grid-template-columns: 1fr; } }
+
 /* ===== product add box ===== */
 .add-box { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 16px; background: var(--bg-2); }
 .add-box .opts { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; }

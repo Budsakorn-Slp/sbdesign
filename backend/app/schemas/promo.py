@@ -33,6 +33,11 @@ class TotalsOut(BaseModel):
     member_savings: Decimal
     discount_total: Decimal
     net_total: Decimal
+    shipping_fee: Decimal = Decimal(0)
+    install_fee: Decimal = Decimal(0)
+    shipping_discount: Decimal = Decimal(0)
+    grand_total: Decimal = Decimal(0)
+    vat_included: Decimal = Decimal(0)
     lines: list[DiscountLineOut] = []
     warnings: list[str] = []
 

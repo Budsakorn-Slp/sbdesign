@@ -5,7 +5,7 @@ from app.api.deps import get_current_user_optional
 from app.db.session import get_db
 from app.models.cart import Cart, CartItem
 from app.models.user import User
-from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, MergeIn, UpdateItemIn
+from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, UpdateItemIn
 from app.services import cart_service
 
 router = APIRouter(tags=["cart"])
@@ -14,7 +14,7 @@ router = APIRouter(tags=["cart"])
 def person(u: User | None) -> CartPersonOut | None:
     if not u:
         return None
-    return CartPersonOut(id=u.id, name=u.name, tier=u.tier, sap_customer_no=u.sap_customer_no, staff_code=u.staff_code, phone=u.phone, branch_id=u.branch_id)
+    return CartPersonOut(id=u.id, name=u.name, tier=u.tier, sap_customer_no=u.sap_customer_no, staff_code=u.staff_code, phone=u.phone, branch_id=u.branch_id, email=u.email, default_address=u.default_address, default_postcode=u.default_postcode)
 
 
 def item_out(it: CartItem) -> CartItemOut:
@@ -30,14 +30,22 @@ def item_out(it: CartItem) -> CartItemOut:
 def cart_out(cart: Cart, db: Session | None = None) -> CartOut:
     t = cart_service.totals(cart)
     totals = None
+    delivery = None
     if db is not None:
         from app.api.promo import totals_out  # หลีกเลี่ยง circular import
+        from app.models.delivery import DeliverySlot, DeliveryZone
 
         totals = totals_out(db, cart)
+        zone = db.get(DeliveryZone, cart.ship_postcode) if cart.ship_postcode else None
+        slot = db.get(DeliverySlot, cart.slot_id) if cart.slot_id else None
+        delivery = DeliveryInfoOut(
+            postcode=cart.ship_postcode, address=cart.ship_address, zone=cart.ship_zone, zone_name=zone.zone_name if zone else None, shipping_fee=cart.shipping_fee,
+            install_fee=cart.install_fee, slot_id=cart.slot_id, slot_date=slot.date if slot else None, slot_period=slot.period if slot else None, quoted_at=cart.delivery_quoted_at,
+        )
     return CartOut(
         id=cart.id, no=cart.no, label=cart.label, status=cart.status, customer=person(cart.customer), owner_sales=person(cart.owner_sales),
         is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
-        pending_count=t["pending_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals,
+        pending_count=t["pending_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals, delivery=delivery,
     )
 
 

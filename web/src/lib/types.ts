@@ -138,6 +138,9 @@ export type CartPerson = {
   staff_code: string | null;
   phone: string | null;
   branch_id: string | null;
+  email: string | null;
+  default_address: string | null;
+  default_postcode: string | null;
 };
 
 export type DiscountLine = {
@@ -156,8 +159,57 @@ export type Totals = {
   member_savings: string;
   discount_total: string;
   net_total: string;
+  shipping_fee: string;
+  install_fee: string;
+  shipping_discount: string;
+  grand_total: string;
+  vat_included: string;
   lines: DiscountLine[];
   warnings: string[];
+};
+
+export type CartDelivery = {
+  postcode: string | null;
+  address: string | null;
+  zone: string | null;
+  zone_name: string | null;
+  shipping_fee: string | null;
+  install_fee: string | null;
+  slot_id: string | null;
+  slot_date: string | null;
+  slot_period: "am" | "pm" | null;
+  quoted_at: string | null;
+};
+
+export type DeliverySlot = {
+  id: string;
+  date: string;
+  period: "am" | "pm";
+  zone: string;
+  quota: number;
+  booked: number;
+  remaining: number;
+  held_by_this_cart: boolean;
+};
+
+export type DeliveryGroup = {
+  mode: "takeaway" | "ship" | "install";
+  label: string;
+  items: { matnr: string; name: string; qty: number; plant_code: string | null }[];
+  fee_note: string | null;
+};
+
+export type DeliveryQuote = {
+  cart_id: string;
+  postcode: string;
+  zone: string;
+  zone_name: string;
+  base_fee: string;
+  install_fee: string;
+  total_fee: string;
+  groups: DeliveryGroup[];
+  slots: DeliverySlot[];
+  held_slot_id: string | null;
 };
 
 export type Offer = {
@@ -212,6 +264,7 @@ export type Cart = {
   expires_at: string | null;
   updated_at: string;
   totals: Totals | null;
+  delivery: CartDelivery | null;
 };
 
 // ---------- home content ----------

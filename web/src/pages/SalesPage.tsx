@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import DeliveryPanel from "../components/DeliveryPanel";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
 import PromoPanel from "../components/PromoPanel";
@@ -22,6 +23,7 @@ export default function SalesPage() {
   const [stockFor, setStockFor] = useState<{ matnr: string; name: string } | null>(null);
   const [live, setLive] = useState<string | null>(null);
   const [promoOpen, setPromoOpen] = useState(false);
+  const [deliveryOpen, setDeliveryOpen] = useState(false);
 
   // realtime: ลูกค้ากดเก็บไว้/ลบออก/แก้จำนวนจากมือถือ → เซลล์เห็นทันที
   useCartSocket(sales.active?.id, (evt) => {
@@ -117,6 +119,11 @@ export default function SalesPage() {
             ) : (
               <>
                 <p className="cart-intro">สินค้า {cart.count} ชิ้น · ยอดชั่วคราว {bahtWord(cart.subtotal)}{cart.customer ? ` · ราคาสมาชิก ${cart.customer.tier || "ทั่วไป"}` : " · ยังไม่ผูกลูกค้า (ราคาปกติ)"}</p>
+                {deliveryOpen && (
+                  <div style={{ marginBottom: 14 }}>
+                    <DeliveryPanel key={cart.id} cart={cart} defaultPostcode={cart.customer?.default_postcode} defaultAddress={cart.customer?.default_address} onChanged={sales.reloadActive} />
+                  </div>
+                )}
                 <div className="cart-items">
                   {cart.items.map((it) => (
                     <SalesRow key={it.id} it={it} busy={busy === it.id} plantName={plantName(it.plant_code)}
@@ -144,10 +151,14 @@ export default function SalesPage() {
               {cart.totals?.warnings.map((w) => (
                 <div key={w} className="note warn small">{w}</div>
               ))}
-              <div className="sum-row"><span>ค่าขนส่ง</span><span className="muted">รอคำนวณ (STEP 7)</span></div>
-              <div className="sum-total"><span>ยอดชั่วคราว</span><b>{bahtWord(cart.totals?.net_total ?? cart.subtotal)}</b></div>
+              <div className="sum-row"><span>ค่าขนส่ง{cart.totals && Number(cart.totals.install_fee) > 0 ? " + ติดตั้ง" : ""}</span>
+                {cart.delivery?.quoted_at && cart.totals ? <b>{bahtWord(Number(cart.totals.shipping_fee) + Number(cart.totals.install_fee) - Number(cart.totals.shipping_discount))}</b> : <button className="link-btn small" onClick={() => setDeliveryOpen(true)}>รอคำนวณ</button>}
+              </div>
+              {cart.delivery?.slot_date && <div className="sum-row small muted"><span>คิวจัดส่ง</span><span>{thDate(cart.delivery.slot_date)} {cart.delivery.slot_period === "am" ? "เช้า" : "บ่าย"} · เขต {cart.delivery.zone}</span></div>}
+              <div className="sum-total"><span>ยอดรวมทั้งบิล (รวม VAT)</span><b>{bahtWord(cart.totals?.grand_total ?? cart.subtotal)}</b></div>
               <div className="col" style={{ marginTop: 12 }}>
                 <button className="btn block" onClick={() => setPromoOpen(true)} disabled={cart.items.length === 0}><Icon name="sell" size={18} /> {cart.totals && cart.totals.lines.length > 0 ? "แก้ไขโปรโมชั่น / ส่วนลด" : "เช็คโปรโมชั่น"}</button>
+                <button className="btn block" onClick={() => setDeliveryOpen((v) => !v)} disabled={cart.items.length === 0}><Icon name="local_shipping" size={18} /> {cart.delivery?.quoted_at ? "แก้ไขค่าส่ง / คิวจัดส่ง" : "เช็คสต็อก + คิวจัดส่ง"}</button>
                 <button className="btn block" disabled title="STEP 8">Save Preso</button>
                 <button className="btn primary block" disabled={!cart.customer} title={cart.customer ? "STEP 8" : "ต้องผูกลูกค้าก่อน"}>สร้างใบเสนอราคา</button>
               </div>

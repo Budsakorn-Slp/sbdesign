@@ -2,5 +2,6 @@
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.cart import Cart, CartItem, CartItemHistory  # noqa: F401
 from app.models.catalog import Brand, Category, Material, MaterialPrice, Plant, StockCache, StockCheck  # noqa: F401
+from app.models.delivery import DeliverySlot, DeliveryZone, SlotHold  # noqa: F401
 from app.models.promo import AppliedDiscount, Promotion  # noqa: F401
 from app.models.user import OtpCode, User, UserSession  # noqa: F401
