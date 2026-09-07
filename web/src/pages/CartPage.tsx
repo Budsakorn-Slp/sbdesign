@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
+import PromoPanel from "../components/PromoPanel";
 import { apiPost, errorMessage } from "../lib/api";
 import { ROLE_PERMS, useAuth } from "../lib/auth";
 import { SUPPLY_LABEL, useCart } from "../lib/cart";
@@ -12,12 +13,13 @@ import type { CartItem } from "../lib/types";
 
 export default function CartPage() {
   const auth = useAuth();
-  const { cart, loading, error, update, remove, ack, refresh } = useCart();
+  const { cart, loading, error, update, remove, ack, refresh, setCart } = useCart();
   const { plants } = useContent();
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [live, setLive] = useState<string | null>(null);
+  const [promoOpen, setPromoOpen] = useState(false);
 
   // realtime: เซลล์เพิ่ม/แก้ของ → รีเฟรชทันที + เด้งข้อความ
   useCartSocket(cart?.id, (evt) => {
@@ -150,11 +152,18 @@ export default function CartPage() {
           <div className="summary">
             <h3>สรุปคำสั่งซื้อ</h3>
             <div className="sum-row"><span>สินค้า ({cart?.count || 0})</span><b>{bahtWord(cart?.subtotal || 0)}</b></div>
+            {cart?.totals?.lines.map((l) => (
+              <div key={l.id} className="sum-row"><span>{l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}</span><span className={l.status === "applied" ? "green" : "muted"}>−{bahtWord(l.amount)}</span></div>
+            ))}
+            <div className="sum-row">
+              <span>โปรโมชั่น / ส่วนลด</span>
+              <button className="link-btn small" disabled={!items.length} onClick={() => setPromoOpen(true)}>{cart?.totals && cart.totals.lines.length ? "แก้ไข" : "เช็คโปรโมชั่น"}</button>
+            </div>
             <div className="sum-row"><span>ราคาค่าจัดส่ง</span><span className="muted">เริ่มต้น 350 บาท</span></div>
             <div className="sum-row"><span className="muted"><i>หรือ</i> <u>ใช้บริการรับที่สาขา</u></span><span className="muted">ไม่มีค่าบริการ</span></div>
             <div className="sum-total">
               <span>ยอดรวม (ไม่รวมค่าประกอบสินค้า)</span>
-              <b>{bahtWord(cart?.subtotal || 0)}</b>
+              <b>{bahtWord(cart?.totals?.net_total ?? cart?.subtotal ?? 0)}</b>
             </div>
             <p className="tiny muted">เมื่อคลิก "ชำระเงิน" แสดงว่าคุณยอมรับ <u>นโยบายความเป็นส่วนตัว</u></p>
             {canPay ? (
@@ -171,6 +180,7 @@ export default function CartPage() {
           </div>
 
           {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
+          {promoOpen && cart && <PromoPanel cart={cart} isStaff={false} onClose={() => setPromoOpen(false)} onCartChange={setCart} />}
           <div className="card flat" style={{ marginTop: 14 }}>
             <div className="small muted">สิทธิ์ของบัญชีที่ใช้อยู่ · {auth.user ? `${auth.user.name}${auth.user.tier ? " · สมาชิก " + auth.user.tier : ""}` : "ผู้เยี่ยมชม (ไม่ล็อกอิน)"}</div>
             <ul className="perm-list">

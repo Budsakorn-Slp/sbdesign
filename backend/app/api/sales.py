@@ -52,12 +52,12 @@ def my_carts(db: Session = Depends(get_db), me: User = Depends(sales_only)):
 
 @router.post("/sales/carts", response_model=CartOut, status_code=201)
 def open_cart(body: OpenCartIn, db: Session = Depends(get_db), me: User = Depends(sales_only)):
-    return cart_out(sales_service.open_cart(db, me, body.label))
+    return cart_out(sales_service.open_cart(db, me, body.label), db)
 
 
 @router.get("/sales/carts/{cart_id}", response_model=CartOut)
 def get_cart(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
-    return cart_out(sales_service.require_my_cart(db, me, cart_id))
+    return cart_out(sales_service.require_my_cart(db, me, cart_id), db)
 
 
 @router.delete("/sales/carts/{cart_id}")
@@ -72,7 +72,7 @@ def add_item(cart_id: str, body: AddItemIn, db: Session = Depends(get_db), me: U
     cart = sales_service.require_my_cart(db, me, cart_id)
     cart_service.add_item(db, cart, me, body.matnr, body.qty, body.supply_mode, body.plant_code, body.note)
     sales_service.touch(db, cart)
-    return cart_out(cart_service.load_cart(db, cart.id))
+    return cart_out(cart_service.load_cart(db, cart.id), db)
 
 
 @router.patch("/sales/carts/{cart_id}/items/{item_id}", response_model=CartOut)
@@ -80,14 +80,14 @@ def update_item(cart_id: str, item_id: str, body: UpdateItemIn, db: Session = De
     cart = sales_service.require_my_cart(db, me, cart_id)
     cart_service.update_item(db, cart, me, item_id, body.qty, body.supply_mode, body.plant_code, body.note)
     sales_service.touch(db, cart)
-    return cart_out(cart_service.load_cart(db, cart.id))
+    return cart_out(cart_service.load_cart(db, cart.id), db)
 
 
 @router.delete("/sales/carts/{cart_id}/items/{item_id}", response_model=CartOut)
 def remove_item(cart_id: str, item_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
     cart = sales_service.require_my_cart(db, me, cart_id)
     cart_service.remove_item(db, cart, me, item_id)
-    return cart_out(cart_service.load_cart(db, cart.id))
+    return cart_out(cart_service.load_cart(db, cart.id), db)
 
 
 @router.post("/sales/carts/{cart_id}/attach-customer", response_model=CartOut)
@@ -95,13 +95,13 @@ def attach_customer(cart_id: str, body: AttachIn, db: Session = Depends(get_db),
     """ผูกลูกค้า — ถ้าลูกค้ามีตะกร้าออนไลน์อยู่จะ merge เข้าใบนี้"""
     cart = sales_service.require_my_cart(db, me, cart_id)
     cart, _ = sales_service.attach_customer(db, me, cart, body.customer_key)
-    return cart_out(cart)
+    return cart_out(cart, db)
 
 
 @router.delete("/sales/carts/{cart_id}/attach-customer", response_model=CartOut)
 def detach_customer(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
     cart = sales_service.require_my_cart(db, me, cart_id)
-    return cart_out(sales_service.detach_customer(db, me, cart))
+    return cart_out(sales_service.detach_customer(db, me, cart), db)
 
 
 @router.get("/customers/search")

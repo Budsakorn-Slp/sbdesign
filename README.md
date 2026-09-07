@@ -156,3 +156,15 @@ cd web && npm test
 1. แท็บ 1 ล็อกอินลูกค้า ณภัทร เปิด `/cart` · แท็บ 2 ล็อกอิน SA-104 เปิด `/sales` → ผูกลูกค้า 4400182 → "เพิ่มสินค้าให้ลูกค้า"
 2. แท็บ 1 เด้งการ์ด "พนักงานเพิ่มสินค้าให้คุณ 1 รายการ" ภายใน 1 วินาที → กด เก็บไว้ / ลบออก → แท็บ 2 เห็นผลทันที
 3. test: `pytest tests/test_step5_realtime.py` (3 เคส: เซลล์เพิ่ม→ลูกค้าได้ event/ack/remove, ไม่มีสิทธิ์ถูกปิด 1008, guest ใช้ anon token)
+
+### STEP 6 — โปรโมชั่น + ส่วนลด
+- `POST /promotions/evaluate {cart_id}` → โปรที่ **เข้าเงื่อนไข** (พร้อมยอดลดเป็นบาท) และ **ยังไม่เข้าเงื่อนไขพร้อมเหตุผลว่าขาดอะไร** + โควตาส่วนลดพนักงาน + ยอดหลังส่วนลด (ประเมินผ่าน `SapClient.evaluate_promotions` — mock ใช้กติกาใน `integrations/sap/promo_engine.py`)
+- `POST /cart/{id}/discounts` — `{kind:"promotion", promo_code}` (ลูกค้า/เซลล์กดใช้โปรที่เข้าเงื่อนไข) หรือ `{kind:"staff_manual", percent, reason?}` (เซลล์ ≤ 3% ใช้ได้เลย · > 3% เป็น `pending_approval` รอผู้จัดการ)
+- `GET /discount-approvals` · `POST /discount-approvals/{id}/approve|reject` (manager เท่านั้น — sales ได้ 403)
+- ส่วนลดผูก **รายตะกร้า** (`applied_discounts.cart_id`) · ยอดทุกจุด (`/cart`, `/sales/carts/{id}`, `/promotions/evaluate`, ใบเสนอราคา) คำนวณจาก `promo_service.compute_totals` ฟังก์ชันเดียว → ตรงกันเสมอ · โปรที่ apply แล้วแต่ตะกร้าเปลี่ยนจนไม่เข้าเงื่อนไขจะเป็น 0 พร้อม warning
+
+วิธีลอง
+1. `/sales` ผูกลูกค้า Gold + ใส่โซฟา NORDIC → กด **เช็คโปรโมชั่น** → SEP-SOFA15 เข้าเงื่อนไข (กดใช้) · BUNDLE-BED บอกว่า "ขาดที่นอน 1 ชิ้น"
+2. ใส่ส่วนลดพนักงาน 2% → ยอดในสรุปเปลี่ยนทันที · ใส่ 5% + เหตุผล → ขึ้น "รออนุมัติ" → ล็อกอิน MG-001 ไปที่ไอคอน ✓ (คำขออนุมัติส่วนลด) → อนุมัติ → ยอดหักส่วนลด
+3. ฝั่งลูกค้า `/cart` กด "เช็คโปรโมชั่น" ใช้โปรที่เข้าเงื่อนไขเองได้ แต่ให้ส่วนลดพนักงานไม่ได้ (403)
+4. test: `pytest tests/test_step6_promo.py` (5 เคส)

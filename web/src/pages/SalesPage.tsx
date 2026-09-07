@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
+import PromoPanel from "../components/PromoPanel";
 import { apiGet, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { SUPPLY_LABEL } from "../lib/cart";
@@ -20,6 +21,7 @@ export default function SalesPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [stockFor, setStockFor] = useState<{ matnr: string; name: string } | null>(null);
   const [live, setLive] = useState<string | null>(null);
+  const [promoOpen, setPromoOpen] = useState(false);
 
   // realtime: ลูกค้ากดเก็บไว้/ลบออก/แก้จำนวนจากมือถือ → เซลล์เห็นทันที
   useCartSocket(sales.active?.id, (evt) => {
@@ -132,10 +134,20 @@ export default function SalesPage() {
             <div className="summary">
               <h3>สรุปคำสั่งซื้อ</h3>
               <div className="sum-row"><span>สินค้า ({cart.count})</span><b>{bahtWord(cart.subtotal)}</b></div>
-              <div className="sum-row"><span>ส่วนลด</span><span className="muted">รอเช็คโปร (STEP 6)</span></div>
+              {cart.totals && Number(cart.totals.member_savings) > 0 && <div className="sum-row"><span>ราคาสมาชิก (รวมแล้ว)</span><span className="green">−{bahtWord(cart.totals.member_savings)}</span></div>}
+              {cart.totals && cart.totals.lines.length === 0 && (
+                <div className="sum-row"><span>ส่วนลด</span><button className="link-btn small" onClick={() => setPromoOpen(true)}>รอเช็คโปร</button></div>
+              )}
+              {cart.totals?.lines.map((l) => (
+                <div key={l.id} className="sum-row"><span>{l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}</span><span className={l.status === "applied" ? "green" : "muted"}>−{bahtWord(l.amount)}</span></div>
+              ))}
+              {cart.totals?.warnings.map((w) => (
+                <div key={w} className="note warn small">{w}</div>
+              ))}
               <div className="sum-row"><span>ค่าขนส่ง</span><span className="muted">รอคำนวณ (STEP 7)</span></div>
-              <div className="sum-total"><span>ยอดชั่วคราว</span><b>{bahtWord(cart.subtotal)}</b></div>
+              <div className="sum-total"><span>ยอดชั่วคราว</span><b>{bahtWord(cart.totals?.net_total ?? cart.subtotal)}</b></div>
               <div className="col" style={{ marginTop: 12 }}>
+                <button className="btn block" onClick={() => setPromoOpen(true)} disabled={cart.items.length === 0}><Icon name="sell" size={18} /> {cart.totals && cart.totals.lines.length > 0 ? "แก้ไขโปรโมชั่น / ส่วนลด" : "เช็คโปรโมชั่น"}</button>
                 <button className="btn block" disabled title="STEP 8">Save Preso</button>
                 <button className="btn primary block" disabled={!cart.customer} title={cart.customer ? "STEP 8" : "ต้องผูกลูกค้าก่อน"}>สร้างใบเสนอราคา</button>
               </div>
@@ -152,6 +164,7 @@ export default function SalesPage() {
         onAdd={(m, mode, plant) => run("add", async () => { await sales.addItem(m.matnr, 1, mode, plant); setSearchOpen(false); })}
         onStock={(m) => { setSearchOpen(false); setStockFor({ matnr: m.matnr, name: m.name_th }); }} />}
       {stockFor && <StockDrawer matnr={stockFor.matnr} name={stockFor.name} onClose={() => setStockFor(null)} />}
+      {promoOpen && cart && <PromoPanel cart={cart} isStaff onClose={() => setPromoOpen(false)} onCartChange={(c) => sales.setActive(c)} />}
       {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
     </main>
   );

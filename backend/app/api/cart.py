@@ -27,12 +27,17 @@ def item_out(it: CartItem) -> CartItemOut:
     )
 
 
-def cart_out(cart: Cart) -> CartOut:
+def cart_out(cart: Cart, db: Session | None = None) -> CartOut:
     t = cart_service.totals(cart)
+    totals = None
+    if db is not None:
+        from app.api.promo import totals_out  # หลีกเลี่ยง circular import
+
+        totals = totals_out(db, cart)
     return CartOut(
         id=cart.id, no=cart.no, label=cart.label, status=cart.status, customer=person(cart.customer), owner_sales=person(cart.owner_sales),
         is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
-        pending_count=t["pending_count"], expires_at=cart.expires_at, updated_at=cart.updated_at,
+        pending_count=t["pending_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals,
     )
 
 
@@ -57,28 +62,28 @@ class CartCtx:
 @router.get("/cart", response_model=CartOut)
 def get_cart(ctx: CartCtx = Depends()):
     """ตะกร้าของ user/anon ปัจจุบัน (ลูกค้าจะได้ใบที่เซลล์ถืออยู่ถ้ามี)"""
-    return cart_out(ctx.current())
+    return cart_out(ctx.current(), ctx.db)
 
 
 @router.post("/cart/items", response_model=CartOut, status_code=201)
 def add_item(body: AddItemIn, ctx: CartCtx = Depends()):
     cart = ctx.current()
     cart_service.add_item(ctx.db, cart, ctx.user, body.matnr, body.qty, body.supply_mode, body.plant_code, body.note)
-    return cart_out(cart_service.load_cart(ctx.db, cart.id))
+    return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
 
 
 @router.patch("/cart/items/{item_id}", response_model=CartOut)
 def update_item(item_id: str, body: UpdateItemIn, ctx: CartCtx = Depends()):
     cart = ctx.current()
     cart_service.update_item(ctx.db, cart, ctx.user, item_id, body.qty, body.supply_mode, body.plant_code, body.note)
-    return cart_out(cart_service.load_cart(ctx.db, cart.id))
+    return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
 
 
 @router.delete("/cart/items/{item_id}", response_model=CartOut)
 def remove_item(item_id: str, ctx: CartCtx = Depends()):
     cart = ctx.current()
     cart_service.remove_item(ctx.db, cart, ctx.user, item_id)
-    return cart_out(cart_service.load_cart(ctx.db, cart.id))
+    return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
 
 
 @router.post("/cart/items/{item_id}/ack", response_model=CartOut)
@@ -86,7 +91,7 @@ def ack_item(item_id: str, ctx: CartCtx = Depends()):
     """ลูกค้ากด 'เก็บไว้' รายการที่พนักงานเพิ่มให้"""
     cart = ctx.current()
     cart_service.ack_item(ctx.db, cart, ctx.user, item_id)
-    return cart_out(cart_service.load_cart(ctx.db, cart.id))
+    return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
 
 
 @router.post("/carts/{cart_id}/merge", response_model=CartOut)
@@ -94,7 +99,7 @@ def merge(cart_id: str, body: MergeIn, ctx: CartCtx = Depends()):
     """รวม source เข้า cart_id — ต้องมีสิทธิ์ทั้งสองใบ"""
     target = ctx.by_id(cart_id)
     source = ctx.by_id(body.source_cart_id)
-    return cart_out(cart_service.merge_carts(ctx.db, source, target, ctx.user))
+    return cart_out(cart_service.merge_carts(ctx.db, source, target, ctx.user), ctx.db)
 
 
 @router.post("/cart/checkout-check")

@@ -4,6 +4,7 @@ import { AuthProvider } from "./lib/auth";
 import { CartProvider } from "./lib/cart";
 import { ContentProvider } from "./lib/content";
 import { SalesProvider } from "./lib/sales";
+import ApprovalsPage from "./pages/ApprovalsPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import HomePage from "./pages/HomePage";
@@ -38,6 +39,7 @@ export default function App() {
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
                   <Route path="/sales" element={<SalesPage />} />
+                  <Route path="/manager/approvals" element={<ApprovalsPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

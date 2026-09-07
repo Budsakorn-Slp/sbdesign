@@ -10,7 +10,7 @@ from app.db.session import SessionLocal
 from app.integrations.sap import get_sap_client
 from app.models.catalog import Material
 from app.models.user import User
-from app.services import catalog_service, stock_service
+from app.services import catalog_service, promo_service, stock_service
 
 SAP_MOCK_DIR = Path(__file__).resolve().parents[1] / "seed" / "sap_mock"
 
@@ -54,7 +54,8 @@ def seed_catalog(db: Session) -> dict:
     added = catalog_service.upsert_materials(db, client.list_materials())
     matnrs = [m for m in db.scalars(select(Material.matnr)).all()]
     cached = stock_service.sync_all_stock_to_cache(db, matnrs)
-    return {"materials_added": added, "materials_total": len(matnrs), "stock_cached": cached}
+    promos = promo_service.sync_promotions(db, _load("promotions.json"))
+    return {"materials_added": added, "materials_total": len(matnrs), "stock_cached": cached, "promotions_added": promos}
 
 
 def run() -> None:

@@ -109,6 +109,9 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
             <Icon name="shopping_cart" />
             {cartCount > 0 && <span className="badge">{cartCount}</span>}
           </Link>
+          {auth.user && (auth.user.role === "manager" || auth.user.role === "admin") && (
+            <Link to="/manager/approvals" className="icon-btn" aria-label="อนุมัติส่วนลด" title="คำขออนุมัติส่วนลด"><Icon name="approval" /></Link>
+          )}
           {auth.user ? (
             <div className="hdr-user">
               <Icon name="account_circle" size={26} />

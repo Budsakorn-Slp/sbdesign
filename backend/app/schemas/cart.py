@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.promo import TotalsOut
+
 
 class CartItemOut(BaseModel):
     id: str
@@ -53,6 +55,7 @@ class CartOut(BaseModel):
     pending_count: int
     expires_at: datetime | None = None
     updated_at: datetime
+    totals: TotalsOut | None = None
 
 
 class AddItemIn(BaseModel):

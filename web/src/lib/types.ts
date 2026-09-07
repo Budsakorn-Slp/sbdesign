@@ -140,6 +140,63 @@ export type CartPerson = {
   branch_id: string | null;
 };
 
+export type DiscountLine = {
+  id: string;
+  kind: "promotion" | "staff_manual" | "member_price";
+  code: string | null;
+  title: string | null;
+  amount: string;
+  status: "applied" | "pending_approval" | "rejected" | "removed";
+  percent: string | null;
+};
+
+export type Totals = {
+  subtotal: string;
+  standard_subtotal: string;
+  member_savings: string;
+  discount_total: string;
+  net_total: string;
+  lines: DiscountLine[];
+  warnings: string[];
+};
+
+export type Offer = {
+  code: string;
+  title: string;
+  condition_text: string;
+  eligible: boolean;
+  amount: string;
+  reason: string | null;
+  stackable: boolean;
+  discount_type: "percent" | "amount" | "gift";
+  applied: boolean;
+  applied_id: string | null;
+};
+
+export type EvaluateOut = {
+  cart_id: string;
+  customer_name: string | null;
+  customer_tier: string | null;
+  eligible: Offer[];
+  ineligible: Offer[];
+  staff_discount_quota_percent: number;
+  staff_discount: DiscountLine | null;
+  totals: Totals;
+};
+
+export type Approval = {
+  id: string;
+  cart_id: string | null;
+  cart_no: string | null;
+  customer_name: string | null;
+  sales_name: string | null;
+  percent: string | null;
+  amount: string;
+  reason: string | null;
+  status: string;
+  created_at: string;
+};
+
 export type Cart = {
   id: string;
   no: string;
@@ -154,6 +211,7 @@ export type Cart = {
   pending_count: number;
   expires_at: string | null;
   updated_at: string;
+  totals: Totals | null;
 };
 
 // ---------- home content ----------
