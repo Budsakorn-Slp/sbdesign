@@ -1,0 +1,11 @@
+[
+  {"code": "SEP-SOFA15", "title": "โซฟาลด 15%", "condition_text": "หมวดโซฟา ยอด ≥ 20,000 · ใช้ร่วมกับบัตรสมาชิกได้",
+   "condition": {"type": "category_percent", "category_root": "sofa", "min_category_subtotal": 20000, "percent": 15},
+   "discount_type": "percent", "discount_value": 15, "stackable": true, "valid_from": "2026-09-01", "valid_to": "2026-09-30"},
+  {"code": "GOLD-FREESHIP", "title": "ส่งฟรีในเขต กทม.", "condition_text": "สมาชิก Gold + ยอด ≥ 30,000 · ไม่รวมค่าติดตั้ง",
+   "condition": {"type": "free_shipping", "tier": "Gold", "min_subtotal": 30000, "zones": ["A", "B"], "max_amount": 800},
+   "discount_type": "amount", "discount_value": 800, "stackable": true, "valid_from": "2026-09-01", "valid_to": "2026-12-31"},
+  {"code": "BUNDLE-BED", "title": "ซื้อที่นอนแถมหมอน 2 ใบ", "condition_text": "มีที่นอนในบิลอย่างน้อย 1 ชิ้น",
+   "condition": {"type": "bundle_gift", "category_root": "mattress", "min_qty": 1, "gift_value": 1290, "gift_text": "หมอนหนุน 2 ใบ"},
+   "discount_type": "gift", "discount_value": 1290, "stackable": true, "valid_from": "2026-09-01", "valid_to": "2026-10-31"}
+]

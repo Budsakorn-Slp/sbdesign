@@ -1,0 +1,6 @@
+[
+  {"plant_code": "BKN", "name": "สาขาบางนา", "type": "store", "zone_codes": ["A", "B"], "address": "ถ.บางนา-ตราด กม.4 บางนา กทม. 10260"},
+  {"plant_code": "BPL", "name": "คลังบางพลี", "type": "warehouse", "zone_codes": ["A", "B", "C"], "address": "นิคมอุตสาหกรรมบางพลี สมุทรปราการ 10540"},
+  {"plant_code": "RIT", "name": "สาขารามอินทรา", "type": "store", "zone_codes": ["A", "B"], "address": "ถ.รามอินทรา คันนายาว กทม. 10230"},
+  {"plant_code": "CNX", "name": "สาขาเชียงใหม่", "type": "store", "zone_codes": ["D"], "address": "ถ.ซุปเปอร์ไฮเวย์ เชียงใหม่ 50000"}
+]

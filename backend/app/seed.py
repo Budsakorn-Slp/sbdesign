@@ -1,10 +1,18 @@
 """seed data - รันซ้ำได้ (idempotent): python -m app.seed"""
+import json
+from pathlib import Path
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
 from app.db.session import SessionLocal
+from app.integrations.sap import get_sap_client
+from app.models.catalog import Material
 from app.models.user import User
+from app.services import catalog_service, stock_service
+
+SAP_MOCK_DIR = Path(__file__).resolve().parents[1] / "seed" / "sap_mock"
 
 SEED_USERS = [
     # ลูกค้า
@@ -21,6 +29,11 @@ SEED_USERS = [
 DEFAULT_PASSWORD = "1234"
 
 
+def _load(name: str):
+    with open(SAP_MOCK_DIR / name, encoding="utf-8") as f:
+        return json.load(f)
+
+
 def seed_users(db: Session) -> int:
     n = 0
     for row in SEED_USERS:
@@ -33,9 +46,21 @@ def seed_users(db: Session) -> int:
     return n
 
 
+def seed_catalog(db: Session) -> dict:
+    """mirror จาก SAP (mock) -> Group B: categories/brands/plants/materials/prices/stock_cache"""
+    catalog_service.upsert_taxonomy(db, _load("categories.json"), _load("brands.json"))
+    catalog_service.upsert_plants(db, _load("plants.json"))
+    client = get_sap_client()
+    added = catalog_service.upsert_materials(db, client.list_materials())
+    matnrs = [m for m in db.scalars(select(Material.matnr)).all()]
+    cached = stock_service.sync_all_stock_to_cache(db, matnrs)
+    return {"materials_added": added, "materials_total": len(matnrs), "stock_cached": cached}
+
+
 def run() -> None:
     with SessionLocal() as db:
         print(f"seed users: +{seed_users(db)} (password ทุกบัญชี = {DEFAULT_PASSWORD})")
+        print(f"seed catalog: {seed_catalog(db)}")
 
 
 if __name__ == "__main__":

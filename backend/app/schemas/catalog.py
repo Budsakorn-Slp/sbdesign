@@ -1,0 +1,100 @@
+from datetime import date, datetime
+from decimal import Decimal
+
+from pydantic import BaseModel
+
+
+class CategoryOut(BaseModel):
+    id: str
+    name_th: str
+    name_en: str | None = None
+    room: str | None = None
+    icon: str | None = None
+    children: list["CategoryOut"] = []
+
+
+class BrandOut(BaseModel):
+    id: str
+    name: str
+
+
+class PlantOut(BaseModel):
+    plant_code: str
+    name: str
+    type: str
+    address: str | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class StockSummaryOut(BaseModel):
+    available_total: int = 0
+    store_available: int = 0
+    warehouse_available: int = 0
+    fetched_at: datetime | None = None
+
+
+class MaterialCard(BaseModel):
+    matnr: str
+    sku: str
+    name_th: str
+    name_en: str | None = None
+    variant: str | None = None
+    spec: str | None = None
+    category_id: str | None = None
+    category_name: str | None = None
+    brand_id: str | None = None
+    brand_name: str | None = None
+    room: str | None = None
+    image_url: str | None = None
+    price: Decimal
+    price_tier: str
+    standard_price: Decimal
+    member_price: Decimal | None = None  # ราคาสมาชิก (เห็นเมื่อล็อกอิน)
+    compare_at_price: Decimal | None = None
+    discount_percent: int | None = None
+    requires_install: bool
+    is_takeaway_ok: bool
+    is_new: bool
+    tags: list[str] = []
+    stock: StockSummaryOut | None = None
+
+
+class MaterialDetail(MaterialCard):
+    barcode: str | None = None
+    description: str | None = None
+    volume_m3: Decimal | None = None
+    weight_kg: Decimal | None = None
+    synced_at: datetime
+
+
+class SearchOut(BaseModel):
+    items: list[MaterialCard]
+    total: int
+    q: str | None = None
+    category: str | None = None
+
+
+class StockRowOut(BaseModel):
+    plant_code: str
+    plant_name: str
+    plant_type: str
+    on_hand: int
+    reserved: int
+    available: int
+    atp_date: date | None = None
+    note: str | None = None
+
+
+class StockOut(BaseModel):
+    """พนักงานเห็นครบทุกสาขา · ลูกค้าเห็นแค่สรุป (ไม่เห็นสต็อกข้ามสาขา)"""
+
+    matnr: str
+    source: str
+    stale: bool
+    fetched_at: datetime
+    stale_minutes: int
+    available: bool
+    earliest_atp: date | None = None
+    rows: list[StockRowOut] = []
+    error: str | None = None

@@ -1,0 +1,30 @@
+[
+  {"id": "bedroom", "name_th": "ห้องนอน", "name_en": "Bedroom", "room": "bedroom", "icon": "bed", "sort": 1, "children": [
+    {"id": "bedroom-set", "name_th": "ชุดห้องนอน"}, {"id": "bed", "name_th": "เตียงนอน"}, {"id": "wardrobe", "name_th": "ตู้เสื้อผ้า"},
+    {"id": "walk-in", "name_th": "ห้องวอล์คอิน คลอสเซ็ท"}, {"id": "dresser", "name_th": "โต๊ะเครื่องแป้ง"}, {"id": "mirror", "name_th": "กระจก"}]},
+  {"id": "living", "name_th": "ห้องนั่งเล่น", "name_en": "Living room", "room": "living", "icon": "weekend", "sort": 2, "children": [
+    {"id": "tv-stand", "name_th": "ชั้นวางทีวี"}, {"id": "tv-set", "name_th": "ชุดวางทีวีและตู้โชว์"}, {"id": "display-cabinet", "name_th": "ตู้โชว์"},
+    {"id": "bookcase", "name_th": "ตู้และชั้นหนังสือ"}, {"id": "wall-shelf", "name_th": "ชั้นแขวนและตู้ติดผนัง"}, {"id": "coffee-table", "name_th": "โต๊ะกลาง"}]},
+  {"id": "sofa", "name_th": "โซฟาและเก้าอี้พักผ่อน", "name_en": "Sofa & lounge chairs", "room": "living", "icon": "chair", "sort": 3, "children": [
+    {"id": "sofa-3", "name_th": "โซฟา 3 ที่นั่ง"}, {"id": "sofa-l", "name_th": "โซฟาเข้ามุม"}, {"id": "recliner", "name_th": "รีไคลเนอร์"}, {"id": "armchair", "name_th": "เก้าอี้พักผ่อน"}]},
+  {"id": "dining", "name_th": "ห้องทานอาหาร", "name_en": "Dining", "room": "dining", "icon": "table_restaurant", "sort": 4, "children": [
+    {"id": "dining-set", "name_th": "ชุดโต๊ะอาหาร"}, {"id": "dining-table", "name_th": "โต๊ะอาหาร"}, {"id": "dining-chair", "name_th": "เก้าอี้ทานอาหาร"}, {"id": "cupboard", "name_th": "ตู้โชว์ถ้วยชาม"}]},
+  {"id": "kitchen", "name_th": "ห้องครัวและอุปกรณ์", "name_en": "Kitchen", "room": "dining", "icon": "countertops", "sort": 5, "children": [
+    {"id": "kitchen-counter", "name_th": "เคาน์เตอร์ครัว"}, {"id": "tableware", "name_th": "ของใช้บนโต๊ะอาหาร"}, {"id": "glassware", "name_th": "แก้วน้ำ แก้วไวน์ เหยือกน้ำ"},
+    {"id": "cookware", "name_th": "อุปกรณ์เครื่องครัว"}, {"id": "kitchen-storage", "name_th": "ของใช้ในครัว"}, {"id": "kitchen-appliance", "name_th": "เครื่องใช้ไฟฟ้าในครัวและอุปกรณ์"}]},
+  {"id": "storage", "name_th": "ตู้เก็บของและอุปกรณ์จัดเก็บ", "name_en": "Storage", "room": "living", "icon": "shelves", "sort": 6, "children": [
+    {"id": "cabinet", "name_th": "ตู้เก็บของ"}, {"id": "shelf", "name_th": "ชั้นวางของ"}, {"id": "shoe-cabinet", "name_th": "ตู้รองเท้า"}]},
+  {"id": "office", "name_th": "โฮมออฟฟิศ และ เกมมิ่ง", "name_en": "Home office & gaming", "room": "office", "icon": "desktop_windows", "sort": 7, "children": [
+    {"id": "desk-set", "name_th": "ชุดโต๊ะทำงาน"}, {"id": "desk", "name_th": "โต๊ะทำงาน"}, {"id": "meeting-table", "name_th": "โต๊ะประชุม"},
+    {"id": "filing", "name_th": "ตู้เอกสารและชั้นวาง"}, {"id": "office-chair", "name_th": "เก้าอี้สำนักงาน"}, {"id": "gaming-chair", "name_th": "เก้าอี้เกมมิ่ง"}]},
+  {"id": "mattress", "name_th": "ที่นอนและเครื่องนอน", "name_en": "Mattress & bedding", "room": "bedroom", "icon": "king_bed", "sort": 8, "children": [
+    {"id": "mattress-spring", "name_th": "ที่นอนพ็อกเก็ตสปริง"}, {"id": "mattress-latex", "name_th": "ที่นอนยางพารา"}, {"id": "bedding", "name_th": "ชุดเครื่องนอน"}, {"id": "pillow", "name_th": "หมอน"}]},
+  {"id": "wall-decor", "name_th": "ตกแต่งผนัง", "name_en": "Wall decor", "room": "living", "icon": "wallpaper", "sort": 9, "children": []},
+  {"id": "lighting", "name_th": "โคมไฟและของแต่งบ้าน", "name_en": "Lighting & decor", "room": "living", "icon": "light", "sort": 10, "children": [
+    {"id": "floor-lamp", "name_th": "โคมไฟตั้งพื้น"}, {"id": "pendant-lamp", "name_th": "โคมไฟแขวน"}, {"id": "table-lamp", "name_th": "โคมไฟตั้งโต๊ะ"}, {"id": "decor", "name_th": "ของแต่งบ้าน"}]},
+  {"id": "rugs-curtains", "name_th": "พรมและผ้าม่าน", "name_en": "Rugs & curtains", "room": "living", "icon": "curtains", "sort": 11, "children": []},
+  {"id": "outdoor", "name_th": "เฟอร์นิเจอร์นอกบ้าน & สวน", "name_en": "Outdoor", "room": "outdoor", "icon": "yard", "sort": 12, "children": []},
+  {"id": "office-furniture", "name_th": "เฟอร์นิเจอร์สำนักงาน", "name_en": "Office furniture", "room": "office", "icon": "business_center", "sort": 13, "children": []},
+  {"id": "small-spaces", "name_th": "Small Spaces", "name_en": "Small spaces", "room": "living", "icon": "crop_free", "sort": 14, "children": []},
+  {"id": "kids", "name_th": "สินค้าเด็กและครอบครัว", "name_en": "Kids & family", "room": "kids", "icon": "child_care", "sort": 15, "children": []}
+]

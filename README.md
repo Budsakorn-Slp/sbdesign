@@ -80,3 +80,16 @@ cd web && npm test
 3. API: `POST /auth/login {identifier, password, account_type}` → `{access_token, refresh_token, user}` · `GET /me` ต้องส่ง `Authorization: Bearer <access_token>`
 4. endpoint ที่จำกัด role: `GET /admin/users` → sales ได้ **403**, admin ได้ 200 (ใช้ `require_role(...)` ใน `app/api/deps.py`)
 5. test: `pytest tests/test_step1_auth.py` — ล็อกอิน 4 role, 401 รหัสผิด, 403 role ผิด, refresh token หมุนแล้วใบเก่าใช้ไม่ได้, register ซ้ำ 409, OTP ผิด 400
+
+### STEP 2 — Catalog + SAP mock
+- SAP adapter อยู่ที่ `backend/app/integrations/sap/` — interface `SapClient` (base.py) · `MockSapClient` (mock.py อ่าน `backend/seed/sap_mock/*.json`: แมท 20 ตัว · สต็อก 4 สาขา · โปร 3 ตัว · โซนจัดส่ง 5 โซน) · สลับด้วย `SAP_MODE=mock|rfc|http` (rfc/http มาใน STEP 12)
+- `python -m app.seed` จะ sync แมทจาก mock ลงตาราง mirror (`materials`, `material_prices`, `plants`, `stock_cache`) + หมวดหมู่/แบรนด์
+
+วิธีลอง
+1. หน้าแรก http://localhost:5173 — hero / promo / หมวดหมู่ / สินค้าใหม่ / ดีล / ช้อปตามห้อง / แบรนด์ / footer ตาม mockup (`docs/design`)
+2. ค้นหาด้วยชื่อ (`โซฟา`), MATNR (`10023841`) หรือบาร์โค้ด (`8850100442904`) ที่ช่องค้นหา → `GET /materials/search?q=`
+3. เปิดหน้าสินค้า → กด **เช็คสต็อก** (`GET /materials/{matnr}/stock`) — ยิง SAP สดทุกครั้งและเขียน `stock_checks`
+   - ล็อกอินเป็นพนักงาน (SA-104) จะเห็นทุกสาขา/คลัง + ATP · ลูกค้า/guest เห็นแค่สาขาที่เลือกจาก "รับที่สาขา" + สรุปว่าจัดส่งได้เมื่อไหร่ (ไม่เห็นสต็อกข้ามสาขา)
+   - ล็อกอินเป็นลูกค้า Gold จะเห็นราคาสมาชิก (ต่ำกว่าราคาปกติ 6%) · guest เห็นราคาปกติอย่างเดียว
+4. จำลอง SAP ล่ม: ใน test ใช้ `get_sap_client().fail_next(2)` → response `source=cache, stale=true` พร้อมเวลาที่ cache ถูกดึง
+5. test: `pytest tests/test_step2_catalog.py` (7 เคส)
