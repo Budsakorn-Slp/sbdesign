@@ -1,0 +1,322 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
+import Icon from "../components/Icon";
+import Placeholder from "../components/Placeholder";
+import { apiGet, errorMessage } from "../lib/api";
+import { useAuth } from "../lib/auth";
+import { SUPPLY_LABEL } from "../lib/cart";
+import { useContent } from "../lib/content";
+import { baht, bahtWord, relTime, thDate, thTime } from "../lib/format";
+import { useSales, type CustomerHit } from "../lib/sales";
+import type { CartItem, MaterialCard, StockOut } from "../lib/types";
+
+export default function SalesPage() {
+  const auth = useAuth();
+  const sales = useSales();
+  const { plants } = useContent();
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [stockFor, setStockFor] = useState<{ matnr: string; name: string } | null>(null);
+
+  if (!sales.enabled) {
+    return (
+      <main className="container sec">
+        <div className="card" style={{ maxWidth: 560 }}>
+          <b>โหมดพนักงานขาย</b>
+          <p className="muted small">ต้องเข้าสู่ระบบด้วยบัญชีพนักงานขาย (เช่น SA-104) เพื่อใช้หน้านี้</p>
+          <button className="btn dark" onClick={auth.openLogin}>เข้าสู่ระบบพนักงาน</button>
+        </div>
+      </main>
+    );
+  }
+
+  const cart = sales.active;
+  const plantName = (code: string | null) => plants.find((p) => p.plant_code === code)?.name || code || "";
+  const run = async (key: string, fn: () => Promise<unknown>) => {
+    setBusy(key);
+    setMsg(null);
+    try {
+      await fn();
+    } catch (e) {
+      setMsg(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <main className="container sec sales">
+      <Link to="/search" className="row small muted" style={{ marginBottom: 10 }}><Icon name="arrow_back" size={18} /> กลับไปช้อปต่อ</Link>
+      <h1 className="cart-title">ตะกร้าที่กำลังดูแล</h1>
+
+      {/* session bar */}
+      <div className="sess-bar">
+        <div className="row between wrap">
+          <div className="row"><Icon name="support_agent" size={22} /> <b>โหมดพนักงานขาย · {auth.user?.name}</b> {cart && <span className="chip light">SESSION {cart.no}</span>}</div>
+          <button className="btn sm" style={{ background: "#fff" }} onClick={() => run("open", () => sales.openCart())} disabled={busy === "open"}><Icon name="add" size={18} /> เปิดตะกร้าใหม่</button>
+        </div>
+        <div className="sess-tabs">
+          {sales.sessions.map((s) => (
+            <div key={s.id} className={"sess-tab" + (s.id === sales.activeId ? " on" : "")} onClick={() => sales.setActiveId(s.id)} role="button" tabIndex={0}>
+              <Icon name="shopping_basket" size={18} />
+              <span className="grow">
+                <b>{s.customer_name || `ตะกร้าใหม่ ${s.no}`}</b>
+                <small>{s.count > 0 ? `${s.count} ชิ้น · ${bahtWord(s.subtotal)}` : "ยังไม่มีสินค้า"}{s.customer_tier ? ` · ${s.customer_tier}` : ""}</small>
+              </span>
+              <button className="sess-close" aria-label="ปิดตะกร้า" onClick={(e) => { e.stopPropagation(); if (confirm(`ปิดตะกร้า ${s.customer_name || s.no}? สิทธิ์ของคุณจะหมดทันที`)) run("close", () => sales.closeCart(s.id)); }}><Icon name="close" size={16} /></button>
+            </div>
+          ))}
+          {sales.sessions.length === 0 && !sales.loading && <span className="small" style={{ opacity: .8 }}>ยังไม่มีตะกร้า — กด "เปิดตะกร้าใหม่"</span>}
+        </div>
+        {cart && (
+          <div className="sess-cust">
+            <span className="small" style={{ opacity: .8 }}>ตะกร้าของลูกค้า:</span>
+            {cart.customer ? (
+              <>
+                <span className="cust-pill"><Icon name="how_to_reg" size={18} /> <b>{cart.customer.name}</b> · CUST {cart.customer.sap_customer_no || "-"} · {cart.customer.tier || "ทั่วไป"}</span>
+                <button className="link-btn small" style={{ color: "#fff" }} onClick={() => run("detach", () => sales.detach())} disabled={busy === "detach"}>ตัดการเชื่อมต่อ</button>
+              </>
+            ) : (
+              <CustomerSearch onPick={(hit) => run("attach", () => sales.attach(hit.sap_customer_no || hit.email || hit.phone || ""))} search={sales.searchCustomers} />
+            )}
+            <button className="btn primary sm" style={{ marginLeft: "auto" }} onClick={() => setSearchOpen(true)}><Icon name="add_shopping_cart" size={18} /> เพิ่มสินค้าให้ลูกค้า</button>
+          </div>
+        )}
+      </div>
+
+      {msg && <div className="note err" style={{ margin: "12px 0" }}>{msg}</div>}
+
+      {cart ? (
+        <div className="cart-grid">
+          <div className="cart-main">
+            {cart.items.length === 0 ? (
+              <div className="cart-empty">
+                <Icon name="search" size={44} />
+                <div className="strong">ยังไม่มีสินค้าในตะกร้านี้</div>
+                <button className="btn dark" onClick={() => setSearchOpen(true)}>ค้นหาสินค้า (MATNR) เพื่อเพิ่มให้ลูกค้า</button>
+              </div>
+            ) : (
+              <>
+                <p className="cart-intro">สินค้า {cart.count} ชิ้น · ยอดชั่วคราว {bahtWord(cart.subtotal)}{cart.customer ? ` · ราคาสมาชิก ${cart.customer.tier || "ทั่วไป"}` : " · ยังไม่ผูกลูกค้า (ราคาปกติ)"}</p>
+                <div className="cart-items">
+                  {cart.items.map((it) => (
+                    <SalesRow key={it.id} it={it} busy={busy === it.id} plantName={plantName(it.plant_code)}
+                      onInc={() => run(it.id, () => sales.updateItem(it.id, { qty: it.qty + 1 }))}
+                      onDec={() => it.qty > 1 && run(it.id, () => sales.updateItem(it.id, { qty: it.qty - 1 }))}
+                      onRemove={() => run(it.id, () => sales.removeItem(it.id))}
+                      onStock={() => setStockFor({ matnr: it.matnr, name: it.name })}
+                      onNote={(note) => run(it.id, () => sales.updateItem(it.id, { note }))} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <aside className="cart-side">
+            <div className="summary">
+              <h3>สรุปคำสั่งซื้อ</h3>
+              <div className="sum-row"><span>สินค้า ({cart.count})</span><b>{bahtWord(cart.subtotal)}</b></div>
+              <div className="sum-row"><span>ส่วนลด</span><span className="muted">รอเช็คโปร (STEP 6)</span></div>
+              <div className="sum-row"><span>ค่าขนส่ง</span><span className="muted">รอคำนวณ (STEP 7)</span></div>
+              <div className="sum-total"><span>ยอดชั่วคราว</span><b>{bahtWord(cart.subtotal)}</b></div>
+              <div className="col" style={{ marginTop: 12 }}>
+                <button className="btn block" disabled title="STEP 8">Save Preso</button>
+                <button className="btn primary block" disabled={!cart.customer} title={cart.customer ? "STEP 8" : "ต้องผูกลูกค้าก่อน"}>สร้างใบเสนอราคา</button>
+              </div>
+              <p className="tiny muted" style={{ marginTop: 10 }}>{cart.customer ? "ใบเสนอราคาจะยืนราคา 7 วัน แล้วส่งต่อให้ระบบหลังบ้าน convert เป็น SO ใน SAP" : "ต้องค้นหาและผูกลูกค้าก่อนจึงจะออกใบเสนอราคาได้"}</p>
+              {cart.expires_at && <p className="tiny muted">ตะกร้านี้หมดอายุอัตโนมัติ {thDate(cart.expires_at)} {thTime(cart.expires_at)} (ต่ออายุทุกครั้งที่ใช้งาน)</p>}
+            </div>
+          </aside>
+        </div>
+      ) : (
+        !sales.loading && <div className="cart-empty"><Icon name="shopping_basket" size={44} /><div className="strong">เลือกหรือเปิดตะกร้าเพื่อเริ่มดูแลลูกค้า</div></div>
+      )}
+
+      {searchOpen && <MaterialSearchModal onClose={() => setSearchOpen(false)} target={cart?.customer?.name || `ตะกร้า ${cart?.no || ""}`} search={sales.searchMaterials}
+        onAdd={(m, mode, plant) => run("add", async () => { await sales.addItem(m.matnr, 1, mode, plant); setSearchOpen(false); })}
+        onStock={(m) => { setSearchOpen(false); setStockFor({ matnr: m.matnr, name: m.name_th }); }} />}
+      {stockFor && <StockDrawer matnr={stockFor.matnr} name={stockFor.name} onClose={() => setStockFor(null)} />}
+    </main>
+  );
+}
+
+function SalesRow({ it, busy, plantName, onInc, onDec, onRemove, onStock, onNote }: { it: CartItem; busy: boolean; plantName: string; onInc: () => void; onDec: () => void; onRemove: () => void; onStock: () => void; onNote: (n: string) => void }) {
+  const [note, setNote] = useState(it.note || "");
+  return (
+    <div className="cart-row">
+      <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={it.image_url} label="1:1" /></Link>
+      <div className="cart-info">
+        <div className="row wrap" style={{ gap: 6, marginBottom: 4 }}>
+          <span className={"chip " + (it.added_by === "sales" ? "green" : "light")}>{it.added_by === "sales" ? "เซลล์เพิ่ม" : "จากตะกร้าลูกค้า"}</span>
+          {it.pending_ack && <span className="chip amber">รอลูกค้ายืนยัน</span>}
+          <span className="pill"><Icon name={it.supply_mode === "takeaway" ? "shopping_bag" : it.supply_mode === "install" ? "handyman" : "local_shipping"} size={14} /> {SUPPLY_LABEL[it.supply_mode]}{it.plant_code ? ` · ${plantName}` : ""}{it.atp_date ? ` · ATP ${thDate(it.atp_date)}` : ""}</span>
+        </div>
+        <Link to={`/p/${it.matnr}`} className="cart-name">{it.name}</Link>
+        <div className="small muted">{it.variant}{it.spec ? ` · ${it.spec}` : ""}</div>
+        <div className="mono tiny muted">MATNR {it.matnr} · {it.sku}</div>
+        <div className="small muted" style={{ marginTop: 4 }}>{bahtWord(it.unit_price)} / ชิ้น · {it.price_tier}</div>
+        <div className="cart-ctrl">
+          <div className="qty">
+            <button onClick={onDec} disabled={busy || it.qty <= 1} aria-label="ลด"><Icon name="remove" size={18} /></button>
+            <span>{it.qty}</span>
+            <button onClick={onInc} disabled={busy} aria-label="เพิ่ม"><Icon name="add" size={18} /></button>
+          </div>
+          <button className="link-btn" onClick={onRemove} disabled={busy}>ลบ</button>
+          <button className="link-btn" onClick={onStock}><Icon name="inventory_2" size={16} /> เช็คสต็อก</button>
+        </div>
+        <form className="row" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); onNote(note); }}>
+          <input className="hdr-pop-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ เช่น รอลูกค้าวัดห้อง" />
+          <button className="btn sm" type="submit" disabled={busy || note === (it.note || "")}>บันทึก</button>
+        </form>
+      </div>
+      <div className="cart-line strong">{bahtWord(it.line_total)}</div>
+    </div>
+  );
+}
+
+function CustomerSearch({ onPick, search }: { onPick: (hit: CustomerHit) => void; search: (q: string) => Promise<CustomerHit[]> }) {
+  const [q, setQ] = useState("");
+  const [hits, setHits] = useState<CustomerHit[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setErr(null);
+    try {
+      setHits(await search(q));
+    } catch (e2) {
+      setErr(errorMessage(e2));
+    }
+  };
+  return (
+    <div className="cust-search">
+      <form className="row" onSubmit={submit}>
+        <Icon name="person_search" size={20} />
+        <input className="hdr-pop-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหาลูกค้า (เลขสมาชิก / เบอร์ / อีเมล)" />
+        <button className="btn sm" style={{ background: "#fff" }} type="submit" disabled={q.trim().length < 2}>ค้นหา</button>
+        <button className="btn sm" style={{ background: "#fff" }} type="button" onClick={() => setQ("089-234-4471")} title="สแกน QR (จำลอง)"><Icon name="qr_code_scanner" size={18} /></button>
+      </form>
+      {err && <div className="note err small" style={{ marginTop: 6 }}>{err}</div>}
+      {hits && (
+        <div className="cust-hits">
+          {hits.length === 0 && <div className="small">ไม่พบลูกค้า — ลูกค้าใหม่ walk-in ให้ลงทะเบียนด้วย OTP ก่อน</div>}
+          {hits.map((h) => (
+            <div key={(h.sap_customer_no || "") + (h.email || "")} className="cust-hit">
+              <span className="avatar">{h.name.slice(0, 2)}</span>
+              <span className="grow">
+                <b>{h.name}</b> · {h.tier || "ทั่วไป"}
+                <small>CUST {h.sap_customer_no || "-"} · {h.phone || "-"} · {h.email || "-"}{h.source === "sap" ? " · จาก SAP" : ""}</small>
+                {h.online_cart_count > 0 && <small className="green strong">มีตะกร้าออนไลน์ {h.online_cart_count} ชิ้น → จะรวมเข้าตะกร้านี้</small>}
+              </span>
+              <button className="btn dark sm" onClick={() => onPick(h)}>ผูกลูกค้า</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MaterialSearchModal({ onClose, target, search, onAdd, onStock }: { onClose: () => void; target: string; search: (q: string) => Promise<SearchOutLike>; onAdd: (m: MaterialCard, mode: string | null, plant: string | null) => void; onStock: (m: MaterialCard) => void }) {
+  const { plants } = useContent();
+  const [q, setQ] = useState("");
+  const [items, setItems] = useState<MaterialCard[]>([]);
+  const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    const t = setTimeout(() => {
+      search(q).then((r) => alive && setItems(r.items)).finally(() => alive && setLoading(false));
+    }, 200);
+    return () => { alive = false; clearTimeout(t); };
+  }, [q, search]);
+  const store = plants.find((p) => p.type === "store");
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>ค้นหาสินค้า (MATNR) เพื่อเพิ่มให้ <span className="green">{target}</span></h2>
+          <button className="icon-btn" onClick={onClose} aria-label="ปิด"><Icon name="close" /></button>
+        </div>
+        <div className="row" style={{ marginBottom: 12 }}>
+          <Icon name="search" size={20} />
+          <input className="hdr-pop-input" autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="ชื่อสินค้า / รหัสแมท / บาร์โค้ด" />
+          <button className="btn sm" type="button" onClick={() => setQ("10023841")}><Icon name="barcode_scanner" size={18} /> สแกน</button>
+        </div>
+        {loading && items.length === 0 && <div className="ph" style={{ height: 120 }}>กำลังค้นหา…</div>}
+        {!loading && items.length === 0 && <div className="muted small">ไม่พบสินค้า</div>}
+        <div className="mat-results">
+          {items.map((m) => {
+            const st = m.stock;
+            return (
+              <div key={m.matnr} className="mat-hit">
+                <Placeholder src={m.image_url} label="1:1" className="mat-img" />
+                <div className="grow">
+                  <b>{m.name_th}</b>
+                  <div className="small muted">{m.variant}{m.spec ? ` · ${m.spec}` : ""}</div>
+                  <div className="mono tiny muted">MATNR {m.matnr} · {m.sku}</div>
+                  <div className="row wrap" style={{ gap: 8, marginTop: 4 }}>
+                    <b>{baht(m.standard_price)}</b>
+                    {m.member_price && <span className="small green">สมาชิก {baht(m.member_price)}</span>}
+                    <span className={"small " + (st && st.available_total > 0 ? "green" : "red")}>
+                      {st ? `สาขา ${st.store_available} · คลัง ${st.warehouse_available} ชิ้น (cache)` : "ไม่มีข้อมูลสต็อก"}
+                    </span>
+                  </div>
+                </div>
+                <div className="col">
+                  <button className="btn sm" onClick={() => onStock(m)}><Icon name="inventory_2" size={16} /> เช็คสต็อก</button>
+                  <button className="btn dark sm" onClick={() => onAdd(m, m.requires_install ? "install" : store && m.is_takeaway_ok ? "takeaway" : "ship", store && m.is_takeaway_ok && !m.requires_install ? store.plant_code : null)}>ลงตะกร้า</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type SearchOutLike = { items: MaterialCard[] };
+
+export function StockDrawer({ matnr, name, onClose }: { matnr: string; name: string; onClose: () => void }) {
+  const [stock, setStock] = useState<StockOut | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const load = () => {
+    setStock(null);
+    setErr(null);
+    apiGet<StockOut>(`/materials/${matnr}/stock`).then(setStock).catch((e) => setErr(errorMessage(e)));
+  };
+  useEffect(load, [matnr]);
+  return (
+    <div className="drawer-backdrop" onClick={onClose}>
+      <aside className="drawer" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>สต็อก · MATNR {matnr}</h2>
+          <button className="icon-btn" onClick={onClose} aria-label="ปิด"><Icon name="close" /></button>
+        </div>
+        <div className="muted small" style={{ marginBottom: 10 }}>{name}</div>
+        {err && <div className="note err">{err}</div>}
+        {!stock && !err && <div className="ph" style={{ height: 120 }}>กำลังยิง SAP…</div>}
+        {stock && (
+          <>
+            <ul className="stock-rows">
+              {stock.rows.map((r) => (
+                <li key={r.plant_code}>
+                  <Icon name={r.plant_type === "warehouse" ? "warehouse" : "storefront"} size={22} />
+                  <span className="grow">
+                    <b>{r.plant_name}</b>
+                    <small>{r.note || (r.atp_date ? `ATP: ส่งได้ ${thDate(r.atp_date)}` : "")}{r.reserved ? ` · จองแล้ว ${r.reserved}` : ""}</small>
+                  </span>
+                  <b className={r.available > 0 ? "green" : "red"}>{r.available} ชิ้น</b>
+                </li>
+              ))}
+            </ul>
+            <div className={"note " + (stock.stale ? "warn" : "ok")} style={{ marginTop: 12 }}>
+              {stock.stale ? `ข้อมูลจาก cache (SAP ไม่ตอบ) · ดึงเมื่อ ${relTime(stock.fetched_at)}` : `ข้อมูลสด จาก service SAP · อัปเดต ${thTime(stock.fetched_at)}`}
+              <button className="link-btn small" style={{ marginLeft: 8 }} onClick={load}>เช็คใหม่</button>
+            </div>
+          </>
+        )}
+      </aside>
+    </div>
+  );
+}

@@ -4,7 +4,7 @@ import { useAuth } from "../../lib/auth";
 import { useContent } from "../../lib/content";
 import Icon from "../Icon";
 
-export default function Header({ cartCount = 0 }: { cartCount?: number }) {
+export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCount?: number; cartHref?: string }) {
   const auth = useAuth();
   const { content, plants, plant, setPlantCode, postcode, setPostcode } = useContent();
   const nav = useNavigate();
@@ -105,7 +105,7 @@ export default function Header({ cartCount = 0 }: { cartCount?: number }) {
         <div className="hdr-icons">
           <button className="icon-btn" aria-label="แจ้งเตือน"><Icon name="notifications" /></button>
           <button className="icon-btn" aria-label="คูปอง"><Icon name="confirmation_number" /></button>
-          <Link to="/cart" className="icon-btn" aria-label="ตะกร้า">
+          <Link to={cartHref} className="icon-btn" aria-label="ตะกร้า">
             <Icon name="shopping_cart" />
             {cartCount > 0 && <span className="badge">{cartCount}</span>}
           </Link>

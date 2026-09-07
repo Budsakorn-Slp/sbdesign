@@ -1,0 +1,49 @@
+/* ===== sales workspace ===== */
+.sess-bar { background: var(--green-dark); color: #fff; border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px; }
+.sess-bar .btn { border-color: transparent; }
+.sess-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.sess-tab { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-width: 200px; padding: 8px 10px 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.10); color: #fff; cursor: pointer; }
+.sess-tab.on { background: #fff; color: var(--green-dark); border-color: #fff; }
+.sess-tab b { display: block; font-size: 13px; line-height: 1.2; }
+.sess-tab small { display: block; font-size: 11px; opacity: .8; }
+.sess-close { border: none; background: transparent; color: inherit; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; opacity: .7; }
+.sess-close:hover { opacity: 1; background: rgba(0,0,0,.08); }
+.sess-cust { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,.2); padding-top: 12px; }
+.cust-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.14); border-radius: 999px; padding: 6px 12px; font-size: 13px; }
+.cust-search { flex: 1; min-width: 320px; }
+.cust-search .hdr-pop-input { background: #fff; color: var(--ink); }
+.cust-hits { margin-top: 8px; background: #fff; color: var(--ink); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.cust-hit { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; }
+.cust-hit:hover { background: var(--bg-2); }
+.cust-hit b { font-size: 13.5px; }
+.cust-hit small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--green-dark); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none; }
+.mat-results { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow: auto; }
+.mat-hit { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.mat-img { width: 72px; flex: none; }
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(17,17,17,.35); z-index: 100; display: flex; justify-content: flex-end; }
+.drawer { width: min(460px, 100%); height: 100%; background: #fff; padding: 22px 24px; overflow: auto; box-shadow: -10px 0 40px rgba(0,0,0,.2); }
+.drawer .modal-head h2 { font-size: 18px; }
+
+/* promo / delivery panels (ใช้ใน STEP 6-7) */
+.promo-list { display: flex; flex-direction: column; gap: 8px; }
+.promo-row { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; }
+.promo-row.on { background: #f4fbf8; border-color: var(--green); }
+.promo-row.no { background: var(--amber-bg); border-color: #e8d9a8; }
+.promo-row b { display: block; font-size: 13.5px; }
+.promo-row small { display: block; color: var(--ink-3); font-size: 12px; }
+.disc-steps { display: flex; gap: 6px; }
+.disc-steps button { min-width: 52px; height: 34px; border-radius: 8px; border: 1px solid var(--line-2); background: #fff; font-weight: 600; }
+.disc-steps button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.slot-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.slot { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 13px; cursor: pointer; }
+.slot.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.slot.full { opacity: .5; cursor: not-allowed; }
+.group-box { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: #fff; display: flex; gap: 10px; align-items: flex-start; }
+
+@media (max-width: 599px) {
+  .sess-tab { min-width: 160px; }
+  .cust-search { min-width: 0; width: 100%; }
+  .mat-hit { flex-wrap: wrap; }
+  .slot-grid { grid-template-columns: 1fr; }
+}
