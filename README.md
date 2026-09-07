@@ -179,3 +179,17 @@ cd web && npm test
 2. กดเลือกคิว → "จองแล้ว" · รอบที่เต็มกดไม่ได้ (รอบบ่ายวันแรกของทุกเขตเต็มใน mock)
 3. ฝั่งลูกค้า `/checkout` มีฟอร์มที่อยู่ + คำนวณค่าส่ง + เลือกคิว + สรุปยอดรวม VAT
 4. test: `pytest tests/test_step7_delivery.py` (3 เคส)
+
+### STEP 8 — Preso + ใบเสนอราคา (Quotation)
+- **Preso = ใบร่างที่ยังแก้ได้** · `POST /presos {cart_id, note?}` เซฟ snapshot (สินค้า + ส่วนลด + ยอด + จัดส่ง) เป็นเลข `PRE-YYMMDD-NNNN` (เซฟซ้ำ = อัปเดตใบเดิม) · `GET /presos?mine=true&status=draft` · `POST /presos/{no}/reopen` ดึงตะกร้ากลับเข้าเซสชันเซลล์ (409 ถ้าเซลล์คนอื่นถืออยู่)
+- **Quotation = ล็อกราคา/โปร แก้ไม่ได้** · `POST /presos/{no}/quotation {force?}` — ก่อนออกจะ **เช็คสต็อกสดจาก SAP** ทุกบรรทัด: ของไม่พอ → 409 พร้อมรายการที่ขาด (กด "ออกทั้งที่ของไม่พอ" = `force:true` แล้วบันทึกเป็น `stock_warnings`) · ต้องผูกลูกค้าก่อน (400) · ต้องคำนวณค่าส่งถ้ามีรายการต้องจัดส่ง (400) · มีส่วนลดค้างอนุมัติ → 409 · SAP ล่มก็ยังออกใบได้ (ใช้ราคา snapshot)
+- ออกแล้ว: ยอดถูกล็อกจาก `compute_totals` (subtotal / discount_total / ค่าส่ง / VAT / `grand_total` / มัดจำ 20%) · ยืนราคา `QUOTATION_VALID_DAYS` วัน · คิวจัดส่งเปลี่ยนเป็นจองถาวร · Preso → `quoted` · ตะกร้า → `converted`
+- **แก้ไม่ได้ ต้องยกเลิกแล้วออกใหม่** · `POST /quotations/{no}/cancel {reason}` → ใบเป็น `cancelled`, Preso กลับเป็น `draft`, ตะกร้ากลับมาแก้ได้, คิวจัดส่งกลับเป็น hold 15 นาที
+- เอกสาร/ส่งต่อ: `GET /quotations/{no}/document` (PDF mock — HTML พร้อมพิมพ์) · `POST /quotations/{no}/send {channel:"sms"|"email"}` (mock ลง log) → ลิงก์ `/q/{no}?t=<token>` ที่ลูกค้าเปิดได้โดยไม่ต้องล็อกอิน (HMAC · token ผิด 403 · ไม่มี token และไม่ล็อกอิน 401)
+
+วิธีลอง
+1. `/sales` ผูกลูกค้า + ใส่สินค้า + ใช้โปร + เลือกคิวส่ง → กด **Save Preso** → ไปที่ "Preso ของฉัน" (`/sales/presos`) เห็นใบร่าง
+2. ล็อกเอาต์/ล็อกอินใหม่ → กด **เปิด** ดึงตะกร้ากลับมาทำต่อได้ (เซลล์คนอื่นกดจะได้ 403)
+3. กด **สร้าง Quotation** → ถ้าของไม่พอจะถามยืนยันก่อน → ได้หน้าใบเสนอราคา `/sales/quotations/{no}`: กด PDF / ส่ง SMS / คัดลอกลิงก์ → เปิดลิงก์ `/q/{no}?t=...` ในหน้าต่าง incognito ก็เห็นใบ
+4. กด **ยกเลิก + ออกใหม่** → เด้งกลับ `/sales` พร้อมตะกร้าเดิมที่แก้ได้
+5. test: `pytest tests/test_step8_quotation.py` (4 เคส)

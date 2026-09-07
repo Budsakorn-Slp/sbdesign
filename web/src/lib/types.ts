@@ -267,6 +267,81 @@ export type Cart = {
   delivery: CartDelivery | null;
 };
 
+// ---------- preso / quotation ----------
+export type PresoSummary = {
+  id: string;
+  preso_no: string;
+  status: "draft" | "quoted" | "expired" | "cancelled";
+  cart_id: string;
+  customer_name: string | null;
+  customer_tier: string | null;
+  sales_name: string | null;
+  item_count: number;
+  grand_total: string;
+  note: string | null;
+  quotation_no: string | null;
+  quotation_status: string | null;
+  updated_at: string;
+  created_at: string;
+};
+
+export type Preso = PresoSummary & { snapshot: Record<string, unknown> };
+
+export type QuotationLine = {
+  matnr: string;
+  sku: string;
+  name: string;
+  variant: string | null;
+  qty: number;
+  unit_price: string;
+  line_discount: string;
+  line_total: string;
+  supply_mode: SupplyMode;
+  plant_code: string | null;
+  atp_date: string | null;
+  added_by: "customer" | "sales";
+  requires_install: boolean;
+};
+
+export type StockShortage = { matnr: string; name: string; need: number; available: number; plant_code: string | null; stale: boolean; supply_mode: string };
+
+export type Quotation = {
+  id: string;
+  quotation_no: string;
+  preso_no: string | null;
+  status: "issued" | "paid" | "converted" | "expired" | "cancelled";
+  channel: "online" | "in_store_assisted";
+  customer: { id?: string; name?: string; tier?: string | null; sap_customer_no?: string | null; phone?: string | null; email?: string | null };
+  sales_name: string | null;
+  sales_code: string | null;
+  lines: QuotationLine[];
+  discounts: { kind: string; code: string | null; title: string | null; amount: string }[];
+  subtotal: string;
+  discount_total: string;
+  shipping_fee: string;
+  install_fee: string;
+  shipping_discount: string;
+  vat: string;
+  grand_total: string;
+  deposit_amount: string;
+  valid_until: string;
+  pdf_url: string | null;
+  ship_address: string | null;
+  ship_postcode: string | null;
+  ship_zone: string | null;
+  slot_date: string | null;
+  slot_period: "am" | "pm" | null;
+  stock_warnings: StockShortage[] | null;
+  sap_so_no: string | null;
+  sap_sync_status: "pending" | "ok" | "failed";
+  sap_sync_error: string | null;
+  issued_at: string;
+  paid_at: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  link_token: string | null;
+};
+
 // ---------- home content ----------
 export type NavLink = { label: string; href: string };
 export type HomeContent = {

@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DeliveryPanel from "../components/DeliveryPanel";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
 import PromoPanel from "../components/PromoPanel";
-import { apiGet, errorMessage } from "../lib/api";
+import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { SUPPLY_LABEL } from "../lib/cart";
 import { useContent } from "../lib/content";
@@ -24,6 +24,53 @@ export default function SalesPage() {
   const [live, setLive] = useState<string | null>(null);
   const [promoOpen, setPromoOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
+  const [presoNo, setPresoNo] = useState<string | null>(null);
+  const nav = useNavigate();
+
+  useEffect(() => {
+    setPresoNo(null);
+    if (!sales.active) return;
+    apiGet<{ preso_no: string; status: string }[]>("/presos?status=draft&mine=true")
+      .then((rows) => setPresoNo(rows.find((r) => (r as { cart_id?: string }).cart_id === sales.active?.id)?.preso_no || null))
+      .catch(() => setPresoNo(null));
+  }, [sales.active?.id]);
+
+  const savePreso = async (): Promise<string | null> => {
+    if (!sales.active) return null;
+    setBusy("preso");
+    setMsg(null);
+    try {
+      const p = await apiPost<{ preso_no: string }>("/presos", { cart_id: sales.active.id });
+      setPresoNo(p.preso_no);
+      setLive(`บันทึก Preso ${p.preso_no} แล้ว — ดึงกลับมาทำต่อได้ที่ "Preso ของฉัน"`);
+      return p.preso_no;
+    } catch (e) {
+      setMsg(errorMessage(e));
+      return null;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const makeQuotation = async (force = false) => {
+    const no = presoNo || (await savePreso());
+    if (!no) return;
+    setBusy("quotation");
+    setMsg(null);
+    try {
+      const q = await apiPost<{ quotation_no: string }>(`/presos/${no}/quotation`, { force });
+      await sales.reload();
+      nav(`/sales/quotations/${q.quotation_no}`);
+    } catch (e) {
+      const detail = (e as { detail?: { shortages?: { name: string; need: number; available: number }[]; message?: string } }).detail;
+      if (detail && typeof detail === "object" && detail.shortages) {
+        const lines = detail.shortages.map((s) => `• ${s.name}: ต้องการ ${s.need} มี ${s.available}`).join("\n");
+        if (confirm(`${detail.message}\n\n${lines}\n\nออกใบเสนอราคาทั้งที่ของไม่พอ?`)) return makeQuotation(true);
+      } else setMsg(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   // realtime: ลูกค้ากดเก็บไว้/ลบออก/แก้จำนวนจากมือถือ → เซลล์เห็นทันที
   useCartSocket(sales.active?.id, (evt) => {
@@ -74,7 +121,10 @@ export default function SalesPage() {
       <div className="sess-bar">
         <div className="row between wrap">
           <div className="row"><Icon name="support_agent" size={22} /> <b>โหมดพนักงานขาย · {auth.user?.name}</b> {cart && <span className="chip light">SESSION {cart.no}</span>}</div>
-          <button className="btn sm" style={{ background: "#fff" }} onClick={() => run("open", () => sales.openCart())} disabled={busy === "open"}><Icon name="add" size={18} /> เปิดตะกร้าใหม่</button>
+          <div className="row">
+            <Link to="/sales/presos" className="btn sm" style={{ background: "#fff" }}><Icon name="folder_open" size={18} /> Preso ของฉัน</Link>
+            <button className="btn sm" style={{ background: "#fff" }} onClick={() => run("open", () => sales.openCart())} disabled={busy === "open"}><Icon name="add" size={18} /> เปิดตะกร้าใหม่</button>
+          </div>
         </div>
         <div className="sess-tabs">
           {sales.sessions.map((s) => (
@@ -159,8 +209,8 @@ export default function SalesPage() {
               <div className="col" style={{ marginTop: 12 }}>
                 <button className="btn block" onClick={() => setPromoOpen(true)} disabled={cart.items.length === 0}><Icon name="sell" size={18} /> {cart.totals && cart.totals.lines.length > 0 ? "แก้ไขโปรโมชั่น / ส่วนลด" : "เช็คโปรโมชั่น"}</button>
                 <button className="btn block" onClick={() => setDeliveryOpen((v) => !v)} disabled={cart.items.length === 0}><Icon name="local_shipping" size={18} /> {cart.delivery?.quoted_at ? "แก้ไขค่าส่ง / คิวจัดส่ง" : "เช็คสต็อก + คิวจัดส่ง"}</button>
-                <button className="btn block" disabled title="STEP 8">Save Preso</button>
-                <button className="btn primary block" disabled={!cart.customer} title={cart.customer ? "STEP 8" : "ต้องผูกลูกค้าก่อน"}>สร้างใบเสนอราคา</button>
+                <button className="btn block" disabled={busy === "preso" || cart.items.length === 0} onClick={() => savePreso()}><Icon name="save" size={18} /> {presoNo ? `บันทึกแล้ว · ${presoNo}` : "Save Preso"}</button>
+                <button className="btn primary block" disabled={!cart.customer || busy !== null || cart.items.length === 0} title={cart.customer ? "" : "ต้องผูกลูกค้าก่อน"} onClick={() => makeQuotation()}>สร้างใบเสนอราคา</button>
               </div>
               <p className="tiny muted" style={{ marginTop: 10 }}>{cart.customer ? "ใบเสนอราคาจะยืนราคา 7 วัน แล้วส่งต่อให้ระบบหลังบ้าน convert เป็น SO ใน SAP" : "ต้องค้นหาและผูกลูกค้าก่อนจึงจะออกใบเสนอราคาได้"}</p>
               {cart.expires_at && <p className="tiny muted">ตะกร้านี้หมดอายุอัตโนมัติ {thDate(cart.expires_at)} {thTime(cart.expires_at)} (ต่ออายุทุกครั้งที่ใช้งาน)</p>}
