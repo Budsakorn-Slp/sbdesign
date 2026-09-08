@@ -25,7 +25,7 @@ def _cards(db: Session, materials, user: User | None) -> list[MaterialCard]:
 def track_event(body: TrackIn, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
     if body.event not in analytics_service.EVENTS:
         raise HTTPException(status_code=422, detail="event ไม่รู้จัก")
-    analytics_service.track(db, user, _anon(request), body.event, body.matnr, body.query, body.source, body.payload)
+    analytics_service.track(db, user, _anon(request), body.event, body.matnr, body.query, body.source, body.payload, body.purpose)
     db.commit()
     return {"ok": True}
 

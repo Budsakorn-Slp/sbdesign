@@ -28,15 +28,26 @@ def owner_key(user: User | None, anon: str | None) -> str | None:
     return f"u:{user.id}" if user else (f"a:{anon}" if anon else None)
 
 
-def track(db: Session, user: User | None, anon: str | None, event: str, matnr: str | None = None, query: str | None = None, source: str = "web", payload: dict | None = None) -> None:
-    """เก็บ event — ไม่ commit เอง ยกเว้นถูกเรียกจาก endpoint /events"""
+def track(db: Session, user: User | None, anon: str | None, event: str, matnr: str | None = None, query: str | None = None, source: str = "web", payload: dict | None = None, purpose: str = "service") -> None:
+    """เก็บ event — ไม่ commit เอง ยกเว้นถูกเรียกจาก endpoint /events
+
+    purpose="service" = จำเป็นต่อการให้บริการ (ดูล่าสุด/ตะกร้า/ประวัติ) เก็บได้ตามปกติ
+    purpose="marketing" = เก็บเพื่อการตลาด ต้องมี consent · ไม่มี consent → ยังนับเป็นสถิติรวมได้
+    แต่ต้องตัดตัวตนทิ้งตั้งแต่ตอนเขียน
+    """
+    from app.services import pdpa_service  # import ตรงนี้กัน circular import
+
     if event not in EVENTS:
         return
-    db.add(UserEvent(user_id=user.id if user else None, anon_token=None if user else anon, event=event, matnr=matnr, query=query, source=source, payload=payload))
+    purpose = purpose if purpose in ("service", "marketing") else "service"
+    identify = purpose == "service" or pdpa_service.marketing_allowed(user)
+    uid = user.id if (user and identify) else None
+    tok = None if user else (anon if identify else None)
+    db.add(UserEvent(user_id=uid, anon_token=tok, event=event, matnr=matnr, query=query, source=source, payload=payload, purpose=purpose))
     if event == "view_material" and matnr:
         _touch_recent(db, user, anon, matnr)
     if event == "search" and query:
-        db.add(SearchQuery(user_id=user.id if user else None, anon_token=None if user else anon, q=query[:200], result_count=int((payload or {}).get("result_count") or 0)))
+        db.add(SearchQuery(user_id=uid, anon_token=tok, q=query[:200], result_count=int((payload or {}).get("result_count") or 0)))
 
 
 def _touch_recent(db: Session, user: User | None, anon: str | None, matnr: str) -> None:

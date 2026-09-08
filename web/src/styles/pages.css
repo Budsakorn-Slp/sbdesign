@@ -177,3 +177,17 @@
 .btn.icon-only { padding-inline: 14px; }
 .btn.icon-only.on { color: var(--red); border-color: var(--red); }
 .hdr-user-link { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; }
+
+/* ความเป็นส่วนตัว (PDPA) */
+.privacy { display: grid; gap: 16px; max-width: 720px; }
+.privacy-box { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; background: #fff; }
+.privacy-box h2 { font-size: 16px; margin: 0 0 12px; }
+.privacy-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.privacy-row input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--red); }
+.privacy .d-block { display: block; margin-top: 2px; }
+.privacy .ok { color: var(--green); }
+.privacy-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 8px; }
+.privacy-confirm { display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.btn.danger { border-color: var(--red); color: var(--red); }
+.btn.danger:hover { background: #fff3f4; }
+.privacy-history { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); }

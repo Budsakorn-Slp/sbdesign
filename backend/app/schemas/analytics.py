@@ -12,6 +12,7 @@ class TrackIn(BaseModel):
     query: str | None = None
     source: str = "web"
     payload: dict | None = None
+    purpose: str = "service"  # marketing = ต้องมี consent ไม่งั้นเก็บแบบไม่ระบุตัวตน
 
 
 class OrderLineOut(BaseModel):

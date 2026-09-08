@@ -25,6 +25,10 @@ class User(Base, TimestampMixin):
     is_guest: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     default_address: Mapped[str | None] = mapped_column(Text, nullable=True)
     default_postcode: Mapped[str | None] = mapped_column(String(8), nullable=True)
+    # PDPA — ความยินยอมการตลาด (ค่าเริ่มต้น "ไม่ยินยอม") + วันที่ลบตัวตนตามคำขอ
+    consent_marketing: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    consent_marketing_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    anonymized_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     sessions: Mapped[list["UserSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 

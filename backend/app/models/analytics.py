@@ -21,6 +21,7 @@ class UserEvent(Base):
     matnr: Mapped[str | None] = mapped_column(String(18), nullable=True)
     query: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source: Mapped[str] = mapped_column(String(16), default="web", nullable=False)  # web | sales_app
+    purpose: Mapped[str] = mapped_column(String(16), default="service", nullable=False)  # service = จำเป็นต่อการใช้งาน | marketing = ต้องมี consent
     payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False, index=True)
 

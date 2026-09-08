@@ -27,7 +27,10 @@ def get_current_user_optional(
     payload = decode_access_token(token)
     if not payload:
         return None
-    return db.get(User, payload["sub"])
+    user = db.get(User, payload["sub"])
+    if user and user.anonymized_at:
+        return None  # ขอลบข้อมูลแล้ว — access token ที่ออกไปก่อนหน้าต้องใช้ไม่ได้ทันที
+    return user
 
 
 def get_current_user(user: User | None = Depends(get_current_user_optional)) -> User:

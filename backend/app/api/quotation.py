@@ -81,8 +81,11 @@ def create_quotation(preso_no: str, body: CreateQuotationIn, db: Session = Depen
 
 
 @router.post("/checkout/quotation", response_model=QuotationOut, status_code=201)
-def checkout_online(body: CreateQuotationIn, db: Session = Depends(get_db), me: User = Depends(get_current_user), ctx: CartCtx = Depends()):
-    """ลูกค้าสั่งเองออนไลน์ — เซฟ Preso จากตะกร้าตัวเองแล้วออกใบเสนอราคาช่องทาง online ไปหน้าชำระเงิน"""
+def checkout_online(body: CreateQuotationIn, db: Session = Depends(get_db), me: User = Depends(require_role("customer")), ctx: CartCtx = Depends()):
+    """ลูกค้าสั่งเองออนไลน์ — เซฟ Preso จากตะกร้าตัวเองแล้วออกใบเสนอราคาช่องทาง online ไปหน้าชำระเงิน
+
+    เฉพาะบทบาทลูกค้า: เซลล์ห้ามรับเงินเอง (ต้องออกใบเสนอราคาให้ลูกค้าไปจ่ายเอง)
+    """
     cart = ctx.current()
     if cart.customer_user_id != me.id:
         raise HTTPException(status_code=403, detail="ตะกร้านี้ไม่ใช่ของคุณ")

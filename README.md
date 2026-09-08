@@ -226,3 +226,23 @@ cd web && npm test
 4. `/account/orders` — ดึงประวัติจาก SAP mock มาแสดง กดที่ใบเพื่อดูรายการสินค้าในออร์เดอร์
 5. ล็อกอิน MG-001 แล้ว `POST /admin/jobs/daily-stats` → เรียก `GET /best-sellers` เทียบก่อน/หลัง จะเห็นอันดับเปลี่ยนตามยอดจริง
 6. test: `pytest tests/test_step10_history.py` (5 เคส)
+
+### STEP 11 — สิทธิ์ · audit · PDPA
+- **matrix สิทธิ์ครบทุก endpoint**: `tests/test_step11_permissions.py` ยิงทุก endpoint (77 ช่องทาง) ด้วยทั้ง 5 บทบาท (guest/customer/sales/manager/admin) — บทบาทที่ไม่มีสิทธิ์ต้องได้ 401/403 เสมอ · มี test กันลืมที่เทียบตารางกับ `openapi()` ถ้าเพิ่ม endpoint ใหม่แล้วไม่ใส่ในตาราง test จะพัง
+- ปิดช่องโหว่ที่เจอตอนทำ matrix: `POST /checkout/quotation` และ `POST /cart/checkout-check` เป็นของ **ลูกค้าเท่านั้น** (เซลล์ห้ามรับเงินเอง ต้องออกใบเสนอราคาให้ลูกค้าไปจ่ายเอง)
+- **ปิดตะกร้า → เซลล์หมดสิทธิ์ทันที** (`cart_service.can_access` เช็ค `cart.is_open` + `owner_sales_id`) · เซลล์คนอื่นแตะตะกร้าที่ไม่ใช่ของตัวเองไม่ได้แม้ยังเปิดอยู่
+- **consent การตลาดแยกจากการใช้งานทั่วไป**: `user_events.purpose` = `service` (จำเป็นต่อการให้บริการ — เก็บได้เลย) หรือ `marketing` (ต้องมีความยินยอม) · ไม่ยินยอม → ยังนับเป็นสถิติรวมได้แต่ตัดตัวตนตั้งแต่ตอนเขียน · **ถอนความยินยอมแล้ว event เก่าถูกลบตัวตนย้อนหลังทันที**
+- ประวัติ consent เก็บทุกครั้งไม่ทับของเดิม (`consents`) เพื่อพิสูจน์ย้อนหลังได้ · คำขอตามสิทธิ์เก็บใน `data_requests`
+- **ขอสำเนาข้อมูล**: `GET /me/data/export` (โปรไฟล์ + consent + ดูล่าสุด + รายการโปรด + คำค้น + events + ออร์เดอร์ + ใบเสนอราคา)
+- **ขอลบข้อมูล**: `POST /me/data/delete {confirm: true}` → ลบรายการโปรด/ดูล่าสุดทิ้ง · ตัด `user_id`/`anon_token` ออกจาก events + คำค้น · ปิดตะกร้าที่เปิดอยู่ · ล้างใบร่าง · ตัดลิงก์ใบเสนอราคา/ออร์เดอร์ออกจากบัญชี (ตัวเอกสารเก็บต่อตามกฎหมาย) · เก็บ `audit_logs` ไว้แต่ไม่รู้ว่าเป็นใคร · ล้างโปรไฟล์ + เพิกถอนทุก session · **access token เดิมใช้ไม่ได้ทันที** (`deps` เช็ค `anonymized_at`) · มีใบเสนอราคาค้าง (issued/paid) จะตอบ 409 ให้ปิดงานก่อน
+- แอดมิน: `POST /admin/users/{id}/anonymize` · `GET /admin/users/{id}/data-export` (ทำแทนตอนลูกค้าโทรเข้ามา) · `GET /admin/data-requests` · **`GET /admin/audit-logs?action=…&target_id=…`** ดู audit ย้อนหลัง
+- หน้าเว็บ: `/account/privacy` — สวิตช์ความยินยอมการตลาด · ปุ่มดาวน์โหลดสำเนาข้อมูล (JSON) · ปุ่มขอลบข้อมูล (ยืนยัน 2 ชั้น) · ประวัติการให้/ถอนความยินยอม
+
+วิธีลอง
+1. `/account/privacy` → ติ๊ก "ให้เก็บพฤติกรรมเพื่อการตลาด" แล้วเอาออก จะเห็นประวัติสะสมทั้งสองครั้ง
+2. ยิง `POST /events {"event":"view_material","matnr":"10023841","purpose":"marketing"}` ตอน**ไม่**ยินยอม → เช็ค DB: `select user_id, purpose from user_events where purpose='marketing';` ต้องเป็น NULL
+3. กดปุ่ม "ขอสำเนาข้อมูลของฉัน" → ได้ไฟล์ `sbdesign-my-data.json` มาดูได้ทั้งก้อน
+4. สมัครบัญชีใหม่ → ดูสินค้า/ใส่ตะกร้า → กด "ขอลบข้อมูลส่วนบุคคล" → ล็อกอินด้วยเบอร์เดิมไม่ได้อีก และ `select * from user_events where user_id='<id>'` ว่างเปล่า
+5. ล็อกอิน ADM-001 → `GET /admin/audit-logs?action=pdpa` เห็นร่องรอยว่าใครขอลบ/ให้ความยินยอมเมื่อไร · `GET /admin/data-requests` เห็นสรุปว่าลบอะไรไปบ้าง
+6. ลองเข้า endpoint ของเซลล์ด้วยบัญชีลูกค้า (เช่น `GET /sales/carts`) → ต้องได้ 403 ทุกครั้ง
+7. test: `pytest tests/test_step11_permissions.py tests/test_step11_pdpa.py` (81 + 5 เคส)
