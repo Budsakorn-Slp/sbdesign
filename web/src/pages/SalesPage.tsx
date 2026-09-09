@@ -148,7 +148,10 @@ export default function SalesPage() {
                 <button className="link-btn small" style={{ color: "#fff" }} onClick={() => run("detach", () => sales.detach())} disabled={busy === "detach"}>ตัดการเชื่อมต่อ</button>
               </>
             ) : (
-              <CustomerSearch onPick={(hit) => run("attach", () => sales.attach(hit.sap_customer_no || hit.email || hit.phone || ""))} search={sales.searchCustomers} />
+              <>
+                <CustomerSearch onPick={(hit) => run("attach", () => sales.attach(hit.sap_customer_no || hit.email || hit.phone || ""))} search={sales.searchCustomers} />
+                <span className="small" style={{ opacity: .8 }}>ลูกค้าใหม่ยังไม่มีในระบบก็ทำต่อได้ — ใส่สินค้าไปก่อน ค่อยผูกลูกค้าตอนจะออกใบเสนอราคา</span>
+              </>
             )}
             <button className="btn primary sm" style={{ marginLeft: "auto" }} onClick={() => setSearchOpen(true)}><Icon name="add_shopping_cart" size={18} /> เพิ่มสินค้าให้ลูกค้า</button>
           </div>
@@ -218,7 +221,19 @@ export default function SalesPage() {
           </aside>
         </div>
       ) : (
-        !sales.loading && <div className="cart-empty"><Icon name="shopping_basket" size={44} /><div className="strong">เลือกหรือเปิดตะกร้าเพื่อเริ่มดูแลลูกค้า</div></div>
+        /* ลูกค้าใหม่ที่ยังไม่มีบัญชี/ยังไม่มีตะกร้า — เซลล์เปิดตะกร้าของตัวเองแล้วเริ่มจัดของได้เลย ค่อยผูกลูกค้าทีหลัง */
+        !sales.loading && (
+          <div className="cart-empty">
+            <Icon name="shopping_basket" size={44} />
+            <div className="strong">{sales.sessions.length ? "เลือกตะกร้าด้านบนเพื่อทำงานต่อ" : "ยังไม่มีตะกร้าที่กำลังดูแล"}</div>
+            <p className="small muted" style={{ maxWidth: 460, textAlign: "center", margin: 0 }}>
+              ลูกค้าใหม่ที่ยังไม่มีบัญชีก็เริ่มได้ — เปิดตะกร้าของคุณเองแล้วใส่สินค้าได้ทันที (คิดราคาปกติไปก่อน) ค่อยค้นหาและผูกลูกค้าทีหลังเพื่อใช้ราคาสมาชิกและออกใบเสนอราคา
+            </p>
+            <button className="btn dark" onClick={() => run("open", () => sales.openCart())} disabled={busy === "open"}>
+              <Icon name="add" size={18} /> เปิดตะกร้าใหม่
+            </button>
+          </div>
+        )
       )}
 
       {searchOpen && <MaterialSearchModal onClose={() => setSearchOpen(false)} target={cart?.customer?.name || `ตะกร้า ${cart?.no || ""}`} search={sales.searchMaterials}
@@ -234,7 +249,7 @@ export default function SalesPage() {
 function SalesRow({ it, busy, plantName, onInc, onDec, onRemove, onStock, onNote }: { it: CartItem; busy: boolean; plantName: string; onInc: () => void; onDec: () => void; onRemove: () => void; onStock: () => void; onNote: (n: string) => void }) {
   const [note, setNote] = useState(it.note || "");
   return (
-    <div className="cart-row">
+    <div className="cart-row sales-row">
       <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={it.image_url} label="1:1" /></Link>
       <div className="cart-info">
         <div className="row wrap" style={{ gap: 6, marginBottom: 4 }}>
@@ -246,21 +261,25 @@ function SalesRow({ it, busy, plantName, onInc, onDec, onRemove, onStock, onNote
         <div className="small muted">{it.variant}{it.spec ? ` · ${it.spec}` : ""}</div>
         <div className="mono tiny muted">MATNR {it.matnr} · {it.sku}</div>
         <div className="small muted" style={{ marginTop: 4 }}>{bahtWord(it.unit_price)} / ชิ้น · {it.price_tier}</div>
+        {/* เช็คสต็อกเป็นปุ่มจริง — เซลล์กดบ่อยตอนคุยกับลูกค้า ไม่ควรเป็นลิงก์เล็ก ๆ ปนกับตัวหนังสือ */}
         <div className="cart-ctrl">
-          <div className="qty">
-            <button onClick={onDec} disabled={busy || it.qty <= 1} aria-label="ลด"><Icon name="remove" size={18} /></button>
-            <span>{it.qty}</span>
-            <button onClick={onInc} disabled={busy} aria-label="เพิ่ม"><Icon name="add" size={18} /></button>
-          </div>
-          <button className="link-btn" onClick={onRemove} disabled={busy}>ลบ</button>
-          <button className="link-btn" onClick={onStock}><Icon name="inventory_2" size={16} /> เช็คสต็อก</button>
+          <button className="btn sm" onClick={onStock}><Icon name="inventory_2" size={16} /> เช็คสต็อกทุกสาขา</button>
         </div>
         <form className="row" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); onNote(note); }}>
           <input className="hdr-pop-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ เช่น รอลูกค้าวัดห้อง" />
           <button className="btn sm" type="submit" disabled={busy || note === (it.note || "")}>บันทึก</button>
         </form>
       </div>
-      <div className="cart-line strong">{bahtWord(it.line_total)}</div>
+      {/* ริมขวา: ถังขยะอยู่บนสุด · ยอดของบรรทัดนี้ · ปุ่มจำนวนอยู่ฝั่งเดียวกับราคา */}
+      <div className="sales-side">
+        <button className="icon-btn danger" onClick={onRemove} disabled={busy} title="ลบออกจากตะกร้า" aria-label="ลบออกจากตะกร้า"><Icon name="delete" size={18} /></button>
+        <b className="cart-line">{bahtWord(it.line_total)}</b>
+        <div className="qty sm">
+          <button onClick={onDec} disabled={busy || it.qty <= 1} aria-label="ลด"><Icon name="remove" size={16} /></button>
+          <span>{it.qty}</span>
+          <button onClick={onInc} disabled={busy} aria-label="เพิ่ม"><Icon name="add" size={16} /></button>
+        </div>
+      </div>
     </div>
   );
 }
