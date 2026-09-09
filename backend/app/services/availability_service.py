@@ -8,12 +8,14 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.integrations.sap.availability import AvailAsk, AvailLine, get_availability_client
 from app.integrations.sap.base import SapError
 from app.models.cart import Cart
+from app.models.catalog import Material
 from app.models.common import utcnow
 from app.models.user import User
 from app.services import audit_service
@@ -57,7 +59,7 @@ class ItemAvailability:
 
 @dataclass
 class CartAvailability:
-    cart_id: str
+    cart_id: str | None
     checked_at: datetime
     req_date: date
     customer_no: str
@@ -103,6 +105,15 @@ def _classify(ask_qty: int, line: AvailLine | None, matnr: str, name: str, our_u
     )
 
 
+def _summarize(items: list[ItemAvailability]) -> tuple[bool, str]:
+    bad = [o for o in items if o.status not in ("full", "split")]
+    if not items:
+        return False, "ตะกร้ายังไม่มีสินค้า"
+    if bad:
+        return False, f"มี {len(bad)} รายการที่ของไม่พอ — คุยกับลูกค้าก่อนออกใบเสนอราคา"
+    return True, "ของครบทุกรายการ" if all(o.status == "full" for o in items) else "ของครบ แต่บางรายการต้องแบ่งส่ง"
+
+
 def check_cart(db: Session, cart: Cart, actor: User | None) -> CartAvailability:
     """ยิงทั้งตะกร้าครั้งเดียว — ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน"""
     s = get_settings()
@@ -114,14 +125,8 @@ def check_cart(db: Session, cart: Cart, actor: User | None) -> CartAvailability:
     source = "mock" if type(client).__name__.startswith("Mock") else "sap"
     lines = client.check(asks, customer_no, req) if asks else []
     out = [_classify(it.qty, ln, it.matnr, it.name_snapshot, it.unit_price_snapshot, it.id) for it, ln in zip(items, lines)]
-    all_ok = bool(out) and all(o.status in ("full", "split") for o in out)
+    all_ok, message = _summarize(out)
     bad = [o for o in out if o.status not in ("full", "split")]
-    if not out:
-        message = "ตะกร้ายังไม่มีสินค้า"
-    elif all_ok:
-        message = "ของครบทุกรายการ" if all(o.status == "full" for o in out) else "ของครบ แต่บางรายการต้องแบ่งส่ง"
-    else:
-        message = f"มี {len(bad)} รายการที่ของไม่พอ — คุยกับลูกค้าก่อนออกใบเสนอราคา"
     audit_service.log(db, actor, "sap.availability", "cart", cart.id, {
         "customer": customer_no, "req_date": req.isoformat(), "source": source,
         "lines": len(out), "not_ok": len(bad),
@@ -130,6 +135,34 @@ def check_cart(db: Session, cart: Cart, actor: User | None) -> CartAvailability:
     return CartAvailability(
         cart_id=cart.id, checked_at=utcnow(), req_date=req, customer_no=customer_no,
         is_walkin=customer_no == s.sap_walkin_customer, source=source, items=out, all_ok=all_ok, message=message,
+    )
+
+
+def check_lines(db: Session, lines_in: list[tuple[str, int]], actor: User | None, customer_no: str | None = None) -> CartAvailability:
+    """เช็คสต็อกรายการชุดหนึ่งโดยไม่ต้องมีตะกร้า — ยังยิง SAP ครั้งเดียวทั้งชุดเหมือนเดิม
+
+    มีไว้ให้ช่องทางที่ไม่ได้เปิดตะกร้าไว้ (เช่น MCP ที่ให้ Claude ถามแทนเซลล์) เรียกใช้
+    ห้ามทำเป็น loop เรียก check_one ทีละตัว เพราะ SAP จำลองทั้งบิล ของชิ้นเดียวจะถูก
+    นับซ้ำให้ทุกบรรทัด = ขายเกิน (ดู docstring ของ integrations/sap/availability.py)
+    """
+    s = get_settings()
+    asks = [AvailAsk(matnr=m, qty=max(1, q)) for m, q in lines_in if m]
+    cust = customer_no or s.sap_walkin_customer
+    req = req_date_for()
+    client = get_availability_client()
+    source = "mock" if type(client).__name__.startswith("Mock") else "sap"
+    got = client.check(asks, cust, req) if asks else []
+    names = {m.matnr: m.name_th for m in db.scalars(select(Material).where(Material.matnr.in_([a.matnr for a in asks]))).all()} if asks else {}
+    out = [_classify(a.qty, ln, a.matnr, names.get(a.matnr, a.matnr), None) for a, ln in zip(asks, got)]
+    all_ok, message = _summarize(out)
+    audit_service.log(db, actor, "sap.availability", "lines", None, {
+        "customer": cust, "req_date": req.isoformat(), "source": source,
+        "lines": len(out), "not_ok": len([o for o in out if o.status not in ("full", "split")]),
+    })
+    db.commit()
+    return CartAvailability(
+        cart_id=None, checked_at=utcnow(), req_date=req, customer_no=cust,
+        is_walkin=cust == s.sap_walkin_customer, source=source, items=out, all_ok=all_ok, message=message,
     )
 
 
@@ -145,4 +178,4 @@ def check_one(db: Session, matnr: str, qty: int, name: str, actor: User | None, 
     return res
 
 
-__all__ = ["CartAvailability", "ItemAvailability", "SapError", "check_cart", "check_one", "req_date_for"]
+__all__ = ["CartAvailability", "ItemAvailability", "SapError", "check_cart", "check_lines", "check_one", "req_date_for"]

@@ -27,7 +27,7 @@ class AvailabilityItemOut(BaseModel):
 class AvailabilityOut(BaseModel):
     """ผลเช็คสต็อก — ทั้งตะกร้าในการยิงครั้งเดียว"""
 
-    cart_id: str
+    cart_id: str | None = None  # ว่าง = เช็คเป็นชุดรายการลอยๆ ไม่ได้ผูกกับตะกร้า
     checked_at: datetime
     req_date: date
     customer_no: str
@@ -41,3 +41,10 @@ class AvailabilityOut(BaseModel):
 class AvailabilityOneIn(BaseModel):
     matnr: str = Field(min_length=1, max_length=18)
     qty: int = Field(default=1, ge=1, le=9999)
+
+
+class AvailabilityBatchIn(BaseModel):
+    """เช็คหลายรายการพร้อมกันโดยไม่ต้องมีตะกร้า — ยิง SAP ครั้งเดียวทั้งชุด"""
+
+    items: list[AvailabilityOneIn] = Field(min_length=1, max_length=25)
+    customer_no: str | None = Field(default=None, max_length=20, description="เลขลูกค้า SAP · ไม่ใส่ = walk-in")

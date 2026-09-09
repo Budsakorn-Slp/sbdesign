@@ -8,7 +8,7 @@ from app.db.session import get_db
 from app.integrations.sap.base import SapError
 from app.models.catalog import Material
 from app.models.user import User
-from app.schemas.availability import AvailabilityItemOut, AvailabilityOneIn, AvailabilityOut
+from app.schemas.availability import AvailabilityBatchIn, AvailabilityItemOut, AvailabilityOneIn, AvailabilityOut
 from app.schemas.cart import AddItemIn, CartOut, UpdateItemIn
 from app.services import availability_service, cart_service, sales_service
 
@@ -128,6 +128,20 @@ def check_availability_one(body: AvailabilityOneIn, db: Session = Depends(get_db
         return AvailabilityItemOut(**vars(availability_service.check_one(db, m.matnr, body.qty, m.name_th, me)))
     except SapError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คสต็อกไม่ได้: {e}")
+
+
+@router.post("/sales/availability/batch", response_model=AvailabilityOut)
+def check_availability_batch(body: AvailabilityBatchIn, db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    """เช็คหลายรายการพร้อมกันโดยไม่ต้องเปิดตะกร้า — ยิง SAP ครั้งเดียวทั้งชุดเหมือนเช็คตะกร้า
+
+    ให้ช่องทางที่ถือรายการอยู่ในมืออยู่แล้ว (MCP/สคริปต์) เช็คได้โดยไม่ต้องสร้างตะกร้าทิ้งไว้
+    ห้ามให้ผู้เรียกวนเรียก /sales/availability ทีละตัวแทน — จะเห็นของชิ้นเดียวกันซ้ำทุกบรรทัด
+    """
+    try:
+        res = availability_service.check_lines(db, [(i.matnr, i.qty) for i in body.items], me, body.customer_no)
+    except SapError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คสต็อกไม่ได้: {e}")
+    return AvailabilityOut(**{**vars(res), "items": [AvailabilityItemOut(**vars(i)) for i in res.items]})
 
 
 @router.get("/customers/search")

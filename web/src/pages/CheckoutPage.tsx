@@ -128,7 +128,8 @@ export default function CheckoutPage() {
                   <Placeholder src={it.image_url} label="1:1" style={{ width: 48, flex: "none" }} />
                   <div className="grow small">
                     <b>{it.name}</b> <span className="muted">{it.variant}</span>
-                    <div className="muted tiny">SKU: {it.sku} · จำนวน: {it.qty}</div>
+                    {/* เลขเดียวพอ — SKU กับ MATNR เป็นเลขเดียวกันเกือบทั้งฐาน โชว์สองอันมีแต่ทำให้สับสน */}
+                    <div className="muted tiny">MATNR {it.matnr} · จำนวน: {it.qty}</div>
                   </div>
                   <b className="small">{bahtWord(it.line_total)}</b>
                 </div>
