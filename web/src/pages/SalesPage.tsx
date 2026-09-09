@@ -261,6 +261,8 @@ export default function SalesPage() {
                     <div className="tiny muted" style={{ marginTop: 4 }}>
                       ถามวันส่ง {thDate(avail.req_date)} · ลูกค้า {avail.customer_no}{avail.is_walkin ? " (walk-in)" : ""} · เช็คเมื่อ {thTime(avail.checked_at)}
                     </div>
+                    {/* บอกให้ชัดว่าเลขมาจากไหน — ตอนรัน mock ของจริงทุกตัวจะขึ้น "ไม่รู้จักรหัสนี้" ซึ่งชวนเข้าใจผิดว่า SAP ตอบแบบนั้น */}
+                    {avail.source !== "http" && <div className="tiny" style={{ marginTop: 2, color: "#a12d2d" }}>⚠ ข้อมูลจำลอง (mock) ไม่ได้ยิง SAP จริง — ตั้ง SAP_AVAIL_URL / SAP_API_KEY แล้วรีสตาร์ท backend</div>}
                   </div>
                 )}
                 <button className="btn block" onClick={() => setPromoOpen(true)} disabled={cart.items.length === 0}><Icon name="sell" size={18} /> {cart.totals && cart.totals.lines.length > 0 ? "แก้ไขโปรโมชั่น / ส่วนลด" : "เช็คโปรโมชั่น"}</button>
