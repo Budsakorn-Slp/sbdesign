@@ -9,23 +9,57 @@
 .pending-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .pending-img { width: 64px; flex: none; }
 .cart-intro { font-size: 13.5px; color: var(--ink-2); margin: 0 0 8px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-.cart-items { display: flex; flex-direction: column; }
-.cart-row { display: grid; grid-template-columns: 160px 1fr auto; gap: 20px; padding: 22px 0; border-bottom: 1px solid var(--line); }
-.cart-img { display: block; }
-.cart-name { font-size: 16px; font-weight: 700; display: block; }
+.cart-bulk { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 2px 10px; }
+.cart-bulk label { gap: 8px; cursor: pointer; }
+.cart-pick { width: 18px; height: 18px; flex: none; accent-color: var(--red); cursor: pointer; }
+.cart-items { display: flex; flex-direction: column; gap: 12px; }
+/* หนึ่งรายการ = การ์ดใบเดียว · ติ๊กกับรูปกินสองแถว ชื่อสินค้าอยู่แถวบน
+   ราคา/จำนวน/ยอดรวม เข้าไปอยู่ในช่องว่างล่างขวาของกรอบเดียวกัน ไม่แยกเป็นแถบเต็มความกว้าง */
+.cart-row { display: grid; grid-template-columns: auto 96px minmax(0, 1fr) auto; align-items: start; gap: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 14px 16px; }
+.cart-row.picked { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.cart-row-head { display: contents; }
+.cart-row-head .cart-pick { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+.cart-img { display: block; grid-column: 2; grid-row: 1 / span 2; }
+.cart-info { grid-column: 3; grid-row: 1; }
+.cart-name { font-size: 15px; font-weight: 700; display: block; }
+.cart-code { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.cart-tools { display: flex; align-items: center; gap: 2px; grid-column: 4; grid-row: 1; }
+.cart-tools .icon-btn { width: 36px; height: 36px; }
+.cart-tools .icon-btn.danger:hover { color: var(--red); }
+.cart-row-cols { grid-column: 3 / -1; grid-row: 2; display: flex; align-items: flex-end; justify-content: flex-end; gap: 32px; }
+.cart-col { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.cart-col.center { align-items: center; }
+/* ช่องล่างสุดของรายการทั้งหมด = ยอดรวมของที่ติ๊กไว้ */
+.cart-foot { display: flex; align-items: baseline; justify-content: flex-end; gap: 16px; margin-top: 14px; padding: 14px 16px; border-top: 1px solid var(--line); font-size: 13.5px; }
+.cart-foot b { font-size: 20px; }
+.cart-col b { font-size: 15px; }
+.cart-col-lbl { font-size: 12px; color: var(--ink-3); }
 .staff-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--green-dark); background: #e8f3ef; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px; }
-.cart-ctrl { display: flex; align-items: center; gap: 18px; margin-top: 14px; }
 .qty { display: inline-flex; align-items: center; border: 1px solid var(--line-2); border-radius: 999px; height: 44px; }
 .qty button { width: 44px; height: 42px; border: none; background: none; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
 .qty button:disabled { color: var(--line-2); cursor: not-allowed; }
 .qty span { min-width: 32px; text-align: center; font-weight: 600; }
-.cart-line { font-size: 15px; text-align: right; white-space: nowrap; }
+.qty.sm { height: 36px; }
+.qty.sm button { width: 34px; height: 34px; }
+.qty.sm span { min-width: 26px; }
+/* แถวในตะกร้าฝั่งพนักงาน: รูป · รายละเอียด+ปุ่มเช็คสต็อก+ช่องหมายเหตุ · ริมขวาเป็นลบ/ราคา/จำนวน */
+.sales-row { grid-template-columns: 96px minmax(0, 1fr) auto; }
+.sales-row .cart-img { grid-column: 1; grid-row: 1; }
+.sales-row .cart-info { grid-column: 2; grid-row: 1; }
+.sales-side { grid-column: 3; grid-row: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.sales-side .icon-btn:hover { color: var(--red); }
+.sales-side .cart-line { font-size: 17px; white-space: nowrap; }
+.cart-ctrl { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .cart-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 48px 0; color: var(--ink-3); }
 .summary { border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; background: #fff; }
 .summary h3 { font-size: 16px; margin-bottom: 12px; }
 .sum-row { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; padding: 5px 0; }
-.sum-total { display: flex; justify-content: space-between; align-items: baseline; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 14px; font-weight: 700; }
-.sum-total b { font-size: 26px; }
+/* ยอดรวมยาวกว่ากล่อง — คำในวงเล็บลงบรรทัดใหม่ ตัวเลขไม่ตัดคำ */
+.sum-total { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 14px; font-weight: 700; }
+.sum-total span { display: flex; flex-direction: column; }
+.sum-total small { font-weight: 400; font-size: 11.5px; color: var(--ink-3); }
+.sum-total b { font-size: 24px; white-space: nowrap; }
+.promo-btn { width: 100%; margin: 10px 0 4px; border-style: dashed; }
 .pay-icons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 
 /* ===== checkout ===== */
@@ -35,7 +69,8 @@
 @media (max-width: 1023px) { .checkout-grid { grid-template-columns: 1fr; } }
 
 /* ===== product add box ===== */
-.add-box { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 16px; background: var(--bg-2); }
+/* ปุ่มซื้อไม่ต้องมีกรอบ/พื้นหลัง — ให้ปุ่มเด่นเองพอ */
+.add-box { margin-top: 16px; }
 .add-box .opts { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; }
 .opt { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; font-size: 13.5px; }
 .opt.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
@@ -46,14 +81,29 @@
 
 @media (max-width: 1023px) {
   .cart-grid { grid-template-columns: 1fr; }
-  .cart-row { grid-template-columns: 110px 1fr; }
-  .cart-line { grid-column: 2; text-align: left; }
 }
 @media (max-width: 599px) {
-  .cart-row { grid-template-columns: 1fr; }
-  .cart-img { max-width: 160px; }
-  .cart-line { grid-column: 1; }
-  .cart-ctrl { flex-wrap: wrap; gap: 10px; }
+  /* มือถือ: โครงแบบตะกร้าช้อปปี้ — ติ๊ก · รูป · ชื่อ/ตัวเลือก แล้วบรรทัดล่างเป็นราคาคู่กับปุ่มจำนวน
+     (ยอดรวมรายบรรทัดตัดออก เพราะเท่ากับราคา × จำนวนที่เห็นอยู่แล้ว ไปดูยอดจริงที่สรุปคำสั่งซื้อ) */
+  .cart-row { display: grid; grid-template-columns: auto 92px minmax(0, 1fr); align-items: start; gap: 10px; padding: 12px; }
+  .cart-row-head { display: contents; }
+  .cart-row-head .cart-pick { grid-column: 1; grid-row: 1 / span 2; align-self: center; margin-top: 0; }
+  .cart-img { grid-column: 2; grid-row: 1 / span 2; }
+  .cart-info { grid-column: 3; grid-row: 1; padding-right: 32px; }
+  .cart-name { font-size: 13.5px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .cart-code { display: none; }
+  .cart-tools { grid-column: 3; grid-row: 1; justify-self: end; align-self: start; }
+  .cart-tools .icon-btn { width: 30px; height: 30px; }
+  .cart-tools .icon-btn.edit { display: none; }   /* กดที่ชื่อสินค้าไปหน้ารายละเอียดได้อยู่แล้ว */
+  .cart-row-cols { grid-column: 3; grid-row: 2; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 0; border-top: none; }
+  .cart-col-lbl { display: none; }
+  .cart-foot { display: none; }   /* มือถือดูยอดที่กล่องสรุปคำสั่งซื้อใต้รายการอยู่แล้ว */
+  /* ตะกร้าฝั่งพนักงานบนจอแคบ: รูป+รายละเอียดแถวบน แล้วลบ/ราคา/จำนวน เรียงเป็นแถบล่าง */
+  .sales-row { grid-template-columns: 72px minmax(0, 1fr); }
+  .sales-row .cart-info { grid-column: 2; grid-row: 1; padding-right: 0; }
+  .sales-side { grid-column: 1 / -1; grid-row: 2; flex-direction: row; align-items: center; justify-content: flex-end; gap: 12px; }
+  .cart-col.center { flex-direction: row; }
+  .cart-col b { font-size: 15px; color: var(--red); }
 }
 
 /* ===== ชำระเงิน (STEP 9) ===== */

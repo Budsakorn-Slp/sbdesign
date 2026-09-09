@@ -47,7 +47,7 @@ def build_snapshot(db: Session, cart: Cart) -> dict:
             {"matnr": it.matnr, "sku": it.sku, "name": it.name_snapshot, "variant": it.variant_snapshot, "qty": it.qty, "unit_price": str(it.unit_price_snapshot), "price_tier": it.price_tier,
              "line_total": str(it.line_total), "supply_mode": it.supply_mode, "plant_code": it.plant_code, "atp_date": it.atp_date.isoformat() if it.atp_date else None, "added_by": it.added_by,
              "requires_install": it.requires_install, "note": it.note}
-            for it in cart.items
+            for it in cart.selected_items
         ],
         "discounts": [{"kind": l["kind"], "code": l["code"], "title": l["title"], "amount": str(l["amount"]), "status": l["status"], "percent": str(l["percent"]) if l["percent"] is not None else None} for l in t.lines],
         "totals": {"subtotal": str(t.subtotal), "member_savings": str(t.member_savings), "discount_total": str(t.discount_total), "net_total": str(t.net_total), "shipping_fee": str(t.shipping_fee), "install_fee": str(t.install_fee), "shipping_discount": str(t.shipping_discount), "grand_total": str(t.grand_total), "vat_included": str(t.vat_included)},
@@ -62,7 +62,7 @@ def draft_of_cart(db: Session, cart: Cart) -> Preso | None:
 
 
 def save_preso(db: Session, cart: Cart, actor: User, note: str | None) -> Preso:
-    if not cart.items:
+    if not cart.selected_items:
         raise HTTPException(status_code=400, detail="ตะกร้าว่าง บันทึก Preso ไม่ได้")
     preso = draft_of_cart(db, cart)
     if not preso:
@@ -124,7 +124,7 @@ def reopen_preso(db: Session, sales: User, preso: Preso) -> Cart:
 def live_stock_check(db: Session, cart: Cart, actor: User | None) -> list[dict]:
     """ยิง SAP สดทุกบรรทัด — คืนรายการที่ของไม่พอ"""
     shortages: list[dict] = []
-    for it in cart.items:
+    for it in cart.selected_items:
         res = stock_service.check_stock(db, actor, it.matnr)
         rows = [r for r in res.rows if (not it.plant_code) or r.plant_code == it.plant_code] if it.supply_mode in ("takeaway", "pickup") else res.rows
         avail = sum(r.available for r in rows)
@@ -140,11 +140,11 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
     if preso.status != "draft":
         raise HTTPException(status_code=400, detail=f"Preso สถานะ {preso.status} ออกใบเสนอราคาซ้ำไม่ได้")
     cart = cart_service.load_cart(db, preso.cart_id)
-    if not cart or not cart.items:
+    if not cart or not cart.selected_items:
         raise HTTPException(status_code=400, detail="ตะกร้าว่าง")
     if not cart.customer:
         raise HTTPException(status_code=400, detail="ต้องผูกลูกค้าก่อนออกใบเสนอราคา")
-    needs_ship = any(it.supply_mode in ("ship", "install") for it in cart.items)
+    needs_ship = any(it.supply_mode in ("ship", "install") for it in cart.selected_items)
     if needs_ship and not cart.ship_postcode:
         raise HTTPException(status_code=400, detail="มีรายการที่ต้องจัดส่ง — กรุณาคำนวณค่าขนส่งและเลือกคิวก่อน")
     pending = [l for l in promo_service.compute_totals(db, cart).lines if l["status"] == "pending_approval"]
@@ -167,7 +167,7 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
     db.add(q)
     db.flush()
     q.pdf_url = f"/quotations/{q.quotation_no}/document"
-    for i, it in enumerate(cart.items):
+    for i, it in enumerate(cart.selected_items):
         db.add(QuotationLine(quotation_id=q.id, sort=i, matnr=it.matnr, sku=it.sku, name=it.name_snapshot, variant=it.variant_snapshot, qty=it.qty, unit_price=it.unit_price_snapshot, line_discount=Decimal(0), line_total=it.line_total, supply_mode=it.supply_mode, plant_code=it.plant_code, atp_date=it.atp_date, added_by=it.added_by, requires_install=it.requires_install))
     for l in t.lines:  # คัดลอกส่วนลดไปผูกกับ quotation (ล็อกค่า)
         if l["status"] == "applied":

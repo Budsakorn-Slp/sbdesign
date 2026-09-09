@@ -5,7 +5,7 @@ from app.api.deps import get_current_user_optional
 from app.db.session import get_db
 from app.models.cart import Cart, CartItem
 from app.models.user import User
-from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, UpdateItemIn
+from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, SelectIn, UpdateItemIn
 from app.services import cart_service
 
 router = APIRouter(tags=["cart"])
@@ -23,7 +23,7 @@ def item_out(it: CartItem) -> CartItemOut:
         id=it.id, matnr=it.matnr, sku=it.sku, name=it.name_snapshot, variant=it.variant_snapshot, spec=it.spec_snapshot, image_url=it.image_url, category_id=it.category_id,
         qty=it.qty, unit_price=it.unit_price_snapshot, price_tier=it.price_tier, line_total=it.line_total, added_by=it.added_by, added_by_name=u.name if u else None,
         added_by_code=u.staff_code if u else None, added_at=it.added_at, pending_ack=it.pending_ack, supply_mode=it.supply_mode, plant_code=it.plant_code, atp_date=it.atp_date,
-        requires_install=it.requires_install, note=it.note,
+        requires_install=it.requires_install, note=it.note, selected=it.selected,
     )
 
 
@@ -45,7 +45,7 @@ def cart_out(cart: Cart, db: Session | None = None) -> CartOut:
     return CartOut(
         id=cart.id, no=cart.no, label=cart.label, status=cart.status, customer=person(cart.customer), owner_sales=person(cart.owner_sales),
         is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
-        pending_count=t["pending_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals, delivery=delivery,
+        pending_count=t["pending_count"], all_count=t["all_count"], item_count=t["item_count"], selected_count=t["selected_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals, delivery=delivery,
     )
 
 
@@ -102,6 +102,14 @@ def ack_item(item_id: str, ctx: CartCtx = Depends()):
     return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
 
 
+@router.post("/cart/select", response_model=CartOut)
+def select_items(body: SelectIn, ctx: CartCtx = Depends()):
+    """ติ๊กเลือกสินค้าที่จะคิดเงิน — ไม่ส่ง item_ids = ทั้งตะกร้า"""
+    cart = ctx.current()
+    cart_service.set_selected(ctx.db, cart, ctx.user, body.item_ids, body.selected)
+    return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
+
+
 @router.post("/carts/{cart_id}/merge", response_model=CartOut)
 def merge(cart_id: str, body: MergeIn, ctx: CartCtx = Depends()):
     """รวม source เข้า cart_id — ต้องมีสิทธิ์ทั้งสองใบ"""
@@ -118,7 +126,7 @@ def checkout_check(ctx: CartCtx = Depends()):
     if ctx.user.role != "customer":
         raise HTTPException(status_code=403, detail="เฉพาะลูกค้าเท่านั้นที่ชำระเงินเองได้")
     cart = ctx.current()
-    if not cart.items:
-        raise HTTPException(status_code=400, detail="ตะกร้าว่าง")
+    if not cart.selected_items:
+        raise HTTPException(status_code=400, detail="ยังไม่ได้เลือกสินค้าที่จะชำระเงิน" if cart.items else "ตะกร้าว่าง")
     t = cart_service.totals(cart)
     return {"ok": True, "cart_id": cart.id, "count": t["count"], "subtotal": t["subtotal"]}

@@ -29,6 +29,7 @@ class CartItemOut(BaseModel):
     atp_date: date | None = None
     requires_install: bool
     note: str | None = None
+    selected: bool = True
 
 
 class CartPersonOut(BaseModel):
@@ -66,9 +67,12 @@ class CartOut(BaseModel):
     owner_sales: CartPersonOut | None = None
     is_guest: bool
     items: list[CartItemOut]
-    count: int
-    subtotal: Decimal
+    count: int          # จำนวนชิ้นที่ติ๊กไว้ (= ที่คิดเงิน)
+    subtotal: Decimal   # ยอดเฉพาะที่ติ๊กไว้
     pending_count: int
+    all_count: int = 0       # จำนวนชิ้นทั้งตะกร้า (ป้ายบนหัวเว็บ)
+    item_count: int = 0      # จำนวนบรรทัดทั้งหมดในตะกร้า
+    selected_count: int = 0  # จำนวนบรรทัดที่ติ๊กไว้
     expires_at: datetime | None = None
     updated_at: datetime
     totals: TotalsOut | None = None
@@ -88,6 +92,13 @@ class UpdateItemIn(BaseModel):
     supply_mode: str | None = Field(default=None, pattern="^(takeaway|ship|install|pickup)$")
     plant_code: str | None = None
     note: str | None = None
+
+
+class SelectIn(BaseModel):
+    """ติ๊ก/เอาติ๊กออก — item_ids = None คือทั้งตะกร้า"""
+
+    item_ids: list[str] | None = None
+    selected: bool = True
 
 
 class MergeIn(BaseModel):

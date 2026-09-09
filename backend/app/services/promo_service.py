@@ -28,7 +28,7 @@ def q1(v: Decimal) -> Decimal:
 
 def cart_dto(db: Session, cart: Cart) -> CartDTO:
     lines: list[CartLineDTO] = []
-    for it in cart.items:
+    for it in cart.selected_items:
         m = db.get(Material, it.matnr)
         lines.append(CartLineDTO(matnr=it.matnr, qty=it.qty, unit_price=it.unit_price_snapshot, category_id=it.category_id, supply_mode=it.supply_mode, requires_install=it.requires_install, volume_m3=float(m.volume_m3) if m and m.volume_m3 is not None else None))
     return CartDTO(cart_id=cart.id, lines=lines, subtotal=cart_service.totals(cart)["subtotal"])
@@ -75,7 +75,7 @@ def compute_totals(db: Session, cart: Cart, promo_result: PromoResult | None = N
     """ส่วนลดจริง ณ ตอนนี้ — โปรที่ apply ไว้จะถูกประเมินใหม่ตามตะกร้าปัจจุบัน ถ้าไม่เข้าเงื่อนไขแล้วจะเป็น 0 + warning"""
     subtotal = cart_service.totals(cart)["subtotal"]
     standard = Decimal(0)
-    for it in cart.items:
+    for it in cart.selected_items:
         m = catalog_service.get_material(db, it.matnr)
         std = catalog_service.prices_of(m).get("standard", it.unit_price_snapshot) if m else it.unit_price_snapshot
         standard += std * it.qty
@@ -111,8 +111,11 @@ def compute_totals(db: Session, cart: Cart, promo_result: PromoResult | None = N
     # ค่าขนส่ง (STEP 7): quote ล่าสุดบนตะกร้า · โปรส่งฟรี (free_shipping) หักจากค่าส่ง ไม่ใช่จากค่าสินค้า
     from app.services import delivery_service  # import ตรงนี้กัน circular import
 
-    ship = delivery_service.shipping_summary(db, cart)
+    # กฎค่าส่ง (ส่งฟรีเมื่อครบ 6,000 / เรตเดียวเมื่อต่ำกว่า) เทียบกับยอดสินค้าหลังหักส่วนลด
+    # ไม่รวมค่าส่งเองและไม่รวมส่วนลดค่าส่ง — ตรงกับ package_value_with_discount ของต้นทาง
+    ship = delivery_service.shipping_summary(db, cart, subtotal - total)
     shipping_fee, install_fee = ship["shipping_fee"], ship["install_fee"]
+    warnings.extend(ship.get("ship_warnings") or [])
     shipping_discount = Decimal(0)
     for line in lines:
         if line["kind"] == "promotion" and line["status"] == "applied":

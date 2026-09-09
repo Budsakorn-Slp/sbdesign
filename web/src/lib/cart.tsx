@@ -15,6 +15,7 @@ type CartState = {
   update: (itemId: string, patch: { qty?: number; supply_mode?: string; plant_code?: string | null; note?: string }) => Promise<Cart>;
   remove: (itemId: string) => Promise<Cart>;
   ack: (itemId: string) => Promise<Cart>;
+  select: (itemIds: string[] | null, selected: boolean) => Promise<Cart>;
   setCart: (c: Cart | null) => void;
 };
 
@@ -53,7 +54,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       cart,
       loading,
       error,
-      count: cart ? cart.count : 0,
+      count: cart ? cart.all_count : 0, // ป้ายบนหัวเว็บนับของทั้งตะกร้า (cart.count = เฉพาะที่ติ๊ก)
       refresh,
       setCart,
       add: async (matnr, opts = {}) => {
@@ -73,6 +74,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
       ack: async (itemId) => {
         const c = await api<Cart>("POST", `/cart/items/${itemId}/ack`, {});
+        setCart(c);
+        return c;
+      },
+      // ติ๊ก/เอาติ๊กออก — itemIds = null คือทั้งตะกร้า
+      select: async (itemIds, selected) => {
+        const c = await api<Cart>("POST", "/cart/select", { item_ids: itemIds, selected });
         setCart(c);
         return c;
       },

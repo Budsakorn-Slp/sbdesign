@@ -5,7 +5,7 @@ import Placeholder from "../components/Placeholder";
 import PromoPanel from "../components/PromoPanel";
 import { apiPost, errorMessage } from "../lib/api";
 import { ROLE_PERMS, useAuth } from "../lib/auth";
-import { SUPPLY_LABEL, useCart } from "../lib/cart";
+import { useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { bahtWord, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
@@ -13,7 +13,7 @@ import type { CartItem } from "../lib/types";
 
 export default function CartPage() {
   const auth = useAuth();
-  const { cart, loading, error, update, remove, ack, refresh, setCart } = useCart();
+  const { cart, loading, error, update, remove, ack, select, refresh, setCart } = useCart();
   const { plants } = useContent();
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
@@ -61,6 +61,16 @@ export default function CartPage() {
       setBusy(null);
     }
   };
+
+  // ติ๊ก = เก็บที่ฝั่งเซิร์ฟเวอร์ (cart_items.selected) เพราะยอดรวม ส่วนลด ค่าส่ง และการชำระเงินคิดจากรายการที่ติ๊กเท่านั้น
+  const picked = items.filter((it) => it.selected).map((it) => it.id);
+  const allPicked = items.length > 0 && picked.length === items.length;
+  const togglePick = (it: CartItem) => run(it.id, () => select([it.id], !it.selected));
+  const toggleAll = () => run("bulk", () => select(null, !allPicked));
+  const removePicked = () =>
+    run("bulk", async () => {
+      for (const id of picked) await remove(id);
+    });
 
   const checkout = () =>
     run("checkout", async () => {
@@ -135,14 +145,28 @@ export default function CartPage() {
 
           {cart && items.length > 0 && (
             <>
-              <p className="cart-intro">สินค้ากำลังรอคุณอยู่ในตะกร้าทั้งหมด {cart.count} ชิ้น ชำระเงินง่าย ๆ อีกเพียงไม่กี่ขั้นตอน เลือกใช้บริการจัดส่งแล้วรอรับสินค้าที่บ้านได้เลย!</p>
+              <p className="cart-intro">สินค้ากำลังรอคุณอยู่ในตะกร้าทั้งหมด {cart.all_count} ชิ้น ชำระเงินง่าย ๆ อีกเพียงไม่กี่ขั้นตอน เลือกใช้บริการจัดส่งแล้วรอรับสินค้าที่บ้านได้เลย!</p>
+              <div className="cart-bulk">
+                <label className="row small">
+                  <input type="checkbox" className="cart-pick" checked={allPicked} disabled={busy === "bulk"} onChange={toggleAll} aria-label="เลือกทั้งหมด" />
+                  เลือกทั้งหมด{picked.length > 0 ? ` (เลือกแล้ว ${picked.length} รายการ)` : ""}
+                </label>
+                <button className="link-btn" disabled={!picked.length || busy === "bulk"} onClick={removePicked}>
+                  <Icon name="delete" size={16} /> ลบที่เลือก
+                </button>
+              </div>
               <div className="cart-items">
                 {items.map((it) => (
-                  <CartRow key={it.id} it={it} busy={busy === it.id} plantName={plantName(it.plant_code)}
+                  <CartRow key={it.id} it={it} busy={busy === it.id || busy === "bulk"} picked={it.selected} onPick={() => togglePick(it)}
                     onInc={() => run(it.id, () => update(it.id, { qty: it.qty + 1 }))}
                     onDec={() => it.qty > 1 && run(it.id, () => update(it.id, { qty: it.qty - 1 }))}
                     onRemove={() => run(it.id, () => remove(it.id))} />
                 ))}
+              </div>
+              {/* ช่องล่างสุด: ยอดรวมของรายการที่ติ๊กไว้ทั้งหมด */}
+              <div className="cart-foot">
+                <span>ยอดรวมสินค้าที่เลือก ({cart.count} ชิ้น)</span>
+                <b>{bahtWord(cart.subtotal)}</b>
               </div>
             </>
           )}
@@ -152,22 +176,29 @@ export default function CartPage() {
           <div className="summary">
             <h3>สรุปคำสั่งซื้อ</h3>
             <div className="sum-row"><span>สินค้า ({cart?.count || 0})</span><b>{bahtWord(cart?.subtotal || 0)}</b></div>
+            {/* ยอดทั้งหมดคิดจากรายการที่ติ๊กเท่านั้น ของที่ไม่ติ๊กยังอยู่ในตะกร้า */}
+            {!!cart && cart.item_count > cart.selected_count && (
+              <div className="sum-row small muted"><span>ไม่ได้เลือก {cart.item_count - cart.selected_count} รายการ</span><span>ไม่คิดยอดรอบนี้</span></div>
+            )}
             {cart?.totals?.lines.map((l) => (
               <div key={l.id} className="sum-row"><span>{l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}</span><span className={l.status === "applied" ? "green" : "muted"}>−{bahtWord(l.amount)}</span></div>
             ))}
-            <div className="sum-row">
-              <span>โปรโมชั่น / ส่วนลด</span>
-              <button className="link-btn small" disabled={!items.length} onClick={() => setPromoOpen(true)}>{cart?.totals && cart.totals.lines.length ? "แก้ไข" : "เช็คโปรโมชั่น"}</button>
-            </div>
+            {/* ปุ่มเต็มความกว้าง ให้เห็นชัดว่ากดได้ — ในแผงมีทั้งโปรที่เข้าเงื่อนไขให้กดใช้ และช่องกรอกโค้ดเอง */}
+            <button className="btn block promo-btn" disabled={!items.length} onClick={() => setPromoOpen(true)}>
+              <Icon name="local_offer" size={18} />
+              {cart?.totals && cart.totals.lines.length ? "แก้ไขโปรโมชั่น / โค้ดส่วนลด" : "เช็คโปรโมชั่น หรือกรอกโค้ดส่วนลด"}
+            </button>
             <div className="sum-row"><span>ราคาค่าจัดส่ง</span><span className="muted">เริ่มต้น 350 บาท</span></div>
             <div className="sum-row"><span className="muted"><i>หรือ</i> <u>ใช้บริการรับที่สาขา</u></span><span className="muted">ไม่มีค่าบริการ</span></div>
             <div className="sum-total">
-              <span>ยอดรวม (ไม่รวมค่าประกอบสินค้า)</span>
+              <span>ยอดรวม<small>ไม่รวมค่าประกอบสินค้า</small></span>
               <b>{bahtWord(cart?.totals?.net_total ?? cart?.subtotal ?? 0)}</b>
             </div>
             <p className="tiny muted">เมื่อคลิก "ชำระเงิน" แสดงว่าคุณยอมรับ <u>นโยบายความเป็นส่วนตัว</u></p>
             {canPay ? (
-              <button className="btn primary lg block" disabled={!items.length || busy === "checkout"} onClick={checkout}>ชำระเงิน</button>
+              <button className="btn primary lg block" disabled={!cart?.selected_count || busy === "checkout"} onClick={checkout}>
+                ชำระเงิน{cart?.selected_count ? ` (${cart.selected_count} รายการ)` : ""}
+              </button>
             ) : (
               <button className="btn dark lg block" onClick={auth.openLogin}><Icon name="lock" size={18} /> เข้าสู่ระบบเพื่อชำระเงิน</button>
             )}
@@ -195,33 +226,46 @@ export default function CartPage() {
   );
 }
 
-function CartRow({ it, busy, plantName, onInc, onDec, onRemove }: { it: CartItem; busy: boolean; plantName: string; onInc: () => void; onDec: () => void; onRemove: () => void }) {
+function CartRow({ it, busy, picked, onPick, onInc, onDec, onRemove }: { it: CartItem; busy: boolean; picked: boolean; onPick: () => void; onInc: () => void; onDec: () => void; onRemove: () => void }) {
   return (
-    <div className="cart-row">
-      <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={it.image_url} label="1:1" /></Link>
-      <div className="cart-info">
-        {it.added_by === "sales" && (
-          <div className="staff-tag"><Icon name="support_agent" size={14} /> พนักงานเพิ่มให้ · {it.added_by_name || "พนักงานขาย"}{it.added_by_code ? ` (${it.added_by_code})` : ""} · {thTime(it.added_at)}</div>
-        )}
-        <Link to={`/p/${it.matnr}`} className="cart-name">{it.name}</Link>
-        <div className="small muted">{it.variant}</div>
-        {it.spec && <div className="small muted">{it.spec}</div>}
-        <div className="small muted" style={{ marginTop: 4 }}>{bahtWord(it.unit_price)} / ชิ้น{it.price_tier !== "standard" ? ` · ราคาสมาชิก ${it.price_tier}` : ""}</div>
-        <div className="row wrap" style={{ marginTop: 4, gap: 6 }}>
-          <span className="pill"><Icon name={it.supply_mode === "takeaway" ? "shopping_bag" : it.supply_mode === "install" ? "handyman" : "local_shipping"} size={14} /> {SUPPLY_LABEL[it.supply_mode] || it.supply_mode}{it.plant_code ? ` · ${plantName}` : ""}</span>
-          {it.note && <span className="pill">หมายเหตุ: {it.note}</span>}
+    <div className={"cart-row" + (picked ? " picked" : "")}>
+      {/* หัวแถว: ติ๊กเลือก · รูป · ชื่อ+รหัส · ปุ่มแก้ไข/ลบ */}
+      <div className="cart-row-head">
+        <input type="checkbox" className="cart-pick" checked={picked} disabled={busy} onChange={onPick} aria-label={`เลือก ${it.name}`} />
+        <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={it.image_url} label="1:1" /></Link>
+        <div className="cart-info">
+          {it.added_by === "sales" && (
+            <div className="staff-tag"><Icon name="support_agent" size={14} /> พนักงานเพิ่มให้ · {it.added_by_name || "พนักงานขาย"}{it.added_by_code ? ` (${it.added_by_code})` : ""} · {thTime(it.added_at)}</div>
+          )}
+          <Link to={`/p/${it.matnr}`} className="cart-name">{it.name}</Link>
+          {it.variant && <div className="small muted">{it.variant}</div>}
+          {it.spec && <div className="small muted">{it.spec}</div>}
+          <div className="cart-code">รหัสสินค้า: {it.matnr}</div>
+          {it.note && <div className="small muted">หมายเหตุ: {it.note}</div>}
         </div>
-        <div className="cart-ctrl">
-          <div className="qty">
-            <button onClick={onDec} disabled={busy || it.qty <= 1} aria-label="ลด"><Icon name="remove" size={18} /></button>
-            <span>{it.qty}</span>
-            <button onClick={onInc} disabled={busy} aria-label="เพิ่ม"><Icon name="add" size={18} /></button>
-          </div>
-          <button className="link-btn" onClick={onRemove} disabled={busy}>ลบ</button>
-          <button className="link-btn" disabled title="รายการโปรดจะเปิดใช้ใน STEP 10">ย้ายไปที่รายการโปรด</button>
+        <div className="cart-tools">
+          {/* วิธีรับสินค้า (ส่ง/ยกกลับ/ติดตั้ง) ย้ายไปเลือกทีเดียวที่หน้าชำระเงิน — ตรงนี้เลยเหลือแค่แก้ไขกับลบ */}
+          <Link to={`/p/${it.matnr}`} className="icon-btn edit" title="แก้ไขรายการ" aria-label="แก้ไขรายการ"><Icon name="edit" size={18} /></Link>
+          <button className="icon-btn danger" onClick={onRemove} disabled={busy} title="ลบออกจากตะกร้า" aria-label="ลบออกจากตะกร้า"><Icon name="delete" size={18} /></button>
         </div>
       </div>
-      <div className="cart-line strong">{bahtWord(it.line_total)}</div>
+
+      {/* ท้ายแถว: ราคา · จำนวน ชิดขวา (ยอดรวมรายบรรทัดตัดออก เพราะเท่ากับราคา × จำนวนที่เห็นอยู่แล้ว — ไปดูรวมทั้งหมดที่ช่องล่างสุด) */}
+      <div className="cart-row-cols">
+        <div className="cart-col">
+          <span className="cart-col-lbl">ราคา</span>
+          <b>{bahtWord(it.unit_price)}</b>
+          {it.price_tier !== "standard" && <span className="tiny muted">ราคาสมาชิก {it.price_tier}</span>}
+        </div>
+        <div className="cart-col center">
+          <span className="cart-col-lbl">จำนวน</span>
+          <div className="qty sm">
+            <button onClick={onDec} disabled={busy || it.qty <= 1} aria-label="ลด"><Icon name="remove" size={16} /></button>
+            <span>{it.qty}</span>
+            <button onClick={onInc} disabled={busy} aria-label="เพิ่ม"><Icon name="add" size={16} /></button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
