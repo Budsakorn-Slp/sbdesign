@@ -100,6 +100,8 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("DELETE", f"/sales/carts/{BAD}/items/{BAD}", STAFF, None),
     ("POST", f"/sales/carts/{BAD}/attach-customer", STAFF, {}),
     ("DELETE", f"/sales/carts/{BAD}/attach-customer", STAFF, None),
+    ("POST", f"/sales/carts/{BAD}/availability", STAFF, None),
+    ("POST", "/sales/availability", STAFF, {"matnr": 123}),  # ผิด type → 422 ไม่ยิง SAP จริง
     ("GET", "/customers/search?q=สม", STAFF, None),
     # ---------- ผู้จัดการ ----------
     ("GET", "/discount-approvals", MGR, None),

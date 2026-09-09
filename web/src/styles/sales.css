@@ -21,9 +21,14 @@
 .mat-results { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow: auto; }
 .mat-hit { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
 .mat-img { width: 72px; flex: none; }
-.drawer-backdrop { position: fixed; inset: 0; background: rgba(17,17,17,.35); z-index: 100; display: flex; justify-content: flex-end; }
-.drawer { width: min(460px, 100%); height: 100%; background: #fff; padding: 22px 24px; overflow: auto; box-shadow: -10px 0 40px rgba(0,0,0,.2); }
-.drawer .modal-head h2 { font-size: 18px; }
+/* ผลเช็คของกับ SAP — ป้ายเดียวใช้ทั้งในตะกร้าและในหน้าค้นหา */
+.avail-badge { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 12.5px; line-height: 1.45; }
+.avail-badge.green { background: #f4fbf8; border-color: var(--green); color: var(--green-dark); }
+.avail-badge.amber { background: var(--amber-bg); border-color: #e8d9a8; color: #7a5a12; }
+.avail-badge.red { background: #fdf3f3; border-color: #edc9c9; color: #a12d2d; }
+.avail-badge .ms { flex: none; margin-top: 1px; }
+/* ของในตะกร้าเปลี่ยนหลังเช็ค — หรี่ลงให้เห็นว่าเลขนี้เก่าแล้ว */
+.avail-stale { opacity: .45; filter: grayscale(1); }
 
 /* promo / delivery panels (ใช้ใน STEP 6-7) */
 .promo-list { display: flex; flex-direction: column; gap: 8px; }

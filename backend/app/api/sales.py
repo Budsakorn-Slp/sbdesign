@@ -1,13 +1,16 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.cart import cart_out
 from app.api.deps import require_role
 from app.db.session import get_db
+from app.integrations.sap.base import SapError
+from app.models.catalog import Material
 from app.models.user import User
+from app.schemas.availability import AvailabilityItemOut, AvailabilityOneIn, AvailabilityOut
 from app.schemas.cart import AddItemIn, CartOut, UpdateItemIn
-from app.services import cart_service, sales_service
+from app.services import availability_service, cart_service, sales_service
 
 router = APIRouter(tags=["sales"])
 sales_only = require_role("sales", "manager")
@@ -102,6 +105,29 @@ def attach_customer(cart_id: str, body: AttachIn, db: Session = Depends(get_db),
 def detach_customer(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
     cart = sales_service.require_my_cart(db, me, cart_id)
     return cart_out(sales_service.detach_customer(db, me, cart), db)
+
+
+@router.post("/sales/carts/{cart_id}/availability", response_model=AvailabilityOut)
+def check_availability(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    """เช็คของกับ SAP ทั้งตะกร้าในการยิงครั้งเดียว (ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน)"""
+    cart = sales_service.require_my_cart(db, me, cart_id)
+    try:
+        res = availability_service.check_cart(db, cart, me)
+    except SapError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คของกับ SAP ไม่ได้: {e}")
+    return AvailabilityOut(**{**vars(res), "items": [AvailabilityItemOut(**vars(i)) for i in res.items]})
+
+
+@router.post("/sales/availability", response_model=AvailabilityItemOut)
+def check_availability_one(body: AvailabilityOneIn, db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    """เช็คสินค้าตัวเดียวก่อนใส่ตะกร้า (จากช่องค้นหา)"""
+    m = db.get(Material, body.matnr)
+    if not m:
+        raise HTTPException(status_code=404, detail="ไม่พบสินค้า")
+    try:
+        return AvailabilityItemOut(**vars(availability_service.check_one(db, m.matnr, body.qty, m.name_th, me)))
+    except SapError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คของกับ SAP ไม่ได้: {e}")
 
 
 @router.get("/customers/search")

@@ -8,10 +8,32 @@ import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { SUPPLY_LABEL } from "../lib/cart";
 import { useContent } from "../lib/content";
-import { baht, bahtWord, relTime, thDate, thTime } from "../lib/format";
+import { baht, bahtWord, thDate, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
 import { useSales, type CustomerHit } from "../lib/sales";
-import type { CartItem, MaterialCard, StockOut } from "../lib/types";
+import type { Availability, AvailabilityItem, CartItem, MaterialCard } from "../lib/types";
+
+/** สีของป้ายสถานะ — แยกไว้ตรงนี้เพราะใช้ทั้งในตะกร้าและในหน้าค้นหา */
+const AVAIL_TONE: Record<string, string> = { full: "green", split: "amber", short: "amber", none: "red", unknown: "red" };
+
+function availText(a: AvailabilityItem): string {
+  if (a.status === "unknown") return "SAP ไม่รู้จักรหัสนี้";
+  if (a.status === "none") return "ไม่มีของ — SAP ยังไม่ให้วันส่ง";
+  const parts: string[] = [];
+  if (a.ready_qty) parts.push(`${a.ready_qty} ชิ้น${a.ready_date ? ` ส่งได้ ${thDate(a.ready_date)}` : ""}`);
+  if (a.later_qty) parts.push(`อีก ${a.later_qty} ชิ้น${a.later_date ? ` รอถึง ${thDate(a.later_date)}` : ""}`);
+  if (a.short_qty) parts.push(`ยังขาด ${a.short_qty} ชิ้น`);
+  return parts.join(" · ");
+}
+
+function AvailBadge({ a }: { a: AvailabilityItem }) {
+  return (
+    <div className={"avail-badge " + AVAIL_TONE[a.status]}>
+      <Icon name={a.status === "full" ? "check_circle" : a.status === "split" ? "schedule" : "error"} size={16} />
+      <span><b>{a.label}</b> · {availText(a)}</span>
+    </div>
+  );
+}
 
 export default function SalesPage() {
   const auth = useAuth();
@@ -20,12 +42,31 @@ export default function SalesPage() {
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [stockFor, setStockFor] = useState<{ matnr: string; name: string } | null>(null);
+  const [avail, setAvail] = useState<Availability | null>(null);
   const [live, setLive] = useState<string | null>(null);
   const [promoOpen, setPromoOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [presoNo, setPresoNo] = useState<string | null>(null);
   const nav = useNavigate();
+
+  // ผลเช็คของผูกกับตะกร้าใบนั้น — สลับแท็บหรือแก้ของแล้วต้องเช็คใหม่ ไม่งั้นเซลล์อ่านเลขของตะกร้าเก่า
+  useEffect(() => setAvail(null), [sales.active?.id]);
+  const cartStamp = (sales.active?.items || []).map((i) => `${i.matnr}x${i.qty}`).join("|");
+  const availStale = avail !== null && avail.cart_id === sales.active?.id && avail.items.map((i) => `${i.matnr}x${i.qty}`).join("|") !== cartStamp;
+
+  const checkStock = async () => {
+    if (!sales.active) return;
+    setBusy("stock");
+    setMsg(null);
+    try {
+      setAvail(await apiPost<Availability>(`/sales/carts/${sales.active.id}/availability`, {}));
+    } catch (e) {
+      setAvail(null);
+      setMsg(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
 
   useEffect(() => {
     setPresoNo(null);
@@ -180,10 +221,10 @@ export default function SalesPage() {
                 <div className="cart-items">
                   {cart.items.map((it) => (
                     <SalesRow key={it.id} it={it} busy={busy === it.id} plantName={plantName(it.plant_code)}
+                      avail={avail?.items.find((a) => a.item_id === it.id) || null} availStale={availStale}
                       onInc={() => run(it.id, () => sales.updateItem(it.id, { qty: it.qty + 1 }))}
                       onDec={() => it.qty > 1 && run(it.id, () => sales.updateItem(it.id, { qty: it.qty - 1 }))}
                       onRemove={() => run(it.id, () => sales.removeItem(it.id))}
-                      onStock={() => setStockFor({ matnr: it.matnr, name: it.name })}
                       onNote={(note) => run(it.id, () => sales.updateItem(it.id, { note }))} />
                   ))}
                 </div>
@@ -210,8 +251,20 @@ export default function SalesPage() {
               {cart.delivery?.slot_date && <div className="sum-row small muted"><span>คิวจัดส่ง</span><span>{thDate(cart.delivery.slot_date)} {cart.delivery.slot_period === "am" ? "เช้า" : "บ่าย"} · เขต {cart.delivery.zone}</span></div>}
               <div className="sum-total"><span>ยอดรวมทั้งบิล (รวม VAT)</span><b>{bahtWord(cart.totals?.grand_total ?? cart.subtotal)}</b></div>
               <div className="col" style={{ marginTop: 12 }}>
+                {/* เช็คทั้งตะกร้าในการยิงครั้งเดียว — SAP จำลองทั้งบิล บรรทัดแรกกินของก่อน ยิงทีละชิ้นจะเห็นของตัวเดียวกันซ้ำแล้วขายเกิน */}
+                <button className="btn block" onClick={checkStock} disabled={busy === "stock" || cart.items.length === 0}>
+                  <Icon name="inventory_2" size={18} /> {busy === "stock" ? "กำลังถาม SAP…" : avail ? "เช็คของกับ SAP อีกครั้ง" : "เช็คของกับ SAP"}
+                </button>
+                {avail && avail.cart_id === cart.id && (
+                  <div className={"note small " + (availStale ? "warn" : avail.all_ok ? "ok" : "warn")}>
+                    {availStale ? "ของในตะกร้าเปลี่ยนหลังเช็คครั้งล่าสุด — กดเช็คใหม่ก่อนยืนยันกับลูกค้า" : avail.message}
+                    <div className="tiny muted" style={{ marginTop: 4 }}>
+                      ถามวันส่ง {thDate(avail.req_date)} · ลูกค้า {avail.customer_no}{avail.is_walkin ? " (walk-in)" : ""} · เช็คเมื่อ {thTime(avail.checked_at)}
+                    </div>
+                  </div>
+                )}
                 <button className="btn block" onClick={() => setPromoOpen(true)} disabled={cart.items.length === 0}><Icon name="sell" size={18} /> {cart.totals && cart.totals.lines.length > 0 ? "แก้ไขโปรโมชั่น / ส่วนลด" : "เช็คโปรโมชั่น"}</button>
-                <button className="btn block" onClick={() => setDeliveryOpen((v) => !v)} disabled={cart.items.length === 0}><Icon name="local_shipping" size={18} /> {cart.delivery?.quoted_at ? "แก้ไขค่าส่ง / คิวจัดส่ง" : "เช็คสต็อก + คิวจัดส่ง"}</button>
+                <button className="btn block" onClick={() => setDeliveryOpen((v) => !v)} disabled={cart.items.length === 0}><Icon name="local_shipping" size={18} /> {cart.delivery?.quoted_at ? "แก้ไขค่าส่ง / คิวจัดส่ง" : "คิดค่าส่ง + คิวจัดส่ง"}</button>
                 <button className="btn block" disabled={busy === "preso" || cart.items.length === 0} onClick={() => savePreso()}><Icon name="save" size={18} /> {presoNo ? `บันทึกแล้ว · ${presoNo}` : "Save Preso"}</button>
                 <button className="btn primary block" disabled={!cart.customer || busy !== null || cart.items.length === 0} title={cart.customer ? "" : "ต้องผูกลูกค้าก่อน"} onClick={() => makeQuotation()}>สร้างใบเสนอราคา</button>
               </div>
@@ -237,16 +290,14 @@ export default function SalesPage() {
       )}
 
       {searchOpen && <MaterialSearchModal onClose={() => setSearchOpen(false)} target={cart?.customer?.name || `ตะกร้า ${cart?.no || ""}`} search={sales.searchMaterials}
-        onAdd={(m, mode, plant) => run("add", async () => { await sales.addItem(m.matnr, 1, mode, plant); setSearchOpen(false); })}
-        onStock={(m) => { setSearchOpen(false); setStockFor({ matnr: m.matnr, name: m.name_th }); }} />}
-      {stockFor && <StockDrawer matnr={stockFor.matnr} name={stockFor.name} onClose={() => setStockFor(null)} />}
+        onAdd={(m, mode, plant) => run("add", async () => { await sales.addItem(m.matnr, 1, mode, plant); setSearchOpen(false); })} />}
       {promoOpen && cart && <PromoPanel cart={cart} isStaff onClose={() => setPromoOpen(false)} onCartChange={(c) => sales.setActive(c)} />}
       {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
     </main>
   );
 }
 
-function SalesRow({ it, busy, plantName, onInc, onDec, onRemove, onStock, onNote }: { it: CartItem; busy: boolean; plantName: string; onInc: () => void; onDec: () => void; onRemove: () => void; onStock: () => void; onNote: (n: string) => void }) {
+function SalesRow({ it, busy, plantName, avail, availStale, onInc, onDec, onRemove, onNote }: { it: CartItem; busy: boolean; plantName: string; avail: AvailabilityItem | null; availStale: boolean; onInc: () => void; onDec: () => void; onRemove: () => void; onNote: (n: string) => void }) {
   const [note, setNote] = useState(it.note || "");
   return (
     <div className="cart-row sales-row">
@@ -259,12 +310,11 @@ function SalesRow({ it, busy, plantName, onInc, onDec, onRemove, onStock, onNote
         </div>
         <Link to={`/p/${it.matnr}`} className="cart-name">{it.name}</Link>
         <div className="small muted">{it.variant}{it.spec ? ` · ${it.spec}` : ""}</div>
-        <div className="mono tiny muted">MATNR {it.matnr} · {it.sku}</div>
+        {/* ส่วนใหญ่ SKU = MATNR ตัวเดียวกัน โชว์ซ้ำสองรอบไม่มีประโยชน์ */}
+        <div className="mono tiny muted">MATNR {it.matnr}{it.sku && it.sku !== it.matnr ? ` · ${it.sku}` : ""}</div>
         <div className="small muted" style={{ marginTop: 4 }}>{bahtWord(it.unit_price)} / ชิ้น · {it.price_tier}</div>
-        {/* เช็คสต็อกเป็นปุ่มจริง — เซลล์กดบ่อยตอนคุยกับลูกค้า ไม่ควรเป็นลิงก์เล็ก ๆ ปนกับตัวหนังสือ */}
-        <div className="cart-ctrl">
-          <button className="btn sm" onClick={onStock}><Icon name="inventory_2" size={16} /> เช็คสต็อกทุกสาขา</button>
-        </div>
+        {/* ผลเช็คของมาจากการยิงทั้งตะกร้าครั้งเดียว (ปุ่มในสรุปคำสั่งซื้อ) — บรรทัดนี้แค่แสดงผลของตัวเอง */}
+        {avail && <div className={availStale ? "avail-stale" : undefined}><AvailBadge a={avail} /></div>}
         <form className="row" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); onNote(note); }}>
           <input className="hdr-pop-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ เช่น รอลูกค้าวัดห้อง" />
           <button className="btn sm" type="submit" disabled={busy || note === (it.note || "")}>บันทึก</button>
@@ -326,11 +376,22 @@ function CustomerSearch({ onPick, search }: { onPick: (hit: CustomerHit) => void
   );
 }
 
-function MaterialSearchModal({ onClose, target, search, onAdd, onStock }: { onClose: () => void; target: string; search: (q: string) => Promise<SearchOutLike>; onAdd: (m: MaterialCard, mode: string | null, plant: string | null) => void; onStock: (m: MaterialCard) => void }) {
+function MaterialSearchModal({ onClose, target, search, onAdd }: { onClose: () => void; target: string; search: (q: string) => Promise<SearchOutLike>; onAdd: (m: MaterialCard, mode: string | null, plant: string | null) => void }) {
   const { plants } = useContent();
   const [q, setQ] = useState("");
   const [items, setItems] = useState<MaterialCard[]>([]);
   const [loading, setLoading] = useState(false);
+  // เช็คของรายตัวก่อนลงตะกร้า — ตัวเลขนี้ยังไม่หักของที่อยู่ในตะกร้าแล้ว ต้องกดเช็คทั้งบิลอีกทีหลังลงตะกร้า
+  const [one, setOne] = useState<Record<string, AvailabilityItem | "loading" | string>>({});
+  const checkOne = async (m: MaterialCard) => {
+    setOne((s) => ({ ...s, [m.matnr]: "loading" }));
+    try {
+      const r = await apiPost<AvailabilityItem>("/sales/availability", { matnr: m.matnr, qty: 1 });
+      setOne((s) => ({ ...s, [m.matnr]: r }));
+    } catch (e) {
+      setOne((s) => ({ ...s, [m.matnr]: errorMessage(e) }));
+    }
+  };
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -356,24 +417,24 @@ function MaterialSearchModal({ onClose, target, search, onAdd, onStock }: { onCl
         {!loading && items.length === 0 && <div className="muted small">ไม่พบสินค้า</div>}
         <div className="mat-results">
           {items.map((m) => {
-            const st = m.stock;
+            const res = one[m.matnr];
             return (
               <div key={m.matnr} className="mat-hit">
                 <Placeholder src={m.image_url} label="1:1" className="mat-img" />
                 <div className="grow">
                   <b>{m.name_th}</b>
                   <div className="small muted">{m.variant}{m.spec ? ` · ${m.spec}` : ""}</div>
-                  <div className="mono tiny muted">MATNR {m.matnr} · {m.sku}</div>
+                  <div className="mono tiny muted">MATNR {m.matnr}{m.sku && m.sku !== m.matnr ? ` · ${m.sku}` : ""}</div>
                   <div className="row wrap" style={{ gap: 8, marginTop: 4 }}>
                     <b>{baht(m.standard_price)}</b>
                     {m.member_price && <span className="small green">สมาชิก {baht(m.member_price)}</span>}
-                    <span className={"small " + (st && st.available_total > 0 ? "green" : "red")}>
-                      {st ? `สาขา ${st.store_available} · คลัง ${st.warehouse_available} ชิ้น (cache)` : "ไม่มีข้อมูลสต็อก"}
-                    </span>
                   </div>
+                  {res === "loading" && <div className="tiny muted" style={{ marginTop: 4 }}>กำลังถาม SAP…</div>}
+                  {typeof res === "string" && res !== "loading" && <div className="note err small" style={{ marginTop: 4 }}>{res}</div>}
+                  {res && typeof res !== "string" && <AvailBadge a={res} />}
                 </div>
                 <div className="col">
-                  <button className="btn sm" onClick={() => onStock(m)}><Icon name="inventory_2" size={16} /> เช็คสต็อก</button>
+                  <button className="btn sm" onClick={() => checkOne(m)} disabled={res === "loading"}><Icon name="inventory_2" size={16} /> เช็คของกับ SAP</button>
                   <button className="btn dark sm" onClick={() => onAdd(m, m.requires_install ? "install" : store && m.is_takeaway_ok ? "takeaway" : "ship", store && m.is_takeaway_ok && !m.requires_install ? store.plant_code : null)}>ลงตะกร้า</button>
                 </div>
               </div>
@@ -386,47 +447,3 @@ function MaterialSearchModal({ onClose, target, search, onAdd, onStock }: { onCl
 }
 
 type SearchOutLike = { items: MaterialCard[] };
-
-export function StockDrawer({ matnr, name, onClose }: { matnr: string; name: string; onClose: () => void }) {
-  const [stock, setStock] = useState<StockOut | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const load = () => {
-    setStock(null);
-    setErr(null);
-    apiGet<StockOut>(`/materials/${matnr}/stock`).then(setStock).catch((e) => setErr(errorMessage(e)));
-  };
-  useEffect(load, [matnr]);
-  return (
-    <div className="drawer-backdrop" onClick={onClose}>
-      <aside className="drawer" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <h2>สต็อก · MATNR {matnr}</h2>
-          <button className="icon-btn" onClick={onClose} aria-label="ปิด"><Icon name="close" /></button>
-        </div>
-        <div className="muted small" style={{ marginBottom: 10 }}>{name}</div>
-        {err && <div className="note err">{err}</div>}
-        {!stock && !err && <div className="ph" style={{ height: 120 }}>กำลังยิง SAP…</div>}
-        {stock && (
-          <>
-            <ul className="stock-rows">
-              {stock.rows.map((r) => (
-                <li key={r.plant_code}>
-                  <Icon name={r.plant_type === "warehouse" ? "warehouse" : "storefront"} size={22} />
-                  <span className="grow">
-                    <b>{r.plant_name}</b>
-                    <small>{r.note || (r.atp_date ? `ATP: ส่งได้ ${thDate(r.atp_date)}` : "")}{r.reserved ? ` · จองแล้ว ${r.reserved}` : ""}</small>
-                  </span>
-                  <b className={r.available > 0 ? "green" : "red"}>{r.available} ชิ้น</b>
-                </li>
-              ))}
-            </ul>
-            <div className={"note " + (stock.stale ? "warn" : "ok")} style={{ marginTop: 12 }}>
-              {stock.stale ? `ข้อมูลจาก cache (SAP ไม่ตอบ) · ดึงเมื่อ ${relTime(stock.fetched_at)}` : `ข้อมูลสด จาก service SAP · อัปเดต ${thTime(stock.fetched_at)}`}
-              <button className="link-btn small" style={{ marginLeft: 8 }} onClick={load}>เช็คใหม่</button>
-            </div>
-          </>
-        )}
-      </aside>
-    </div>
-  );
-}

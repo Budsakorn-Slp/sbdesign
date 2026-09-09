@@ -119,6 +119,42 @@ export type StockOut = {
   error: string | null;
 };
 
+// ---------- เช็คของกับ SAP ----------
+// ยิงทั้งตะกร้าครั้งเดียว (ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน) · ไม่มีสาขา — SAP ตัวนี้ไม่บอก plant
+export type AvailStatus = "full" | "split" | "short" | "none" | "unknown";
+
+export type AvailabilityItem = {
+  item_id: string | null;
+  matnr: string;
+  name: string;
+  qty: number;
+  status: AvailStatus;
+  label: string;
+  ready_qty: number;
+  ready_date: string | null;
+  later_qty: number;
+  later_date: string | null;
+  short_qty: number;
+  sap_name: string | null;
+  sap_unit_price: string | null;
+  sap_amount: string | null;
+  sap_discount_percent: number | null;
+  our_amount: string | null;
+  price_diff: string | null;
+};
+
+export type Availability = {
+  cart_id: string;
+  checked_at: string;
+  req_date: string;
+  customer_no: string;
+  is_walkin: boolean;
+  source: "sap" | "mock";
+  all_ok: boolean;
+  message: string;
+  items: AvailabilityItem[];
+};
+
 // ---------- cart ----------
 export type SupplyMode = "takeaway" | "ship" | "install" | "pickup";
 

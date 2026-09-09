@@ -46,6 +46,17 @@ class Settings(BaseSettings):
     sap_mode: str = "mock"  # mock | http
     sap_base_url: str = "http://localhost:9000"
     sap_timeout_seconds: float = 3.0
+    # เช็คของกับ SAP (ZAIBAPI_MATERIAL_AVAILABILITY ผ่าน RFC gateway)
+    # ว่าง = ใช้ mock — dev/test รันได้โดยไม่ต้องต่อ SAP จริง
+    sap_avail_url: str = ""
+    sap_api_key: str = ""
+    sap_avail_timeout_seconds: float = 20.0  # ของจริงตอบ ~0.3 วิ แต่ตะกร้าใหญ่ SAP คิดนานกว่านั้นมาก
+    sap_walkin_customer: str = "1100467950"  # ตะกร้าที่ยังไม่ผูกลูกค้า — SAP บังคับต้องมี CUSTOMER เสมอ
+    sap_order_type: str = "9202"
+    sap_sales_org: str = "9000"
+    sap_distr_chan: str = "18"
+    sap_division: str = "20"
+    sap_avail_lead_days: int = 7  # REQ_DATE = วันนี้ + 7
     sales_cart_ttl_hours: int = 4
     staff_discount_quota_percent: float = 3.0
     quotation_valid_days: int = 7
