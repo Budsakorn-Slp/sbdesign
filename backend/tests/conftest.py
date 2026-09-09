@@ -3,6 +3,9 @@ import os
 os.environ["DATABASE_URL"] = "sqlite:///./test_sbdesign.db"
 os.environ["SAP_MODE"] = "mock"
 os.environ["OTP_DEBUG"] = "true"
+# เครื่อง dev ที่ตั้ง SAP_AVAIL_URL/SAP_API_KEY ไว้ใน .env เทสต้องไม่วิ่งไปยิง SAP ของจริง
+os.environ["SAP_AVAIL_URL"] = ""
+os.environ["SAP_API_KEY"] = ""
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
