@@ -119,7 +119,7 @@ export type StockOut = {
   error: string | null;
 };
 
-// ---------- เช็คของกับ SAP ----------
+// ---------- เช็คสต็อก (SAP) ----------
 // ยิงทั้งตะกร้าครั้งเดียว (ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน) · ไม่มีสาขา — SAP ตัวนี้ไม่บอก plant
 export type AvailStatus = "full" | "split" | "short" | "none" | "unknown";
 

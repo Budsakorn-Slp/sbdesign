@@ -25,7 +25,7 @@ class AvailabilityItemOut(BaseModel):
 
 
 class AvailabilityOut(BaseModel):
-    """ผลเช็คของกับ SAP — ทั้งตะกร้าในการยิงครั้งเดียว"""
+    """ผลเช็คสต็อก — ทั้งตะกร้าในการยิงครั้งเดียว"""
 
     cart_id: str
     checked_at: datetime

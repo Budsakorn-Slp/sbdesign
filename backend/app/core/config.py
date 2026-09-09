@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     sap_mode: str = "mock"  # mock | http
     sap_base_url: str = "http://localhost:9000"
     sap_timeout_seconds: float = 3.0
-    # เช็คของกับ SAP (ZAIBAPI_MATERIAL_AVAILABILITY ผ่าน RFC gateway)
+    # เช็คสต็อก (ZAIBAPI_MATERIAL_AVAILABILITY ผ่าน RFC gateway)
     # ว่าง = ใช้ mock — dev/test รันได้โดยไม่ต้องต่อ SAP จริง
     sap_avail_url: str = ""
     sap_api_key: str = ""

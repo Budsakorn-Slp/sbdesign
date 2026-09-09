@@ -1,4 +1,4 @@
-"""เช็คของกับ SAP — ZAIBAPI_MATERIAL_AVAILABILITY ผ่าน RFC gateway (HTTP)
+"""เช็คสต็อกกับ SAP — ZAIBAPI_MATERIAL_AVAILABILITY ผ่าน RFC gateway (HTTP)
 
 ทำไมต้องยิงทั้งตะกร้าครั้งเดียว ไม่ใช่ทีละชิ้น:
 SAP จำลองใบสั่งขายทั้งใบ ของชิ้นที่มีจะถูกบรรทัดแรกจองไปก่อน บรรทัดหลังเห็นของน้อยลงตามจริง

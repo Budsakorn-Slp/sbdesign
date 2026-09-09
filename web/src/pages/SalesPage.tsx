@@ -6,7 +6,7 @@ import Placeholder from "../components/Placeholder";
 import PromoPanel from "../components/PromoPanel";
 import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { SUPPLY_LABEL } from "../lib/cart";
+import { SUPPLY_LABEL, shipNeedsReview } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { baht, bahtWord, thDate, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
@@ -245,15 +245,22 @@ export default function SalesPage() {
               {cart.totals?.warnings.map((w) => (
                 <div key={w} className="note warn small">{w}</div>
               ))}
+              {/* ใช้กฎค่าส่งชุดเดียวกับหน้าลูกค้า — ถ้าไม่เข้ากฎข้อไหนเลย ต้องขึ้น "รอประเมิน" เหมือนกัน ห้ามโชว์ 0 บาทเป็นค่าส่งจริง */}
               <div className="sum-row"><span>ค่าขนส่ง{cart.totals && Number(cart.totals.install_fee) > 0 ? " + ติดตั้ง" : ""}</span>
-                {cart.delivery?.quoted_at && cart.totals ? <b>{bahtWord(Number(cart.totals.shipping_fee) + Number(cart.totals.install_fee) - Number(cart.totals.shipping_discount))}</b> : <button className="link-btn small" onClick={() => setDeliveryOpen(true)}>รอคำนวณ</button>}
+                {!cart.delivery?.quoted_at || !cart.totals ? (
+                  <button className="link-btn small" onClick={() => setDeliveryOpen(true)}>รอคำนวณ</button>
+                ) : shipNeedsReview(cart.totals.warnings) ? (
+                  <span className="muted">รอเจ้าหน้าที่ประเมิน</span>
+                ) : (
+                  <b>{bahtWord(Number(cart.totals.shipping_fee) + Number(cart.totals.install_fee) - Number(cart.totals.shipping_discount))}</b>
+                )}
               </div>
               {cart.delivery?.slot_date && <div className="sum-row small muted"><span>คิวจัดส่ง</span><span>{thDate(cart.delivery.slot_date)} {cart.delivery.slot_period === "am" ? "เช้า" : "บ่าย"} · เขต {cart.delivery.zone}</span></div>}
-              <div className="sum-total"><span>ยอดรวมทั้งบิล (รวม VAT)</span><b>{bahtWord(cart.totals?.grand_total ?? cart.subtotal)}</b></div>
+              <div className="sum-total"><span>ยอดรวมทั้งบิล (รวม VAT){shipNeedsReview(cart.totals?.warnings) && <small>ยังไม่รวมค่าจัดส่ง</small>}</span><b>{bahtWord(cart.totals?.grand_total ?? cart.subtotal)}</b></div>
               <div className="col" style={{ marginTop: 12 }}>
                 {/* เช็คทั้งตะกร้าในการยิงครั้งเดียว — SAP จำลองทั้งบิล บรรทัดแรกกินของก่อน ยิงทีละชิ้นจะเห็นของตัวเดียวกันซ้ำแล้วขายเกิน */}
                 <button className="btn block" onClick={checkStock} disabled={busy === "stock" || cart.items.length === 0}>
-                  <Icon name="inventory_2" size={18} /> {busy === "stock" ? "กำลังถาม SAP…" : avail ? "เช็คของกับ SAP อีกครั้ง" : "เช็คของกับ SAP"}
+                  <Icon name="inventory_2" size={18} /> {busy === "stock" ? "กำลังเช็คสต็อก…" : avail ? "เช็คสต็อกอีกครั้ง" : "เช็คสต็อก"}
                 </button>
                 {avail && avail.cart_id === cart.id && (
                   <div className={"note small " + (availStale ? "warn" : avail.all_ok ? "ok" : "warn")}>
@@ -262,7 +269,7 @@ export default function SalesPage() {
                       ถามวันส่ง {thDate(avail.req_date)} · ลูกค้า {avail.customer_no}{avail.is_walkin ? " (walk-in)" : ""} · เช็คเมื่อ {thTime(avail.checked_at)}
                     </div>
                     {/* บอกให้ชัดว่าเลขมาจากไหน — ตอนรัน mock ของจริงทุกตัวจะขึ้น "ไม่รู้จักรหัสนี้" ซึ่งชวนเข้าใจผิดว่า SAP ตอบแบบนั้น */}
-                    {avail.source !== "http" && <div className="tiny" style={{ marginTop: 2, color: "#a12d2d" }}>⚠ ข้อมูลจำลอง (mock) ไม่ได้ยิง SAP จริง — ตั้ง SAP_AVAIL_URL / SAP_API_KEY แล้วรีสตาร์ท backend</div>}
+                    {avail.source === "mock" && <div className="tiny" style={{ marginTop: 2, color: "#a12d2d" }}>⚠ ข้อมูลจำลอง (mock) ไม่ได้ยิง SAP จริง — ตั้ง SAP_AVAIL_URL / SAP_API_KEY แล้วรีสตาร์ท backend</div>}
                   </div>
                 )}
                 <button className="btn block" onClick={() => setPromoOpen(true)} disabled={cart.items.length === 0}><Icon name="sell" size={18} /> {cart.totals && cart.totals.lines.length > 0 ? "แก้ไขโปรโมชั่น / ส่วนลด" : "เช็คโปรโมชั่น"}</button>
@@ -431,12 +438,12 @@ function MaterialSearchModal({ onClose, target, search, onAdd }: { onClose: () =
                     <b>{baht(m.standard_price)}</b>
                     {m.member_price && <span className="small green">สมาชิก {baht(m.member_price)}</span>}
                   </div>
-                  {res === "loading" && <div className="tiny muted" style={{ marginTop: 4 }}>กำลังถาม SAP…</div>}
+                  {res === "loading" && <div className="tiny muted" style={{ marginTop: 4 }}>กำลังเช็คสต็อก…</div>}
                   {typeof res === "string" && res !== "loading" && <div className="note err small" style={{ marginTop: 4 }}>{res}</div>}
                   {res && typeof res !== "string" && <AvailBadge a={res} />}
                 </div>
                 <div className="col">
-                  <button className="btn sm" onClick={() => checkOne(m)} disabled={res === "loading"}><Icon name="inventory_2" size={16} /> เช็คของกับ SAP</button>
+                  <button className="btn sm" onClick={() => checkOne(m)} disabled={res === "loading"}><Icon name="inventory_2" size={16} /> เช็คสต็อก</button>
                   <button className="btn dark sm" onClick={() => onAdd(m, m.requires_install ? "install" : store && m.is_takeaway_ok ? "takeaway" : "ship", store && m.is_takeaway_ok && !m.requires_install ? store.plant_code : null)}>ลงตะกร้า</button>
                 </div>
               </div>

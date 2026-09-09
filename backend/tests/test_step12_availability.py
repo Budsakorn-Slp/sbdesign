@@ -1,4 +1,4 @@
-"""เช็คของกับ SAP (ZAIBAPI_MATERIAL_AVAILABILITY) — ยิงทั้งตะกร้าครั้งเดียว
+"""เช็คสต็อก (ZAIBAPI_MATERIAL_AVAILABILITY) — ยิงทั้งตะกร้าครั้งเดียว
 
 เทสวิ่งบน MockAvailabilityClient (ไม่มี SAP_AVAIL_URL/SAP_API_KEY) จะได้ไม่ต้องต่อ SAP จริง
 ส่วนการอ่านคำตอบของ gateway เทสด้วย payload ที่บันทึกจากของจริง

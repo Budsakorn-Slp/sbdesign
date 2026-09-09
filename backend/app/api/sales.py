@@ -109,12 +109,12 @@ def detach_customer(cart_id: str, db: Session = Depends(get_db), me: User = Depe
 
 @router.post("/sales/carts/{cart_id}/availability", response_model=AvailabilityOut)
 def check_availability(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
-    """เช็คของกับ SAP ทั้งตะกร้าในการยิงครั้งเดียว (ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน)"""
+    """เช็คสต็อกกับ SAP ทั้งตะกร้าในการยิงครั้งเดียว (ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน)"""
     cart = sales_service.require_my_cart(db, me, cart_id)
     try:
         res = availability_service.check_cart(db, cart, me)
     except SapError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คของกับ SAP ไม่ได้: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คสต็อกไม่ได้: {e}")
     return AvailabilityOut(**{**vars(res), "items": [AvailabilityItemOut(**vars(i)) for i in res.items]})
 
 
@@ -127,7 +127,7 @@ def check_availability_one(body: AvailabilityOneIn, db: Session = Depends(get_db
     try:
         return AvailabilityItemOut(**vars(availability_service.check_one(db, m.matnr, body.qty, m.name_th, me)))
     except SapError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คของกับ SAP ไม่ได้: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เช็คสต็อกไม่ได้: {e}")
 
 
 @router.get("/customers/search")
