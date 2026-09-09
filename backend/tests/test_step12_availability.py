@@ -188,3 +188,22 @@ def test_customer_cannot_check_sales_cart(client):
     hc = auth_headers(client, "081-222-3333")
     assert client.post(f"/sales/carts/{cart['id']}/availability", headers=hc).status_code == 403
     assert client.post("/sales/availability", json={"matnr": "10023841"}, headers=hc).status_code == 403
+
+
+def test_kit_components_are_dropped_before_matching():
+    """สินค้าชุดตอบแม่ 1 แถว + ลูกอีกหลายแถว ถ้าไม่ตัดลูกออก จำนวนแถวจะไม่ตรงกับที่ขอ
+    แล้วโค้ดจะหลุดไปไล่ทีละบรรทัด = แต่ละบรรทัดเห็นของเต็มเหมือนกันหมด (ขายเกิน)
+    ตัวเลขชุดนี้ยกมาจากที่ยิง SAP จริงด้วย 59064091 (GO/Bedroom)"""
+    from app.integrations.sap.availability import top_level_rows
+
+    rows = [
+        {"ORDER_ITEM": "000020", "HIGH_LEVEL": "000000", "MATERIAL": "59064091", "AVAILABLE_QUAN": 7.0},
+        {"ORDER_ITEM": "000040", "HIGH_LEVEL": "000020", "MATERIAL": "19224282", "AVAILABLE_QUAN": 7.0},
+        {"ORDER_ITEM": "000080", "HIGH_LEVEL": "000020", "MATERIAL": "19226511", "AVAILABLE_QUAN": 8.0},
+        {"ORDER_ITEM": "000120", "HIGH_LEVEL": "000020", "MATERIAL": "19231493", "AVAILABLE_QUAN": 36.0},
+        {"ORDER_ITEM": "000200", "HIGH_LEVEL": "000000", "MATERIAL": "19205233", "AVAILABLE_QUAN": 4.0},
+    ]
+    kept = top_level_rows(rows)
+    assert [r["MATERIAL"] for r in kept] == ["59064091", "19205233"]
+    # ฟิลด์หายหรือว่าง = ถือว่าเป็นแถวแม่ ไม่ใช่ตัดทิ้ง
+    assert len(top_level_rows([{"MATERIAL": "x"}, {"MATERIAL": "y", "HIGH_LEVEL": ""}])) == 2

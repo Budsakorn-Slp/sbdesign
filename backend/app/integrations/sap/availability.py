@@ -11,6 +11,7 @@ SAP จำลองใบสั่งขายทั้งใบ ของชิ
 - ยอดที่ยืนยันได้ = ส่งทันที + ที่จะเข้ามา ส่วนที่เหลือคือของขาด
 - MATERIAL กลับมาเป็น 18 หลักเติมศูนย์หน้า
 - รหัสสินค้าผิดตัวเดียว AI_RETURN_ITEMS ว่างทั้งบิล ไม่ใช่หายแค่ตัวนั้น → ต้องนับแถวเทียบเสมอ
+- สินค้าชุดตอบหลายแถวต่อบรรทัดเดียว (แม่ + ส่วนประกอบ) แยกด้วย HIGH_LEVEL → ตัดลูกออกก่อนนับ
 - REQ_QUANTITY = 0 SAP เปลี่ยนเป็น 1 เงียบๆ → กันไว้ที่ฝั่งเรา
 """
 import logging
@@ -86,6 +87,18 @@ def _qty(v) -> int:
     return int(float(v or 0))
 
 
+def top_level_rows(rows: list[dict]) -> list[dict]:
+    """ตัดแถวส่วนประกอบของสินค้าชุดออก เหลือแถวละ 1 บรรทัดที่เราขอไป
+
+    สินค้าชุด (เช่น 59064091 GO/Bedroom) SAP กาง BOM ออกมาเป็นหลายแถวต่อบรรทัดเดียว
+    แถวแม่ HIGH_LEVEL = 000000 ส่วนลูกใส่เลข ORDER_ITEM ของแม่ไว้
+    ถ้าไม่ตัดออก จำนวนแถวจะไม่มีวันตรงกับที่ขอ แล้วโค้ดจะเข้าโหมดไล่ทีละบรรทัด
+    ซึ่งทำให้แต่ละบรรทัดเห็นของเต็มเหมือนกันหมด = ขายเกิน
+    แถวแม่สรุปให้แล้วทั้งของ (= ค่าน้อยสุดของลูก) และราคาชุด จึงใช้แถวแม่พอ
+    """
+    return [r for r in rows if (r.get("HIGH_LEVEL") or "").strip("0 ") == ""]
+
+
 def _to_line(row: dict, ask: AvailAsk) -> AvailLine:
     return AvailLine(
         matnr=_matnr(row.get("MATERIAL", "")) or ask.matnr,
@@ -150,7 +163,7 @@ class HttpAvailabilityClient:
         msgs = [m for m in (data.get("AI_MESSAGE") or []) if m]
         if msgs:
             log.warning("SAP availability message: %s", msgs)
-        return list(data.get("AI_RETURN_ITEMS") or [])
+        return top_level_rows(list(data.get("AI_RETURN_ITEMS") or []))
 
     def check(self, asks: list[AvailAsk], customer_no: str, req_date: date) -> list[AvailLine | None]:
         if not asks:
