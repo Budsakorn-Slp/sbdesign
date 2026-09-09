@@ -69,15 +69,32 @@ export type MaterialCard = {
   stock: StockSummary | null;
 };
 
+/** สีอื่นของรุ่นเดียวกัน — ต้นทางแยกทุกสีเป็นคนละ MATNR ปุ่มสีจึงเป็นลิงก์ไปอีกหน้าสินค้า */
+export type ColorOption = {
+  matnr: string;
+  color: string | null;
+  name_th: string;
+  image_url: string | null;
+  price: string;
+};
+
 export type MaterialDetail = MaterialCard & {
   barcode: string | null;
   description: string | null;
+  color: string | null;
+  style: string | null;
   volume_m3: string | null;
   weight_kg: string | null;
+  sold_qty: number;
+  colors: ColorOption[];
+  /** หมวดของสินค้านี้ + หมวดพี่น้อง — ใช้เป็นชิปสลับใน "สินค้าที่เกี่ยวข้อง" */
+  related_categories: { id: string; name_th: string }[];
   synced_at: string;
 };
 
-export type SearchOut = { items: MaterialCard[]; total: number; q: string | null; category: string | null };
+export type BrandFacet = { id: string; name: string; count: number };
+export type Facets = { brands: BrandFacet[]; price_min: number | null; price_max: number | null };
+export type SearchOut = { items: MaterialCard[]; total: number; q: string | null; category: string | null; facets?: Facets | null };
 
 export type StockRow = {
   plant_code: string;
@@ -123,6 +140,7 @@ export type CartItem = {
   added_by_code: string | null;
   added_at: string;
   pending_ack: boolean;
+  selected: boolean; // ติ๊กในหน้าตะกร้า = คิดเงินรอบนี้
   supply_mode: SupplyMode;
   plant_code: string | null;
   atp_date: string | null;
@@ -210,6 +228,12 @@ export type DeliveryQuote = {
   groups: DeliveryGroup[];
   slots: DeliverySlot[];
   held_slot_id: string | null;
+  ship_area: string | null;
+  ship_source: string;
+  ship_weight_kg: string | null;
+  ship_needs_review: boolean;
+  ship_warnings: string[];
+  ship_trace: { rule: string; name?: string; priority?: number; matched: boolean; reason: string; weight_kg?: string }[];
 };
 
 export type Offer = {
@@ -258,9 +282,12 @@ export type Cart = {
   owner_sales: CartPerson | null;
   is_guest: boolean;
   items: CartItem[];
-  count: number;
-  subtotal: string;
+  count: number; // จำนวนชิ้นเฉพาะรายการที่ติ๊ก
+  subtotal: string; // ยอดเฉพาะรายการที่ติ๊ก
   pending_count: number;
+  all_count: number; // จำนวนชิ้นทั้งตะกร้า (ป้ายบนหัวเว็บ)
+  item_count: number; // จำนวนรายการทั้งตะกร้า
+  selected_count: number; // จำนวนรายการที่ติ๊กไว้
   expires_at: string | null;
   updated_at: string;
   totals: Totals | null;
@@ -375,15 +402,21 @@ export type SyncJob = {
 
 // ---------- home content ----------
 export type NavLink = { label: string; href: string };
+/** ภาพจริงจาก Magento CMS (ตาราง home_media) — ไม่มีเมื่อยังไม่ได้รัน sync_home_media */
+export type MediaTile = { id: string; label: string | null; alt: string | null; image: string; image_mb: string | null; href: string };
 export type HomeContent = {
-  hero_slides: { id: string; tag: string; title: string; note: string; cta: string; href: string; art: string }[];
+  // hero_slides มาได้ 2 ทาง: ภาพจริงจาก CMS (มี image) หรือกล่อง placeholder จาก home.json
+  hero_slides: ({ id: string; href: string } & Partial<MediaTile> & Partial<{ tag: string; title: string; note: string; cta: string; art: string }>)[];
   promo_cards: { tag: string; title: string; note: string; href: string }[];
-  services: { icon: string; label: string }[];
   category_tiles: { label: string; category: string }[];
+  top_categories?: MediaTile[];
+  inspirations?: MediaTile[];
+  inspire_tabs?: { key: string; label: string; items: MediaTile[] }[];
+  brand_tiles?: MediaTile[];
   new_collections: NavLink[];
-  room_rows: { label: string; room: string; items: { label: string; category: string }[] }[];
+  room_rows: { label: string; room: string; href?: string; items: MaterialCard[] }[];
   rooms: { label: string; room: string }[];
-  main_nav: { label: string; items: NavLink[] }[];
+  main_nav: { label: string; href?: string; items: NavLink[] }[];
   footer_promos: { head: string; body: string; cta: string; href: string }[];
   footer_cols: { head: string; items: string[] }[];
   payments: string[];
@@ -409,4 +442,35 @@ export type OrderHistory = {
   delivery_date: string | null;
   synced_at: string;
   lines: OrderLine[];
+};
+
+// ---------- ที่อยู่ไทย (/geo) ----------
+export type Province = {
+  province_id: number;
+  name_th: string;
+  name_en: string | null;
+  area_id: number | null;
+  postcode: string; // รหัสตัวแทน ใช้ประเมินค่าส่งคร่าวๆ ก่อนรู้ที่อยู่เต็ม
+  serviceable: boolean;
+};
+export type District = { district_id: number; name_th: string; name_en: string | null; province_id: number; serviceable: boolean };
+export type Subdistrict = {
+  subdistrict_id: number;
+  name_th: string;
+  name_en: string | null;
+  district_id: number;
+  zipcode: string;
+  area_id: number | null;
+  is_blocked: boolean;
+};
+export type PostcodeHit = {
+  zipcode: string;
+  subdistrict_id: number;
+  subdistrict_th: string;
+  district_id: number;
+  district_th: string;
+  province_id: number;
+  province_th: string;
+  area_id: number | null;
+  is_blocked: boolean;
 };

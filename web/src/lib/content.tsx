@@ -2,6 +2,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { apiGet } from "./api";
 import type { HomeContent, Plant } from "./types";
 
+/** จังหวัดที่ลูกค้าเลือกไว้คร่าวๆ ก่อนกรอกที่อยู่เต็ม
+ *
+ * ค่าส่งของเราขึ้นกับเขต (1 = กทม.+ปริมณฑล · 2 = ต่างจังหวัด) ซึ่งรู้ได้ตั้งแต่รู้จังหวัด
+ * exact = true คือได้มาจากรหัสไปรษณีย์จริงที่ลูกค้ากรอก ไม่ใช่รหัสตัวแทนของจังหวัด
+ */
+export type ShipTo = { province_id: number; name_th: string; area_id: number | null; postcode: string; exact: boolean };
+
 type Prefs = {
   content: HomeContent | null;
   plants: Plant[];
@@ -9,6 +16,8 @@ type Prefs = {
   setPlantCode: (code: string | null) => void;
   postcode: string;
   setPostcode: (pc: string) => void;
+  shipTo: ShipTo | null;
+  setShipTo: (s: ShipTo | null) => void;
   reload: () => void;
 };
 
@@ -30,11 +39,23 @@ function writeLS(key: string, val: string | null) {
   }
 }
 
+function readShipTo(): ShipTo | null {
+  const raw = readLS("sb_shipto");
+  if (!raw) return null;
+  try {
+    const s = JSON.parse(raw) as ShipTo;
+    return s && typeof s.province_id === "number" && s.name_th ? s : null;
+  } catch {
+    return null;
+  }
+}
+
 export function ContentProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState<HomeContent | null>(null);
   const [plants, setPlants] = useState<Plant[]>([]);
   const [plantCode, setPlantCodeState] = useState<string | null>(readLS("sb_plant"));
   const [postcode, setPostcodeState] = useState<string>(readLS("sb_postcode") || "");
+  const [shipTo, setShipToState] = useState<ShipTo | null>(readShipTo);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -57,6 +78,14 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     setPostcodeState(pc);
     writeLS("sb_postcode", pc || null);
   }, []);
+  // เลือกจังหวัด = ได้รหัสไปรษณีย์ไปด้วยเสมอ (ตัวแทนจังหวัด หรือรหัสจริงถ้ากรอกเอง)
+  // ค่าส่งจะได้คิดได้ทันทีโดยไม่ต้องรอที่อยู่เต็ม
+  const setShipTo = useCallback((s: ShipTo | null) => {
+    setShipToState(s);
+    writeLS("sb_shipto", s ? JSON.stringify(s) : null);
+    setPostcodeState(s?.postcode || "");
+    writeLS("sb_postcode", s?.postcode || null);
+  }, []);
 
   const value = useMemo<Prefs>(
     () => ({
@@ -66,9 +95,11 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       setPlantCode,
       postcode,
       setPostcode,
+      shipTo,
+      setShipTo,
       reload: () => setTick((t) => t + 1),
     }),
-    [content, plants, plantCode, postcode, setPlantCode, setPostcode],
+    [content, plants, plantCode, postcode, shipTo, setPlantCode, setPostcode, setShipTo],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

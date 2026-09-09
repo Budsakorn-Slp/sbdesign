@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import AddressPicker from "../components/AddressPicker";
 import DeliveryPanel from "../components/DeliveryPanel";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
@@ -7,6 +8,7 @@ import PromoPanel from "../components/PromoPanel";
 import { apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart";
+import { useContent } from "../lib/content";
 import { bahtWord, thDate } from "../lib/format";
 import type { Quotation } from "../lib/types";
 
@@ -22,6 +24,7 @@ type Addr = { email: string; first: string; last: string; phone: string; address
 export default function CheckoutPage() {
   const auth = useAuth();
   const { cart, refresh, setCart } = useCart();
+  const { shipTo } = useContent();
   const nav = useNavigate();
   const [pay, setPay] = useState("card");
   const [promoOpen, setPromoOpen] = useState(false);
@@ -38,8 +41,13 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!auth.user) return;
     const [first, ...rest] = auth.user.name.split(" ");
-    setAddr((a) => ({ ...a, email: auth.user!.email || "", first, last: rest.join(" "), phone: auth.user!.phone || "", address: auth.user!.default_address || "", postcode: auth.user!.default_postcode || "" }));
+    setAddr((a) => ({ ...a, email: auth.user!.email || "", first, last: rest.join(" "), phone: auth.user!.phone || "", address: auth.user!.default_address || "", postcode: auth.user!.default_postcode || a.postcode }));
   }, [auth.user]);
+
+  // จังหวัดที่เลือกไว้บน nav = จุดตั้งต้นของที่อยู่ (AddressPicker จะไล่ย้อนจากรหัสนี้ต่อเอง)
+  useEffect(() => {
+    if (shipTo?.postcode) setAddr((a) => (a.postcode ? a : { ...a, postcode: shipTo.postcode, province: shipTo.name_th }));
+  }, [shipTo]);
 
   if (!cart) return <main className="container sec"><div className="ph" style={{ height: 240 }}>กำลังโหลดตะกร้า…</div></main>;
 
@@ -80,10 +88,13 @@ export default function CheckoutPage() {
               <label className="field"><span>ที่อยู่ (Address) *</span><input value={addr.address} onChange={set("address")} placeholder="เลขที่, หมู่บ้าน/โครงการ/คอนโด, ตึก" /></label>
               <label className="field"><span>ถนน *</span><input value={addr.street} onChange={set("street")} placeholder="เช่น พระราม 9" /></label>
               <label className="field"><span>ซอย (Soi)</span><input value={addr.soi} onChange={set("soi")} placeholder="เช่น พระราม 9 ซอย 41" /></label>
-              <label className="field"><span>แขวง/ตำบล *</span><input value={addr.sub} onChange={set("sub")} placeholder="เช่น สวนหลวง" /></label>
-              <label className="field"><span>เขต/อำเภอ *</span><input value={addr.district} onChange={set("district")} placeholder="เช่น สวนหลวง" /></label>
-              <label className="field"><span>จังหวัด *</span><input value={addr.province} onChange={set("province")} placeholder="เช่น กรุงเทพมหานคร" /></label>
-              <label className="field"><span>รหัสไปรษณีย์ (Postal Code) *</span><input value={addr.postcode} onChange={set("postcode")} placeholder="เช่น 10250" maxLength={5} inputMode="numeric" /></label>
+              <AddressPicker
+                postcode={addr.postcode}
+                sub={addr.sub}
+                district={addr.district}
+                province={addr.province}
+                onChange={(p) => setAddr((a) => ({ ...a, ...(p.postcode !== undefined && { postcode: p.postcode }), ...(p.sub !== undefined && { sub: p.sub }), ...(p.district !== undefined && { district: p.district }), ...(p.province !== undefined && { province: p.province }) }))}
+              />
               <label className="field span2"><span>ประเทศ (Country) *</span><select defaultValue="TH"><option value="TH">ไทย</option></select></label>
             </div>
           </section>

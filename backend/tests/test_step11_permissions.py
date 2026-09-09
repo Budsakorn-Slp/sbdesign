@@ -34,6 +34,12 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("GET", f"/materials/{BAD}", ALL, None),
     ("GET", f"/materials/{BAD}/stock", ALL, None),
     ("GET", "/best-sellers", ALL, None),
+    # ที่อยู่ไทย — เปิดสาธารณะ ต้องเลือกจังหวัดได้ก่อนล็อกอิน ไม่มีข้อมูลส่วนบุคคล
+    ("GET", "/geo/provinces", ALL, None),
+    ("GET", "/geo/districts?province_id=0", ALL, None),
+    ("GET", "/geo/subdistricts?district_id=0", ALL, None),
+    ("GET", "/geo/search?q=10", ALL, None),
+    ("GET", f"/geo/postcode/{BAD}", ALL, None),  # ไม่ใช่ตัวเลข 5 หลัก -> 422 แต่ผ่านด่านสิทธิ์แล้ว
     ("POST", "/auth/register", ALL, {}),
     ("POST", "/auth/login", ALL, {}),
     ("POST", "/auth/refresh", ALL, {}),
@@ -46,6 +52,7 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("PATCH", f"/cart/items/{BAD}", ALL, {}),
     ("DELETE", f"/cart/items/{BAD}", ALL, None),
     ("POST", f"/cart/items/{BAD}/ack", ALL, None),
+    ("POST", "/cart/select", ALL, {}),
     ("POST", f"/carts/{BAD}/merge", ALL, None),
     ("POST", "/cart/checkout-check", CUST, None),  # guest ชำระเงินไม่ได้ · เซลล์ห้ามรับเงินเอง
     ("POST", "/promotions/evaluate", ALL, {}),

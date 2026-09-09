@@ -12,7 +12,9 @@
 .hdr-lang { color: var(--ink-4); }
 .hdr-lang b { color: var(--ink); border-bottom: 2px solid var(--ink); padding-bottom: 1px; }
 
-.hdr-main { display: grid; grid-template-columns: auto auto 1fr auto; grid-template-areas: "logo locs icons search"; align-items: center; gap: 20px; height: 80px; }
+/* แถวบน: ซ้าย = โลโก้ + ที่อยู่จัดส่ง/รับที่สาขา · กลาง = ช่องค้นหา · ขวา = ไอคอน + เข้าสู่ระบบ
+   ช่องค้นหามาอยู่ตรงกลางเพื่อกินที่ว่างที่เคยโล่ง จะได้ไม่ต้องมีแถวค้นหาแยกอีกแถว */
+.hdr-main { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "logo locs search icons"; align-items: center; gap: 20px; height: 76px; }
 .hdr-logo { grid-area: logo; width: 140px; height: 48px; border-radius: 2px; font: 700 14px/1 var(--mono); letter-spacing: .08em; color: var(--ink); }
 .hdr-locs { grid-area: locs; display: flex; align-items: center; gap: 16px; position: relative; }
 .hdr-loc { border: none; background: none; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 4px 0; color: var(--ink); }
@@ -25,25 +27,34 @@
 .hdr-pop-row.on, .hdr-pop-row:hover { background: var(--bg-2); border-color: var(--line); }
 .hdr-pop-row b { display: block; font-size: 13px; }
 .hdr-pop-row small { display: block; color: var(--ink-3); font-size: 11.5px; }
-.hdr-icons { grid-area: icons; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+/* 74 จังหวัด — ต้องเลื่อนในกล่อง ไม่งั้น popup ยาวเกินจอ */
+.hdr-pop-list { max-height: 260px; overflow-y: auto; margin-top: 6px; }
+.hdr-icons { grid-area: icons; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .hdr-icons .icon-btn { color: var(--ink); }
-.hdr-login-btn { display: none; }
+/* ต้องเจาะจงกว่า .btn ใน global.css ไม่งั้นกฎซ่อนตอนจอแคบจะโดน .btn ทับ */
+.hdr-icons .hdr-login-btn { display: inline-flex; align-items: center; gap: 6px; margin-left: 10px; white-space: nowrap; }
 .hdr-user { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line-2); border-radius: 999px; padding: 4px 12px 4px 8px; margin-left: 6px; }
 .hdr-user-txt { display: flex; flex-direction: column; line-height: 1.15; }
 .hdr-user-txt b { font-size: 13px; }
 .hdr-user-txt small { font-size: 11px; color: var(--ink-3); }
-.hdr-search { grid-area: search; display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 6px; height: 46px; overflow: hidden; width: 520px; max-width: 100%; }
+.hdr-search { grid-area: search; display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 8px; height: 44px; overflow: hidden; width: 100%; max-width: 620px; justify-self: center; background: #fff; }
+.hdr-search:focus-within { border-color: var(--ink); }
 .hdr-search-all { display: inline-flex; align-items: center; gap: 2px; padding: 0 14px; height: 100%; background: var(--bg-3); border-right: 1px solid var(--line-2); font-size: 13px; white-space: nowrap; }
-.hdr-search input { flex: 1; border: none; height: 100%; padding: 0 12px; font-size: 14px; min-width: 0; }
+.hdr-search input { flex: 1; border: none; height: 100%; padding: 0 12px; font-size: 14px; min-width: 0; background: transparent; }
 .hdr-search input:focus { outline: none; }
-.hdr-search-ai { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; border: 1px solid var(--ink); background: #fff; border-radius: 4px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; }
+.hdr-search-ai { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; border: 1px solid var(--ink); background: #fff; border-radius: 4px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.hdr-search-go { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 100%; border: none; border-left: 1px solid var(--line-2); background: var(--ink); color: #fff; cursor: pointer; }
 
 .hdr-nav-wrap { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); position: relative; }
 .hdr-nav { display: flex; align-items: center; gap: 6px; height: 50px; overflow-x: auto; scrollbar-width: none; }
 .hdr-nav::-webkit-scrollbar { display: none; }
 .hdr-nav-item { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; padding: 0 12px; height: 50px; font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; border-bottom: 2px solid transparent; }
 .hdr-nav-item.on { border-bottom-color: var(--ink); }
-.hdr-nav-item.cats { font-weight: 700; padding-left: 0; }
+.hdr-nav-item.cats { font-weight: 700; padding: 0; gap: 0; }
+/* ครึ่งซ้ายกดไปหน้าสินค้าทั้งหมด · ครึ่งขวากางเมนูหมวด */
+.cats-all { display: inline-flex; align-items: center; gap: 4px; height: 50px; padding: 0 6px 0 0; color: inherit; }
+.cats-all:hover { text-decoration: underline; }
+.cats-toggle { display: inline-flex; align-items: center; border: none; background: none; height: 50px; padding: 0 10px 0 2px; color: inherit; cursor: pointer; }
 .mega { position: absolute; left: 0; right: 0; top: 100%; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.12); z-index: 55; }
 .mega-in { display: grid; grid-template-columns: 240px 1fr; gap: 24px; padding: 18px 0 24px; }
 .mega-side { max-height: 460px; overflow: auto; border-right: 1px solid var(--line); padding-right: 12px; }
@@ -55,7 +66,8 @@
 .mega-item { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-size: 14px; font-weight: 500; }
 .mega-ico { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); background: var(--bg-2); }
 .mega.sub .container { padding-top: 16px; padding-bottom: 22px; }
-.sub-list { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 24px; }
+/* เมนูแบรนด์มีเกือบร้อยชื่อ — คอลัมน์ไหลตามความกว้าง แล้วจำกัดความสูงให้เลื่อนในเมนูแทนที่จะยาวเกินจอ */
+.sub-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 24px; max-height: 58vh; overflow-y: auto; }
 .sub-list li a { display: block; padding: 6px 0; font-size: 14px; }
 
 /* ===== footer ===== */
@@ -75,11 +87,19 @@
 .ftr-legal { display: flex; flex-wrap: wrap; gap: 18px; font-size: 12.5px; }
 
 /* ===== responsive ===== */
+/* โน้ตบุ๊ก: ยังอยู่แถวเดียวกันได้ แค่บีบระยะห่างกับความกว้างช่องค้นหาลง */
+@media (max-width: 1279px) {
+  .hdr-main { gap: 14px; }
+  .hdr-search { max-width: 460px; }
+  .hdr-loc-sep { display: none; }
+}
 @media (max-width: 1023px) {
   .hdr-util-links { gap: 14px; }
   .hdr-free { display: none; }
-  .hdr-main { grid-template-columns: auto 1fr auto; grid-template-areas: "logo locs icons" "search search search"; height: auto; row-gap: 10px; padding-top: 12px; padding-bottom: 12px; }
-  .hdr-search { width: 100%; }
+  /* iPad ลงมา: ช่องค้นหาลงบรรทัดของตัวเอง เต็มความกว้าง จะได้ไม่โดนบีบจนพิมพ์ไม่เห็น */
+  .hdr-main { grid-template-columns: auto 1fr auto; grid-template-areas: "logo locs icons" "search search search"; height: auto; row-gap: 10px; padding-top: 12px; padding-bottom: 12px; gap: 14px; }
+  .hdr-search { max-width: none; }
+  .hdr-locs { gap: 10px; }
   .mega-in { grid-template-columns: 1fr; }
   .mega-side { display: none; }
   .sub-list { grid-template-columns: repeat(2, 1fr); }
@@ -89,12 +109,32 @@
 @media (max-width: 599px) {
   .hdr-util-in { height: auto; padding: 6px 0; flex-direction: column; align-items: flex-end; gap: 4px; }
   .hdr-util-links { gap: 10px; font-size: 12px; flex-wrap: wrap; justify-content: flex-end; }
-  .hdr-main { grid-template-columns: 1fr; grid-template-areas: "logo" "locs" "icons" "search"; row-gap: 8px; }
+  /* จอเล็ก: โลโก้กับไอคอนอยู่แถวเดียวกัน · ที่อยู่จัดส่ง/สาขาลงบรรทัดใหม่ */
+  .hdr-main { grid-template-columns: auto 1fr; grid-template-areas: "logo icons" "search search" "locs locs"; row-gap: 10px; gap: 10px; }
+  .hdr-logo { width: 110px; height: 38px; }
   .hdr-locs { justify-content: flex-start; }
-  .hdr-icons { justify-content: flex-start; }
-  .hdr-icon-login { display: none; }
-  .hdr-login-btn { display: inline-flex; margin-left: auto; }
+  /* จอแคบไม่มีที่พอ — เหลือไอคอนคนพอ */
+  .hdr-icons .hdr-login-btn { display: none; }
+  /* ตอนล็อกอินแล้ว ชื่อ+ระดับสมาชิกกินที่จนแถวล้นออกข้าง (443px บนจอ 375)
+     ซ่อนตัวหนังสือ เหลือรูปคน (กดไปหน้าบัญชี) กับปุ่มออก — ดูชื่อได้ในหน้าบัญชี */
+  .hdr-user-txt { display: none; }
+  .hdr-user { margin-left: 0; padding: 2px 8px 2px 6px; gap: 6px; }
+  .hdr-icons { gap: 0; }
+  .hdr-icons .icon-btn { width: 36px; height: 36px; }
+  /* ช่อง grid ต้องยอมหดต่ำกว่า min-content ไม่งั้นแถวดันจนหน้าล้นออกข้าง */
+  .hdr-main > * { min-width: 0; }
+  .hdr-locs { flex-wrap: wrap; gap: 8px; }
+  .hdr-loc span { font-size: 12.5px; }
+  .hdr-search-all { display: none; }
+  .hdr-search-ai { padding: 5px 8px; }
   .hdr-pop { width: min(320px, 90vw); }
+}
+/* จอแคบมาก (iPhone SE 320px) — บีบอีกชั้นให้ไม่ต้องเลื่อนซ้ายขวา */
+@media (max-width: 389px) {
+  .hdr-logo { width: 96px; height: 34px; }
+  .hdr-icons .icon-btn { width: 32px; height: 32px; }
+  .hdr-user { padding: 2px 6px 2px 4px; gap: 4px; }
+  .hdr-loc span { font-size: 12px; }
   .mega-grid { grid-template-columns: 1fr; }
   .ftr-top { grid-template-columns: 1fr; }
   .ftr-promos { flex-direction: column; }
