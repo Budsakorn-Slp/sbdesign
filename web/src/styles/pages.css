@@ -1,17 +1,34 @@
 /* ===== generic sections ===== */
 .sec { padding: 28px 0 8px; }
+/* หน้าที่เป็น .container .sec พร้อมกัน (หน้าค้นหา/หน้าสินค้า) โดน padding แบบย่อของ .container
+   ซึ่งโหลดทีหลังล้างระยะบน-ล่างทิ้งหมด บรรทัด "หน้าแรก ›" เลยไปติดขอบเมนู — เขียนสองคลาสทับกลับ */
+.container.sec { padding-top: 32px; padding-bottom: 8px; }
+/* แถวที่ต่อจากภาพเต็มกรอบ (แบนเนอร์ / โลโก้แบรนด์) ต้องเว้นบนมากกว่าปกติ ไม่งั้นหัวข้อไปติดขอบรูป */
+/* ต้อง 2 คลาสเพราะ .container ตั้ง margin/padding แบบย่อ (โหลดทีหลัง) ทับค่าคลาสเดียวหมด */
+.sec.sec-lead { margin-top: 40px; }
 .sec-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
 .sec-head h2 { font-size: 22px; font-weight: 700; }
 .sec-more { font-size: 13.5px; font-weight: 600; }
 .arrows { display: flex; gap: 8px; }
 .arrow { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--ink-3); display: inline-flex; align-items: center; justify-content: center; }
 .arrow.dark { border-color: var(--ink); background: #fff; color: var(--ink); }
+.sec-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .crumbs { margin-bottom: 8px; }
 .crumbs a { color: var(--ink-3); }
 
 /* ===== hero + promo ===== */
-.hero-row { display: grid; grid-template-columns: minmax(0, 664px) 1fr; gap: 16px; padding-top: 24px; }
+/* เลย์เอาต์ตอนดราฟ — แบนเนอร์ใหญ่ซ้าย + 4 ช่องขวา ความสูงแถวมาจากช่องขวา แบนเนอร์ยืดตาม */
+.hero-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; padding-top: 24px; align-items: stretch; }
 .hero { position: relative; border: 1px solid var(--line); background: #fff; aspect-ratio: 1 / 1; overflow: hidden; }
+.hero-img { aspect-ratio: auto; border: none; }
+/* ช่องซ้ายเตี้ยกว่าแบนเนอร์ PC (1920×746) มาก จึงใช้ไฟล์ -MB (1446×950) แล้ว cover */
+/* สไลด์ทุกใบซ้อนทับกัน โชว์ทีละใบด้วย opacity — ใบที่ไม่ได้โชว์ต้องกดไม่ได้ด้วย */
+.hero-pic { display: block; position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity .5s ease; }
+.hero-pic.on { opacity: 1; pointer-events: auto; }
+.hero-pic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hero-dots { position: absolute; left: 0; right: 0; bottom: 14px; display: flex; justify-content: center; gap: 8px; }
+.hero-dot { width: 8px; height: 8px; padding: 0; border-radius: 50%; border: none; background: rgba(255, 255, 255, .65); box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); }
+.hero-dot.on { background: var(--ink); }
 .hero-art { position: absolute; inset: 0; border: none; }
 .hero-art-lbl { text-align: center; color: var(--ink-3); font-size: 12px; line-height: 1.7; }
 .hero-copy { position: absolute; left: 28px; top: 28px; max-width: 70%; }
@@ -30,16 +47,22 @@
 .promo-art { flex: 1; min-height: 120px; }
 .promo-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 
-/* ===== services ===== */
-.services { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-top: 28px; }
-.service { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); background: var(--bg-2); font-size: 13px; font-weight: 500; }
-.service-ico { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 1px solid var(--line); display: inline-flex; align-items: center; justify-content: center; }
+/* ===== HOME INSPIRATIONS — 4 ช่องขวาของแบนเนอร์ การ์ด 401×481 จาก CMS ชื่อคอลเลกชันอยู่ในภาพแล้ว ===== */
+.hero-tiles { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 16px; }
+.insp { display: block; position: relative; overflow: hidden; aspect-ratio: 401 / 481; }
+.insp img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* ===== category tiles ===== */
 .cat-tiles { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: 112px 112px; gap: 16px; }
 .cat-tile { border: 1px solid var(--line); background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.05); display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
 .cat-ico { width: 88px; height: 88px; flex: none; }
 .cat-lbl { font-size: 15px; font-weight: 600; }
+.cat-img { width: 88px; height: 88px; flex: none; object-fit: cover; }
+/* TOP CATEGORIES มี 12 หมวด — 2 แถวแล้วเลื่อนซ้ายขวา (grid ทำ 2 แถวเลื่อนได้ทางเดียวคือไหลเป็นคอลัมน์)
+   ความกว้างคอลัมน์หาร 5 ช่องพอดีจอ ช่องจะได้เท่ากันหมดและไม่มีช่องโดนตัดครึ่งค้างอยู่ริมขวา */
+.cat-scroll { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: calc((100% - 4 * 16px) / 5); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.cat-scroll::-webkit-scrollbar { display: none; }
+.cat-scroll .cat-tile { scroll-snap-align: start; }
 
 /* ===== strips ===== */
 .strip { position: relative; }
@@ -49,18 +72,35 @@
 .new-lbl { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; white-space: nowrap; box-shadow: var(--shadow); }
 
 /* ===== product grid / card ===== */
+/* ฐาน = โน้ตบุ๊ก 4 คอลัมน์ · จอใหญ่เพิ่มเป็น 5-6 · แท็บเล็ต 3 · มือถือ 2 (ดูเบรกพอยต์ท้ายไฟล์) */
 .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.pcard { border: 1px solid var(--line); background: #fff; display: flex; flex-direction: column; }
-.pcard-img { position: relative; display: block; }
-.pcard-off { position: absolute; left: 10px; top: 10px; background: var(--red); color: #fff; font: 700 12px/1 var(--mono); padding: 5px 7px; border-radius: 4px; }
+/* ช่อง grid ปกติกว้างอย่างน้อยเท่า min-content ของข้างใน — ชื่อรุ่นอย่าง
+   "0218A-M1/4D/Group1/CUS***" ไม่มีช่องว่างให้ตัด เลยดันคอลัมน์จนหน้าล้นออกข้าง
+   min-width:0 + ตัดคำได้ทุกตำแหน่ง = การ์ดหดตามคอลัมน์จริงๆ */
+.pgrid > * { min-width: 0; }
+.pcard-name, .pcard-brand, .pcard-variant { overflow-wrap: anywhere; }
+/* การ์ดเป็นกล่องมุมมน มีเส้นขอบบางๆ รูปนั่งบนพื้นเทาอ่อน — ทรงเดียวกับตัวอย่างที่ให้มา */
+.pcard { position: relative; background: #fff; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; transition: box-shadow .18s ease, border-color .18s ease; }
+.pcard:hover { border-color: var(--line-2); box-shadow: 0 6px 18px rgba(0, 0, 0, .08); }
+.pcard-img { position: relative; display: block; background: var(--bg-2); }
 .pcard-new { position: absolute; left: 10px; top: 10px; background: var(--ink); color: #fff; font: 700 11px/1 var(--mono); padding: 5px 7px; border-radius: 4px; }
-.pcard-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.pcard-brand { font: 600 11px/1.2 var(--mono); letter-spacing: .06em; color: var(--ink-3); text-transform: uppercase; }
-.pcard-name { font-size: 14.5px; font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.pcard-variant { font-size: 12.5px; color: var(--ink-3); }
-.pcard-price { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
-.pcard-price .now { font-size: 18px; font-weight: 700; }
-.pcard-price .was { font-size: 13px; color: var(--ink-4); text-decoration: line-through; }
+/* หัวใจอยู่มุมซ้ายบนในวงกลมขาว ค้างไว้ตลอด กดได้เลยไม่ต้องชี้ก่อน */
+.pcard-wish { position: absolute; left: 10px; top: 10px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: #fff; color: var(--ink-2); box-shadow: 0 1px 4px rgba(0, 0, 0, .14); cursor: pointer; transition: color .15s ease; }
+.pcard-wish.on { color: var(--red); }
+.pcard-body { padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 3px; flex: 1; }
+/* ชื่อแบรนด์ใช้ฟอนต์เดียวกับข้อความอื่นในการ์ด ต่างกันแค่ตัวหนา — ไม่เอา mono/letter-spacing แล้ว */
+.pcard-brand { font-size: 12.5px; font-weight: 700; line-height: 1.35; color: var(--ink-2); }
+/* ล็อกชื่อไว้สองบรรทัดเสมอ แบรนด์–ราคาของทุกใบในแถวเดียวกันจะได้อยู่ระดับเดียวกัน */
+.pcard-name { font-size: 13.5px; font-weight: 500; line-height: 1.45; min-height: calc(2 * 1.45em); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pcard-name:hover { text-decoration: underline; }
+.pcard-variant { font-size: 12.5px; line-height: 1.4; min-height: 1.4em; color: var(--ink-3); }
+/* ส่วนลดอยู่ต่อท้ายราคาเหมือนเดิม ไม่เอาไปเป็นป้ายบนรูป */
+.pcard-price { margin-top: 6px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pcard-price .now { font-size: 17px; font-weight: 700; }
+.pcard-price .off { font-size: 13px; font-weight: 600; color: var(--red); }
+/* ราคาปกติขึ้นบรรทัดใหม่ ตัวเล็กจางๆ ขีดฆ่าเฉพาะตัวเลข */
+.pcard-was { font-size: 12px; line-height: 1.4; min-height: 1.4em; color: var(--ink-4); margin-top: 2px; }
+.pcard-was s { text-decoration: line-through; }
 .pcard-member { font-size: 12.5px; color: var(--green); font-weight: 600; }
 .pcard-note { font-size: 12px; color: var(--ink-3); }
 .pcard-stock { font-size: 12px; margin-top: auto; padding-top: 6px; }
@@ -77,8 +117,24 @@
 .room-row .arrow { width: 32px; height: 32px; }
 .room-row-strip { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; }
 .room-row-strip::-webkit-scrollbar { display: none; }
+/* การ์ดสินค้าในแถวหมวด — กว้างคงที่ เลื่อนแนวนอน ไม่ยืดตามจำนวนใบ */
+.room-row-strip > .pcard { flex: 0 0 200px; }
 .room-item { flex: 0 0 150px; text-align: center; font-size: 13px; font-weight: 500; }
 .room-item span { display: block; margin-top: 8px; line-height: 1.3; }
+
+/* ===== FIND YOUR INSPIRATION ===== */
+/* แท็บด้านบน แล้วโมเสก 3 ใบบน + 2 ใบกว้างล่าง (6 คอลัมน์ = 2+2+2 และ 3+3) */
+.insp-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.insp-tabs::-webkit-scrollbar { display: none; }
+.insp-tab { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 0; margin-bottom: -1px; font-size: 14px; color: var(--ink-3); white-space: nowrap; cursor: pointer; }
+.insp-tab.on { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
+.insp-grid { margin-top: 16px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
+.insp-cell { grid-column: span 2; display: block; }
+.insp-cell.wide { grid-column: span 3; }
+.insp-cell img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: var(--bg-2); display: block; }
+.insp-cell.wide img { aspect-ratio: 16 / 9; }
+.insp-cap { display: block; margin-top: 8px; font-size: 13.5px; font-weight: 500; line-height: 1.4; }
+.insp-cell:hover .insp-cap { text-decoration: underline; }
 
 /* ===== room tiles / brands ===== */
 .room-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -86,18 +142,58 @@
 .room-lbl { position: absolute; left: 16px; bottom: 16px; background: #fff; border: 1px solid var(--line); padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; }
 .brand-tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 16px; }
 .brand-tile { display: block; }
+/* แบนเนอร์แบรนด์จาก Magento เกือบทุกใบเป็น ~1920×880 (2.2:1) — ตรึงสัดส่วนตามไฟล์จริง จะได้เต็มกรอบไม่เหลือขอบขาว
+   (ตรึงไว้ด้วยเหตุผลที่สองคือกันแถวยุบตอนรูป lazy ยังไม่โหลด) */
+.brand-tile img { display: block; width: 100%; aspect-ratio: 20 / 9; object-fit: cover; border: 1px solid var(--line); background: #fff; }
+/* แบรนด์จาก Magento มีเกือบร้อย — 2 แถวเลื่อนซ้ายขวา เหมือน TOP CATEGORIES แต่ช่องกว้างกว่าเพราะเป็นแบนเนอร์ */
+.brand-scroll { grid-auto-flow: column; grid-template-columns: none; grid-template-rows: repeat(2, auto); grid-auto-columns: calc((100% - 3 * 16px) / 4); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.brand-scroll::-webkit-scrollbar { display: none; }
+.brand-scroll .brand-tile { scroll-snap-align: start; }
 .brand-tile.more { display: flex; align-items: center; justify-content: center; border: 1px dashed var(--line-2); font-size: 12px; color: var(--ink-3); }
 
 /* ===== search ===== */
-.search-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 18px; }
+.search-more { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 28px 0 8px; }
+.search-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; }
 .search-head h1 { font-size: 24px; }
-.search-body { display: grid; grid-template-columns: 220px 1fr; gap: 28px; }
-.facets { display: flex; flex-direction: column; gap: 22px; }
+.search-body { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 28px; }
+.search-body > .grow { min-width: 0; }  /* กันคอลัมน์ผลลัพธ์ดันหน้าล้นเวลาชื่อรุ่นยาว */
+
+/* แถบเครื่องมือเหนือผลลัพธ์ — ปุ่มตัวกรอง (จอเล็ก) · ชิปบอกว่ากรองอะไรอยู่ · ช่องเรียงลำดับ */
+.search-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+.search-tools .chips { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.search-tools .chip { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.sortbox { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; white-space: nowrap; }
+.sortbox select { border: 1px solid var(--line-2); background: #fff; padding: 7px 10px; font: inherit; font-size: 13.5px; }
+.filter-btn { display: none; align-items: center; gap: 6px; }
+
+.facets { display: flex; flex-direction: column; gap: 22px; align-self: start; }
+.facets-head { display: none; align-items: center; justify-content: space-between; }
 .facet h4 { font-size: 13px; margin-bottom: 8px; }
 .facet li { margin-bottom: 6px; }
 .facet li .link-btn { text-decoration: none; font-size: 13.5px; }
 .facet li.on .link-btn { font-weight: 700; color: var(--ink); text-decoration: underline; }
-.search .pgrid { grid-template-columns: repeat(3, 1fr); }
+.facet-find { width: 100%; border: 1px solid var(--line-2); padding: 6px 9px; font: inherit; font-size: 13px; margin-bottom: 8px; }
+/* รายการแบรนด์ยาวได้เกือบร้อย — จำกัดความสูงแล้วเลื่อนในกล่อง ไม่ให้ดันตัวกรองอื่นตกจอ */
+.checks { max-height: 300px; overflow-y: auto; }
+.checks label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
+.checks input { accent-color: var(--ink); flex: 0 0 auto; }
+.checks .grow { overflow-wrap: anywhere; }
+
+/* แถวขายดี / มาใหม่ — 4 การ์ดต่อจอ เลื่อนดูได้ครบ 10 ตัว ความกว้างช่องหารจากกรอบจริง
+   (1fr ไม่ทำงานในกล่องที่เลื่อนแนวนอน มันจะยุบเหลือ min-content) */
+.top-row { margin-bottom: 26px; }
+.top-row .sec-head { margin-bottom: 12px; }
+/* ลูกศรกลมลอยทับขอบแถว โผล่เฉพาะข้างที่ยังเลื่อนต่อได้ */
+.prow-wrap { position: relative; }
+.prow-arrow { position: absolute; top: 36%; transform: translateY(-50%); z-index: 3; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--ink); box-shadow: 0 2px 10px rgba(0, 0, 0, .16); cursor: pointer; }
+.prow-arrow:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
+.prow-arrow.left { left: -16px; }
+.prow-arrow.right { right: -16px; }
+.prow { grid-auto-flow: column; grid-template-columns: none; grid-auto-columns: calc((100% - 4 * 16px) / 5); overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+.prow::-webkit-scrollbar { display: none; }
+.prow > * { scroll-snap-align: start; }
+
+.scrim { display: none; }
 
 /* ===== product page ===== */
 .product-grid { display: grid; grid-template-columns: minmax(0, 560px) 1fr; gap: 40px; }
@@ -108,10 +204,56 @@
 .product-price .was { font-size: 16px; color: var(--ink-4); text-decoration: line-through; }
 .product-flags { display: flex; flex-direction: column; gap: 8px; margin: 18px 0; font-size: 13.5px; }
 .product-flags li { display: flex; align-items: center; gap: 8px; }
-.product-actions { display: flex; gap: 10px; margin-top: 10px; }
+.product-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .product-actions .btn { flex: 1; }
+/* หน้าสินค้า: จำนวนอยู่บรรทัดบน · เพิ่มลงตะกร้า/ซื้อเลย ขึ้นบรรทัดใหม่คู่กัน ปุ่มจะได้กว้างเต็มที่ */
+.add-box .product-actions { display: grid; grid-template-columns: 1fr 1fr; align-items: stretch; }
+.add-box .product-actions .qty { grid-column: 1 / -1; justify-self: start; }
+.add-box .product-actions .btn { width: 100%; }
+/* หัวใจอยู่บนรูป มุมซ้ายบน ทรงเดียวกับการ์ดสินค้า จะได้เป็นที่เดียวกันทั้งเว็บ */
+.gallery-main { position: relative; }
+.gallery-wish { position: absolute; left: 12px; top: 12px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 50%; background: #fff; color: var(--ink-2); box-shadow: 0 1px 4px rgba(0, 0, 0, .14); cursor: pointer; transition: color .15s ease; }
+.gallery-wish.on { color: var(--red); }
+/* ชิปสลับหมวดของ "สินค้าที่เกี่ยวข้อง" — เตียง / ชุดเตียง / หัวเตียง อยู่กลุ่มเดียวกัน */
+.chips-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.chip-btn { border: 1px solid var(--line-2); border-radius: 999px; background: #fff; padding: 6px 14px; font: inherit; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.chip-btn:hover { border-color: var(--ink-3); }
+.chip-btn.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+.sec-gap { margin-top: 56px; }
+.center { display: flex; justify-content: center; }
 .product-desc { margin-top: 40px; max-width: 760px; }
 .product-desc h3 { font-size: 18px; margin-bottom: 8px; }
+/* บรรทัดรหัส/แบรนด์/ขนาด ใต้ชื่อสินค้า — ข้อมูลที่ลูกค้าใช้อ้างอิงตอนโทรถามหรือไปดูที่สาขา */
+.product-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.product-meta .sep { color: var(--line-2); }
+/* สีอื่นของรุ่นเดียวกันเป็นคนละ MATNR — ปุ่มสีจึงเป็นลิงก์ ไม่ใช่ radio */
+.colors { margin-top: 16px; }
+.color-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.color-opt { display: block; width: 76px; }
+.color-opt .ph, .color-opt .img-frame { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.color-opt.on .ph, .color-opt.on .img-frame { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.color-opt small { display: block; margin-top: 4px; font-size: 11.5px; color: var(--ink-3); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thumbs a.on .ph, .thumbs a.on .img-frame { outline: 2px solid var(--ink); outline-offset: -2px; }
+/* หัวข้อพับได้ — ชุดเดียวกับหน้าเว็บจริง: ข้อมูลสินค้า / คุณสมบัติ / การรับประกัน / การจัดส่ง */
+.product-accs { margin-top: 24px; border-top: 1px solid var(--line); }
+.acc { border-bottom: 1px solid var(--line); }
+.acc > summary { display: flex; align-items: center; gap: 8px; padding: 14px 2px; font-weight: 600; cursor: pointer; list-style: none; }
+.acc > summary::-webkit-details-marker { display: none; }
+.acc[open] > summary .ms { transform: rotate(180deg); }
+.acc-body { padding: 0 2px 16px; font-size: 13.5px; color: var(--ink-2); line-height: 1.7; }
+.specs { display: flex; flex-direction: column; }
+.spec-row { display: flex; gap: 12px; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.spec-row:last-child { border-bottom: none; }
+.spec-row > .muted { flex: 0 0 150px; }
+.bullets { display: flex; flex-direction: column; gap: 6px; }
+.bullets li { padding-left: 16px; position: relative; }
+.bullets li::before { content: "•"; position: absolute; left: 2px; color: var(--ink-4); }
+/* สถานะสต็อกของลูกค้า — บรรทัดเดียวใต้ราคา ไม่มีปุ่มให้กดเช็คเอง */
+.stock-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13.5px; color: var(--ink-2); }
+.stock-line span { display: inline-flex; align-items: center; gap: 4px; }
+.stock-line .sep { color: var(--line-2); }
+.stock-line .green { color: var(--green); }
+.stock-line .amber { color: var(--amber); }
 .stock-box { margin-top: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: #fff; }
 .stock-box.stale { background: var(--amber-bg); border-color: #e8d9a8; }
 .stock-rows { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
@@ -120,40 +262,87 @@
 .stock-rows li small { display: block; color: var(--ink-3); font-size: 12px; }
 .stock-summary { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; font-size: 13.5px; }
 
-/* ===== responsive ===== */
+/* ===== responsive =====
+   คอนเทนเนอร์กว้างเต็มจอ ถ้าคงจำนวนคอลัมน์ไว้เท่าเดิม การ์ดจะยืดใหญ่ผิดสัดส่วนบนจอใหญ่
+   เลยเพิ่ม/ลดจำนวนคอลัมน์ตามความกว้างแทน: มือถือ 2 · แท็บเล็ต 3 · โน้ตบุ๊ก 4 · เดสก์ท็อป 5-6 */
+@media (min-width: 1440px) {
+  .pgrid { grid-template-columns: repeat(5, 1fr); }
+  /* แถวเลื่อนใช้ grid-auto-columns ต้องล้าง template ทุกครั้งที่ .pgrid ตั้งใหม่ ไม่งั้นการ์ดแบนติดกัน */
+  .prow { grid-template-columns: none; }
+}
+@media (min-width: 1800px) {
+  .pgrid { grid-template-columns: repeat(6, 1fr); }
+  .prow { grid-template-columns: none; grid-auto-columns: calc((100% - 5 * 16px) / 6); }
+}
+@media (max-width: 1279px) {
+  .prow { grid-template-columns: none; grid-auto-columns: calc((100% - 3 * 16px) / 4); }
+}
 @media (max-width: 1023px) {
-  .hero-row { grid-template-columns: 1fr; }
   .hero { aspect-ratio: 5 / 4; }
-  .services { grid-template-columns: repeat(3, 1fr); }
+  /* พอวางซ้อนกันแล้วไม่มีช่องขวาให้ยืดตาม ต้องกำหนดสัดส่วนให้ cover เอง (ไฟล์ -MB คือ 1446×950) */
+  .hero-img { aspect-ratio: 1446 / 950; }
+  .hero-row { grid-template-columns: 1fr; }
   .cat-tiles { grid-template-columns: repeat(3, 1fr); grid-template-rows: auto; }
-  .pgrid, .search .pgrid { grid-template-columns: repeat(3, 1fr); }
+  .cat-scroll { grid-template-columns: none; grid-template-rows: repeat(2, auto); grid-auto-columns: calc((100% - 2 * 16px) / 3); }
+  .pgrid { grid-template-columns: repeat(3, 1fr); }
+  .prow { grid-template-columns: none; grid-auto-columns: calc((100% - 2 * 16px) / 3); }
+  .prow-arrow.left { left: 4px; }
+  .prow-arrow.right { right: 4px; }
   .room-row { grid-template-columns: 120px 1fr; }
   .room-row .arrow { display: none; }
   .room-tiles { grid-template-columns: repeat(2, 1fr); }
   .brand-tiles { grid-template-columns: repeat(3, 1fr); }
-  .search-body { grid-template-columns: 1fr; }
-  .facets { flex-direction: row; flex-wrap: wrap; }
+  .brand-scroll { grid-template-columns: none; grid-auto-columns: calc((100% - 2 * 16px) / 3); }
   .product-grid { grid-template-columns: 1fr; }
+
+  /* จอเล็ก: ตัวกรองไม่มีที่ยืนข้างผลลัพธ์ ย้ายไปเป็นลิ้นชักเลื่อนออกมาจากซ้าย */
+  .search-body { grid-template-columns: 1fr; }
+  .filter-btn { display: inline-flex; }
+  .facets { position: fixed; z-index: 60; left: 0; top: 0; bottom: 0; width: min(86vw, 340px); background: #fff; padding: 16px; overflow-y: auto; transform: translateX(-100%); transition: transform .25s ease; box-shadow: var(--shadow); }
+  .facets.open { transform: none; }
+  .facets-head { display: flex; }
+  .scrim { display: block; position: fixed; z-index: 55; inset: 0; background: rgba(0, 0, 0, .35); }
+}
+/* แท็บเล็ตแนวตั้งเล็ก/มือถือแนวนอน — 3 คอลัมน์เริ่มแคบจนชื่อสินค้าตัดสองบรรทัดทุกใบ */
+@media (max-width: 767px) {
+  .pgrid { grid-template-columns: repeat(2, 1fr); }
+  /* โมเสก inspiration: มือถือเหลือ 2 คอลัมน์ ใบกว้างกินเต็มแถว */
+  .insp-grid { grid-template-columns: repeat(2, 1fr); }
+  .insp-cell { grid-column: span 1; }
+  .insp-cell.wide { grid-column: span 2; }
+  .prow { grid-template-columns: none; grid-auto-columns: calc((100% - 2 * 16px) / 3); }
 }
 @media (max-width: 599px) {
   .sec-head h2 { font-size: 18px; }
   .hero { aspect-ratio: 1 / 1; }
+  /* พอวางซ้อนกันแล้วไม่มีช่องขวาให้ยืดตาม ต้องกำหนดสัดส่วนให้ cover เอง (ไฟล์ -MB คือ 1446×950) */
+  .hero-img { aspect-ratio: 1446 / 950; }
   .hero-copy h2 { font-size: 20px; }
   .hero-foot { flex-wrap: wrap; }
   .promo-grid { grid-template-columns: 1fr 1fr; }
   .promo h3 { font-size: 15px; }
-  .services { grid-template-columns: repeat(2, 1fr); }
   .cat-tiles { grid-template-columns: 1fr 1fr; }
+  .cat-scroll { grid-template-columns: none; grid-auto-columns: calc((100% - 16px) / 2); }
   .cat-tile { padding: 10px; gap: 10px; }
-  .cat-ico { width: 64px; height: 64px; }
+  .cat-ico, .cat-img { width: 64px; height: 64px; }
   .cat-lbl { font-size: 13px; }
-  .pgrid, .search .pgrid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .pgrid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  /* จอมือถือ: โชว์ 2 ใบเต็ม เผยขอบใบที่ 3 ให้รู้ว่าปัดต่อได้ */
+  .prow { grid-template-columns: none; grid-auto-columns: calc((100% - 20px) / 2.3); }
+  .prow-arrow { display: none; }
+  .search-head h1 { font-size: 19px; }
+  .sortbox { margin-left: 0; }
+  .sortbox .muted { display: none; }
   .room-row { grid-template-columns: 1fr; }
   .room-row-lbl { border-right: none; }
   .room-item { flex-basis: 120px; }
   .room-tiles { grid-template-columns: 1fr; }
   .brand-tiles { grid-template-columns: repeat(2, 1fr); }
-  .product-actions { flex-direction: column; }
+  .brand-scroll { grid-template-columns: none; grid-auto-columns: calc((100% - 16px) / 2); }
+  /* มือถือ: แถวบน = จำนวน + เพิ่มลงตะกร้า · แถวล่าง = ซื้อเลย เต็มความกว้าง
+     (ไม่ใช้ flex-direction: column เพราะปุ่มจะหดตามข้อความ เหลือนิดเดียวกลางจอ) */
+  /* มือถือ: จำนวนบรรทัดบน · ปุ่มบรรทัดล่างเรียงเต็มความกว้างทีละปุ่ม */
+  .add-box .product-actions { grid-template-columns: 1fr; }
 }
 
 /* ---------- บัญชีของฉัน: ประวัติ · รายการโปรด · ดูล่าสุด (STEP 10) ---------- */

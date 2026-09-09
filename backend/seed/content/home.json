@@ -12,14 +12,6 @@
     {"tag": "SERVICE", "title": "ออกแบบฟรี ทุกสาขา", "note": "จองคิวออนไลน์", "href": "/search?room=living"},
     {"tag": "DEAL", "title": "ลดเพิ่มสูงสุด 4,000.-", "note": "เมื่อช้อปตามเงื่อนไข", "href": "/search?tag=deal"}
   ],
-  "services": [
-    {"icon": "design_services", "label": "ออกแบบห้องฟรี"},
-    {"icon": "credit_card", "label": "ผ่อน 0% 10 เดือน"},
-    {"icon": "local_shipping", "label": "ส่ง–ติดตั้งทั่วไทย"},
-    {"icon": "verified_user", "label": "รับประกันสินค้า"},
-    {"icon": "storefront", "label": "นัดชมสาขา"},
-    {"icon": "card_membership", "label": "SB Member"}
-  ],
   "category_tiles": [
     {"label": "ชุดห้องนอน", "category": "bedroom-set"}, {"label": "เตียงนอน", "category": "bed"}, {"label": "โซฟา", "category": "sofa"}, {"label": "ตู้เสื้อผ้า", "category": "wardrobe"},
     {"label": "ที่นอนและเครื่องนอน", "category": "mattress"}, {"label": "ห้องนั่งเล่น", "category": "living"}, {"label": "ห้องอาหาร", "category": "dining"}, {"label": "โฮมออฟฟิศ", "category": "office"}

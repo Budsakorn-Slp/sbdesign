@@ -34,21 +34,38 @@ class Material(Base):
     matnr: Mapped[str] = mapped_column(String(18), primary_key=True)
     sku: Mapped[str] = mapped_column(String(40), index=True, nullable=False)
     barcode: Mapped[str | None] = mapped_column(String(20), index=True, nullable=True)
-    name_th: Mapped[str] = mapped_column(String(200), nullable=False)
+    name_th: Mapped[str] = mapped_column(String(200), nullable=False)  # ชื่อที่ลูกค้าเห็น (display_name จากฐานเว็บ)
     name_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # ชื่อดิบจาก SAP "SELECTOR/กระจกแขวนM080/เวงเก้" — ลูกค้าไม่เห็น แต่เซลล์ค้นด้วยรหัสรุ่นแบบนี้
+    name_raw: Mapped[str | None] = mapped_column(String(255), nullable=True)
     variant: Mapped[str | None] = mapped_column(String(200), nullable=True)  # "ผ้ากันเปื้อน, สีเทาอ่อน"
     spec: Mapped[str | None] = mapped_column(String(200), nullable=True)  # "กว้าง 210 ซม."
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     category_id: Mapped[str | None] = mapped_column(ForeignKey("categories.id"), index=True, nullable=True)
     brand_id: Mapped[str | None] = mapped_column(ForeignKey("brands.id"), nullable=True)
     room: Mapped[str | None] = mapped_column(String(40), index=True, nullable=True)
+    color: Mapped[str | None] = mapped_column(String(100), nullable=True)  # "สีไม้อ่อน"
+    style: Mapped[str | None] = mapped_column(String(100), nullable=True)  # "โมเดิร์น"
     image_url: Mapped[str | None] = mapped_column(String(400), nullable=True)
+    # ข้อมูลครบพอโชว์ลูกค้าไหม — ฐานเว็บตัดสินมาแล้วตอน rebuild (มีรูป+ราคา+ชื่อที่อ่านรู้เรื่อง)
+    # ลูกค้าเห็นเฉพาะ True · เซลล์/แอดมินเห็นทั้งหมด เพราะต้องค้นเช็คสต็อกของที่ยังไม่ขึ้นเว็บ
+    # default=True เพราะของที่ใส่มือ (seed/เทส) คือของที่ตั้งใจให้เห็นอยู่แล้ว
+    # ตัวที่มาจาก ETL ไม่พึ่ง default — import_catalog เซ็ตค่าตาม is_public ของฐานเว็บทุกแถว
+    is_public: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     requires_install: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_takeaway_ok: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_new: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     volume_m3: Mapped[Decimal | None] = mapped_column(Numeric(8, 3), nullable=True)
     weight_kg: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
     tags: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # สองตัวนี้มาจาก sync_product_signals (Magento) ไม่ใช่ SAP — ใช้จัดอันดับ "มาใหม่" / "ขายดี"
+    created_at: Mapped[datetime | None] = mapped_column(DateTime, index=True, nullable=True)  # วันที่ขึ้นเว็บ
+    sold_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)  # ยอดขายในช่วงที่ ETL นับ
+    # ชั้นสินค้า MAABC ของ SAP (A B C E G M N P R T V Z) — ฝ่ายสินค้าเป็นคนจัด
+    abc_class: Mapped[str | None] = mapped_column(String(4), nullable=True)
+    # ขายดีจริงตามที่บริษัทจัดชั้น = MAABC 'Z' · เชื่อถือได้กว่า sold_qty ซึ่งนับเฉพาะยอดบนเว็บ
+    # (วัดกับ sb_product_signals: ชั้น Z เฉลี่ย 3.5 ชิ้น/ตัว · ชั้นอื่นไม่เกิน 1.1)
+    is_bestseller: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     category: Mapped[Category | None] = relationship()

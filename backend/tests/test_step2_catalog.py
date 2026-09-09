@@ -84,5 +84,9 @@ def test_unknown_material_404(client):
 def test_home_payload(client):
     body = client.get("/home").json()
     assert len(body["hero_slides"]) == 5 and len(body["promo_cards"]) == 4
-    assert body["categories"][0]["id"] == "bedroom" and len(body["categories"][0]["children"]) == 6
+    # ต้นไม้หมวดตัดกิ่งที่ยังไม่มีสินค้าให้ลูกค้าเห็นออก — seed มีหมวดลูกใต้ ห้องนอน 6 หมวด
+    # แต่มีของจริงแค่ 3 (เตียงนอน/ตู้เสื้อผ้า/โต๊ะเครื่องแป้ง) อีก 3 จึงไม่โผล่ในตัวกรอง
+    kids = body["categories"][0]["children"]
+    assert body["categories"][0]["id"] == "bedroom"
+    assert [c["id"] for c in kids] == ["bed", "wardrobe", "dresser"]
     assert len(body["new_products"]) >= 3 and len(body["deals"]) >= 3

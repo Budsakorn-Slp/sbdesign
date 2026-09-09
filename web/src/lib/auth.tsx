@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { apiGet, apiPost, loadAuth, saveAuth } from "./api";
 import type { Role, TokenPair, User } from "./types";
+import { resetWishlist } from "./wishlist";
 
 type AuthState = {
   user: User | null;
@@ -42,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshMe]);
 
   const accept = useCallback((t: TokenPair) => {
+    resetWishlist(); // สลับผู้ใช้ ต้องล้างหัวใจของคนก่อน แล้วให้โหลดใหม่ตามบัญชีนี้
     saveAuth({ access_token: t.access_token, refresh_token: t.refresh_token });
     setUser(t.user);
     setLoginOpen(false);
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         saveAuth(null);
         setUser(null);
+        resetWishlist();
         window.dispatchEvent(new CustomEvent("sb:auth-changed"));
       },
       refreshMe,
