@@ -101,5 +101,11 @@ class SelectIn(BaseModel):
     selected: bool = True
 
 
+class ShipToIn(BaseModel):
+    """ปลายทางคร่าวๆ ของตะกร้า — ว่าง = ยังไม่เลือก (หน้าตะกร้าจะไม่โชว์ค่าส่ง)"""
+
+    postcode: str | None = None
+
+
 class MergeIn(BaseModel):
     source_cart_id: str

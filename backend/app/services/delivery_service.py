@@ -186,6 +186,10 @@ def shipping_summary(db: Session, cart: Cart, net_total: Decimal | None = None) 
     needs_ship = any(it.supply_mode in ("ship", "install") for it in sel)
     install = Decimal(cart.install_fee or 0) if any(it.supply_mode == "install" or it.requires_install for it in sel) else Decimal(0)
     base = {"install_fee": install, "quoted": cart.delivery_quoted_at is not None, "zone": cart.ship_zone, "postcode": cart.ship_postcode}
+    if needs_ship and not cart.ship_postcode:
+        # ไม่รู้ปลายทางก็คิดค่าส่งไม่ได้จริง — ตอบ 0 พร้อมเหตุผล ดีกว่าเดาเขตปริยายแล้วโชว์เลขผิด
+        return {**base, "shipping_fee": Decimal(0), "ship_source": "no_postcode", "ship_needs_review": False,
+                "ship_warnings": ["ยังไม่ได้เลือกปลายทาง — ค่าส่งจะคำนวณหลังเลือกจังหวัด"], "ship_trace": []}
     if shipping_engine.has_rules(db):
         q = shipping_engine.quote(db, cart, cart.ship_postcode, net_total if net_total is not None else Decimal(cart_service.totals(cart)["subtotal"]))
         return {**base, "shipping_fee": q.fee, "ship_source": q.source, "ship_needs_review": q.needs_review, "ship_warnings": q.warnings, "ship_trace": q.trace}

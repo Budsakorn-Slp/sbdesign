@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
@@ -13,8 +13,8 @@ import type { CartItem } from "../lib/types";
 
 export default function CartPage() {
   const auth = useAuth();
-  const { cart, loading, error, update, remove, ack, select, refresh, setCart } = useCart();
-  const { plants } = useContent();
+  const { cart, loading, error, update, remove, ack, select, setShipTo, refresh, setCart } = useCart();
+  const { plants, shipTo } = useContent();
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -34,6 +34,16 @@ export default function CartPage() {
     const t = setTimeout(() => setLive(null), 6000);
     return () => clearTimeout(t);
   }, [live]);
+
+  // ค่าส่งจริงคิดจากปลายทาง — ส่งรหัสไปรษณีย์ที่เลือกไว้บน nav (หรือที่อยู่หลักของสมาชิก) ให้หลังบ้าน
+  const wantPostcode = shipTo?.postcode || auth.user?.default_postcode || null;
+  const sentPostcode = useRef<string | null>(null);
+  useEffect(() => {
+    if (!cart || !wantPostcode) return;
+    if (cart.delivery?.postcode === wantPostcode || sentPostcode.current === wantPostcode) return;
+    sentPostcode.current = wantPostcode; // จำไว้กันยิงซ้ำถ้าหลังบ้านไม่รับรหัสนี้
+    setShipTo(wantPostcode).catch(() => {});
+  }, [cart, wantPostcode, setShipTo]);
 
   if (auth.role === "sales" || auth.role === "manager") {
     return (
@@ -77,6 +87,13 @@ export default function CartPage() {
       await apiPost("/cart/checkout-check");
       nav("/checkout");
     });
+
+  const t = cart?.totals;
+  const shipPostcode = cart?.delivery?.postcode || null;
+  const shipFee = Number(t?.shipping_fee || 0);
+  const shipDiscount = Number(t?.shipping_discount || 0);
+  const needsShip = items.some((it) => it.selected && (it.supply_mode === "ship" || it.supply_mode === "install"));
+  const shipReview = (t?.warnings || []).some((w) => w.includes("ประเมิน"));
 
   return (
     <main className="container sec cart">
@@ -188,11 +205,34 @@ export default function CartPage() {
               <Icon name="local_offer" size={18} />
               {cart?.totals && cart.totals.lines.length ? "แก้ไขโปรโมชั่น / โค้ดส่วนลด" : "เช็คโปรโมชั่น หรือกรอกโค้ดส่วนลด"}
             </button>
-            <div className="sum-row"><span>ราคาค่าจัดส่ง</span><span className="muted">เริ่มต้น 350 บาท</span></div>
+            {/* ค่าส่งจริงตามเขตของปลายทาง — ยังไม่เลือกจังหวัดก็ยังคิดไม่ได้ อย่าโชว์เลขมั่ว */}
+            <div className="sum-row">
+              <span>
+                ราคาค่าจัดส่ง
+                {shipPostcode && <small className="muted"> {shipTo?.name_th || ""} {shipPostcode}</small>}
+              </span>
+              {!needsShip ? (
+                <span className="muted">ไม่มีรายการที่ต้องจัดส่ง</span>
+              ) : !shipPostcode ? (
+                <span className="muted">เลือกจังหวัดจัดส่งด้านบนเพื่อดูค่าส่ง</span>
+              ) : shipReview ? (
+                <span className="muted">รอเจ้าหน้าที่ประเมิน</span>
+              ) : shipFee > 0 ? (
+                <b>{bahtWord(t?.shipping_fee || 0)}</b>
+              ) : (
+                <span className="green">จัดส่งฟรี</span>
+              )}
+            </div>
+            {shipDiscount > 0 && (
+              <div className="sum-row"><span>ส่วนลดค่าจัดส่ง</span><span className="green">−{bahtWord(t?.shipping_discount || 0)}</span></div>
+            )}
+            {Number(t?.install_fee || 0) > 0 && (
+              <div className="sum-row"><span>ค่าติดตั้ง</span><b>{bahtWord(t?.install_fee || 0)}</b></div>
+            )}
             <div className="sum-row"><span className="muted"><i>หรือ</i> <u>ใช้บริการรับที่สาขา</u></span><span className="muted">ไม่มีค่าบริการ</span></div>
             <div className="sum-total">
-              <span>ยอดรวม<small>ไม่รวมค่าประกอบสินค้า</small></span>
-              <b>{bahtWord(cart?.totals?.net_total ?? cart?.subtotal ?? 0)}</b>
+              <span>ยอดรวม<small>{!needsShip || (shipPostcode && !shipReview) ? "รวมค่าจัดส่งแล้ว · ไม่รวมค่าประกอบสินค้า" : "ยังไม่รวมค่าจัดส่ง"}</small></span>
+              <b>{bahtWord(t?.grand_total ?? t?.net_total ?? cart?.subtotal ?? 0)}</b>
             </div>
             <p className="tiny muted">เมื่อคลิก "ชำระเงิน" แสดงว่าคุณยอมรับ <u>นโยบายความเป็นส่วนตัว</u></p>
             {canPay ? (

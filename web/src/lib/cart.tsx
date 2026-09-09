@@ -16,6 +16,7 @@ type CartState = {
   remove: (itemId: string) => Promise<Cart>;
   ack: (itemId: string) => Promise<Cart>;
   select: (itemIds: string[] | null, selected: boolean) => Promise<Cart>;
+  setShipTo: (postcode: string | null) => Promise<Cart>;
   setCart: (c: Cart | null) => void;
 };
 
@@ -74,6 +75,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
       ack: async (itemId) => {
         const c = await api<Cart>("POST", `/cart/items/${itemId}/ack`, {});
+        setCart(c);
+        return c;
+      },
+      // ปลายทางคร่าวๆ (จังหวัดที่เลือกบน nav) — ส่งไปให้หลังบ้านคิดค่าส่งจริง
+      setShipTo: async (postcode) => {
+        const c = await api<Cart>("POST", "/cart/shipto", { postcode });
         setCart(c);
         return c;
       },

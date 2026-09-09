@@ -313,6 +313,32 @@ def totals(cart: Cart) -> dict:
     }
 
 
+def set_shipto(db: Session, cart: Cart, actor: User | None, postcode: str | None) -> Cart:
+    """ปลายทางคร่าวๆ ของตะกร้า — ไว้คิดค่าส่งจริงตั้งแต่หน้าตะกร้า ยังไม่ใช่ที่อยู่เต็ม
+
+    ค่าส่งขึ้นกับเขต ซึ่งรู้ได้จากรหัสไปรษณีย์อย่างเดียว ถ้าไม่มีรหัสจะคิดไม่ได้จริง
+    ได้แต่เดา — หน้าตะกร้าเลยต้องบอกให้เลือกจังหวัดก่อน ไม่ใช่โชว์เลขมั่วๆ ไว้
+    """
+    pc = (postcode or "").strip()
+    if pc and (len(pc) != 5 or not pc.isdigit()):
+        raise HTTPException(status_code=422, detail="รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก")
+    new = pc or None
+    if cart.ship_postcode == new:
+        return cart
+    cart.ship_postcode = new
+    # เปลี่ยนปลายทางแล้ว เขต/คิวที่ quote ไว้เดิมใช้ไม่ได้ ต้องให้ quote ใหม่ตอน checkout
+    cart.ship_zone = None
+    cart.delivery_quoted_at = None
+    cart.updated_at = utcnow()
+    audit_service.log(db, actor, "cart.shipto", "cart", cart.id, {"postcode": new})
+    db.commit()
+    if cart.slot_id:
+        from app.services import delivery_service  # import ตรงนี้กัน circular import
+
+        delivery_service.release_hold(db, cart, actor)
+    return cart
+
+
 def set_selected(db: Session, cart: Cart, actor: User | None, item_ids: list[str] | None, selected: bool) -> Cart:
     """ติ๊ก/เอาติ๊กออก — item_ids = None คือทำทั้งตะกร้า"""
     targets = cart.items if item_ids is None else [it for it in cart.items if it.id in set(item_ids)]

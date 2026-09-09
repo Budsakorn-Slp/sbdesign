@@ -5,7 +5,7 @@ from app.api.deps import get_current_user_optional
 from app.db.session import get_db
 from app.models.cart import Cart, CartItem
 from app.models.user import User
-from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, SelectIn, UpdateItemIn
+from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, SelectIn, ShipToIn, UpdateItemIn
 from app.services import cart_service
 
 router = APIRouter(tags=["cart"])
@@ -107,6 +107,14 @@ def select_items(body: SelectIn, ctx: CartCtx = Depends()):
     """ติ๊กเลือกสินค้าที่จะคิดเงิน — ไม่ส่ง item_ids = ทั้งตะกร้า"""
     cart = ctx.current()
     cart_service.set_selected(ctx.db, cart, ctx.user, body.item_ids, body.selected)
+    return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
+
+
+@router.post("/cart/shipto", response_model=CartOut)
+def set_shipto(body: ShipToIn, ctx: CartCtx = Depends()):
+    """บอกปลายทางคร่าวๆ (รหัสไปรษณีย์ที่เลือกบน nav) เพื่อให้ค่าส่งในตะกร้าเป็นเลขจริง"""
+    cart = ctx.current()
+    cart_service.set_shipto(ctx.db, cart, ctx.user, body.postcode)
     return cart_out(cart_service.load_cart(ctx.db, cart.id), ctx.db)
 
 

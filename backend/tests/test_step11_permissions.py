@@ -53,6 +53,7 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("DELETE", f"/cart/items/{BAD}", ALL, None),
     ("POST", f"/cart/items/{BAD}/ack", ALL, None),
     ("POST", "/cart/select", ALL, {}),
+    ("POST", "/cart/shipto", ALL, {"postcode": 123}),  # ผิด type → 422 ไม่แตะข้อมูลจริง
     ("POST", f"/carts/{BAD}/merge", ALL, None),
     ("POST", "/cart/checkout-check", CUST, None),  # guest ชำระเงินไม่ได้ · เซลล์ห้ามรับเงินเอง
     ("POST", "/promotions/evaluate", ALL, {}),
