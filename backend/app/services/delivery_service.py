@@ -13,7 +13,7 @@ from app.models.cart import Cart
 from app.models.common import utcnow
 from app.models.delivery import DeliverySlot, DeliveryZone, SlotHold
 from app.models.user import User
-from app.services import audit_service, cart_service, promo_service
+from app.services import audit_service, cart_service, promo_service, shipping_engine
 
 HOLD_MINUTES = 15
 
@@ -87,21 +87,27 @@ def quote(db: Session, cart: Cart, actor: User | None, postcode: str, address: s
     cart.ship_zone = q.zone
     if address is not None:
         cart.ship_address = address
-    cart.shipping_fee = q.base_fee
     cart.install_fee = q.install_fee
     cart.delivery_quoted_at = utcnow()
+    # ค่าส่งมาจากตารางของเราถ้ามี — SAP ยังเป็นเจ้าของเขต/คิวจัดส่งเหมือนเดิม
+    ship = shipping_engine.quote(db, cart, pc, promo_service.compute_totals(db, cart).net_total) if shipping_engine.has_rules(db) else None
+    base_fee = ship.fee if ship else q.base_fee
+    cart.shipping_fee = base_fee
     if changed_zone and cart.slot_id:
         release_hold(db, cart, actor)  # โซนเปลี่ยน คิวเดิมใช้ไม่ได้
-    audit_service.log(db, actor, "delivery.quote", "cart", cart.id, {"postcode": pc, "zone": q.zone, "base_fee": str(q.base_fee), "install_fee": str(q.install_fee)})
+    audit_service.log(db, actor, "delivery.quote", "cart", cart.id, {"postcode": pc, "zone": q.zone, "base_fee": str(base_fee), "install_fee": str(q.install_fee), "ship_source": ship.source if ship else "sap_zone"})
     db.commit()
     return {
-        "cart_id": cart.id, "postcode": pc, "zone": q.zone, "zone_name": q.zone_name, "base_fee": q.base_fee, "install_fee": q.install_fee, "total_fee": q.base_fee + q.install_fee,
+        "cart_id": cart.id, "postcode": pc, "zone": q.zone, "zone_name": q.zone_name, "base_fee": base_fee, "install_fee": q.install_fee, "total_fee": base_fee + q.install_fee,
         "groups": groups_of(db, cart, q.groups), "slots": slots_for_zone(db, cart, q.zone), "held_slot_id": cart.slot_id,
+        "ship_area": ship.area_name if ship else None, "ship_source": ship.source if ship else "sap_zone",
+        "ship_weight_kg": ship.weight_kg if ship else None, "ship_needs_review": bool(ship and ship.needs_review),
+        "ship_warnings": ship.warnings if ship else [], "ship_trace": ship.trace if ship else [],
     }
 
 
 def groups_of(db: Session, cart: Cart, groups: dict[str, list[str]]) -> list[dict]:
-    names = {it.matnr: it for it in cart.items}
+    names = {it.matnr: it for it in cart.selected_items}
     out = []
     labels = {"takeaway": "ยกกลับวันนี้", "ship": "จัดส่งจากคลัง", "install": "จัดส่ง + ติดตั้ง"}
     for key in ("takeaway", "ship", "install"):
@@ -169,12 +175,22 @@ def slot_of_cart(db: Session, cart: Cart) -> DeliverySlot | None:
     return db.get(DeliverySlot, cart.slot_id) if cart.slot_id else None
 
 
-def shipping_summary(db: Session, cart: Cart) -> dict:
-    """ใช้ใน compute_totals: ค่าส่งที่ quote ไว้ (0 ถ้ายังไม่ quote หรือทั้งตะกร้ายกกลับ)"""
-    needs_ship = any(it.supply_mode in ("ship", "install") for it in cart.items)
+def shipping_summary(db: Session, cart: Cart, net_total: Decimal | None = None) -> dict:
+    """ใช้ใน compute_totals: ค่าส่งของตะกร้านี้ ณ ตอนนี้
+
+    ถ้ามีตารางค่าส่งของเรา (ETL จาก Magento แล้ว) ให้คิดสดทุกครั้ง เพราะกฎขึ้นกับยอดสุทธิ
+    หลังหักส่วนลด — เก็บค่าที่ quote ไว้แล้วใช้ซ้ำจะเพี้ยนทันทีที่ลูกค้าเพิ่ม/ลดของหรือใส่โค้ด
+    ยังไม่มีตาราง (dev/mock) ค่อยถอยไปใช้ค่าที่ SAP quote ไว้บนตะกร้าตามเดิม
+    """
+    sel = cart.selected_items
+    needs_ship = any(it.supply_mode in ("ship", "install") for it in sel)
+    install = Decimal(cart.install_fee or 0) if any(it.supply_mode == "install" or it.requires_install for it in sel) else Decimal(0)
+    base = {"install_fee": install, "quoted": cart.delivery_quoted_at is not None, "zone": cart.ship_zone, "postcode": cart.ship_postcode}
+    if shipping_engine.has_rules(db):
+        q = shipping_engine.quote(db, cart, cart.ship_postcode, net_total if net_total is not None else Decimal(cart_service.totals(cart)["subtotal"]))
+        return {**base, "shipping_fee": q.fee, "ship_source": q.source, "ship_needs_review": q.needs_review, "ship_warnings": q.warnings, "ship_trace": q.trace}
     fee = Decimal(cart.shipping_fee or 0) if needs_ship else Decimal(0)
-    install = Decimal(cart.install_fee or 0) if any(it.supply_mode == "install" or it.requires_install for it in cart.items) else Decimal(0)
-    return {"shipping_fee": fee, "install_fee": install, "quoted": cart.delivery_quoted_at is not None, "zone": cart.ship_zone, "postcode": cart.ship_postcode}
+    return {**base, "shipping_fee": fee, "ship_source": "sap_zone", "ship_needs_review": False, "ship_warnings": [], "ship_trace": []}
 
 
 def sync_zones(db: Session, zones_json: dict) -> int:

@@ -86,13 +86,27 @@ export default function DeliveryPanel({ cart, defaultPostcode, defaultAddress, o
                   <b>{g.label}{g.mode === "takeaway" && g.items[0]?.plant_code ? ` · ${plantName(g.items[0].plant_code)}` : g.mode !== "takeaway" ? " · คลังบางพลี" : ""}</b>
                   <div className="small muted">{g.items.map((it) => `${it.name} ×${it.qty}`).join(" · ")}</div>
                 </div>
-                <b className={g.fee_note ? "green" : ""}>{g.fee_note || (g.mode === "install" ? `ค่าติดตั้ง ${bahtWord(quote.install_fee)}` : `ค่าส่ง ${bahtWord(quote.base_fee)}`)}</b>
+                <b className={g.fee_note ? "green" : ""}>{g.fee_note || (g.mode === "install" ? `ค่าติดตั้ง ${bahtWord(quote.install_fee)}` : quote.ship_needs_review ? "ค่าส่งรอประเมิน" : `ค่าส่ง ${bahtWord(quote.base_fee)}`)}</b>
               </div>
             ))}
             <div className="row between small">
               <span><Icon name="place" size={16} /> {address || "ไม่ระบุที่อยู่"} {quote.postcode} · เขตส่ง {quote.zone} ({quote.zone_name})</span>
               <b>รวมค่าส่ง+ติดตั้ง {bahtWord(quote.total_fee)}</b>
             </div>
+            {/* คิดค่าส่งจากตารางของเราเอง — โชว์ที่มาให้เซลล์ตรวจได้ว่าเข้ากฎไหน น้ำหนักเท่าไร */}
+            {quote.ship_source !== "sap_zone" && quote.ship_source !== "no_ship" && !quote.ship_needs_review && (
+              <div className="small muted">
+                คิดจาก{quote.ship_area ? ` ${quote.ship_area}` : ""}
+                {Number(quote.ship_weight_kg) > 0 ? ` · น้ำหนักรวม ${Number(quote.ship_weight_kg).toLocaleString("th-TH")} กก.` : ""}
+                {" · "}{quote.ship_trace.find((s) => s.matched)?.name || quote.ship_source}
+              </div>
+            )}
+            {quote.ship_needs_review && (
+              <div className="note warn small">
+                <Icon name="warning" size={16} /> ค่าส่งรายการนี้ยังคิดอัตโนมัติไม่ได้ — เจ้าหน้าที่จะแจ้งราคาก่อนยืนยันคำสั่งซื้อ
+                {quote.ship_warnings.map((w) => <div key={w} className="muted">{w}</div>)}
+              </div>
+            )}
           </div>
 
           {needsShip && (

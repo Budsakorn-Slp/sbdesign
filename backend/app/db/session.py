@@ -15,6 +15,9 @@ def _make_engine(url: str):
             dbapi_conn.execute("PRAGMA foreign_keys=ON")
 
         return engine
+    if url.startswith("mysql"):
+        # MySQL/MariaDB ตัด connection ที่ idle เกิน wait_timeout (ปกติ 8 ชม.) → รีไซเคิลก่อนถึงเวลา
+        return create_engine(url, pool_pre_ping=True, pool_recycle=3600)
     return create_engine(url, pool_pre_ping=True)
 
 

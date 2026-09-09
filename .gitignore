@@ -8,11 +8,16 @@ venv/
 backend/*.db
 backend/*.db-journal
 backend/.env
+backend/logs/
 
 # node
 node_modules/
 web/dist/
 web/.vite/
+web/*.tsbuildinfo
+
+# เครื่องมือ/แคชของ editor ประจำเครื่อง ไม่ใช่ของโปรเจกต์
+.claude/
 
 # env
 .env

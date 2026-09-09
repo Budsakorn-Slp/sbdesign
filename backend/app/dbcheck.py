@@ -28,6 +28,8 @@ def check(url: str, timeout: float = 5.0) -> bool:
     kwargs = {}
     if url.startswith("postgresql"):
         kwargs["connect_args"] = {"connect_timeout": int(timeout)}
+    elif url.startswith("mysql"):
+        kwargs["connect_args"] = {"connect_timeout": int(timeout)}
     elif url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
     t0 = time.perf_counter()
@@ -41,6 +43,13 @@ def check(url: str, timeout: float = 5.0) -> bool:
                 dbname = conn.execute(text("SELECT current_database()")).scalar()
                 print(f"OK  postgresql · db={dbname} · {ms:.0f} ms")
                 print(f"    {str(ver).split(',')[0]}")
+            elif engine.dialect.name == "mysql":
+                ver = conn.execute(text("SELECT version()")).scalar()
+                dbname = conn.execute(text("SELECT database()")).scalar()
+                charset = conn.execute(text("SELECT @@character_set_database")).scalar()
+                print(f"OK  mysql/mariadb {ver} · db={dbname} · charset={charset} · {ms:.0f} ms")
+                if charset != "utf8mb4":
+                    print("    ! charset ไม่ใช่ utf8mb4 — ภาษาไทย/อิโมจิอาจเพี้ยน")
             else:
                 ver = conn.execute(text("SELECT sqlite_version()")).scalar()
                 print(f"OK  sqlite {ver} · {ms:.0f} ms")
@@ -56,6 +65,9 @@ def check(url: str, timeout: float = 5.0) -> bool:
         print(f"FAIL ต่อไม่ได้ ({ms:.0f} ms): {type(e).__name__}: {str(e).strip().splitlines()[0]}")
         if url.startswith("postgresql"):
             print("    เช็ค: Postgres รันอยู่ไหม (docker compose up db) · host/port/user/password ใน .env ถูกไหม · firewall")
+        elif url.startswith("mysql"):
+            print("    เช็ค: ใส่รหัสผ่านแทน __PASSWORD__ ใน .env แล้วหรือยัง (อักขระพิเศษต้อง URL-encode เช่น @ = %40)")
+            print("          user 'dba' ได้รับสิทธิ์จาก host เครื่องนี้ไหม (GRANT ... TO 'dba'@'%') · firewall port 3307")
         return False
 
 

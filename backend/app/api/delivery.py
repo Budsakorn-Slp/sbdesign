@@ -52,6 +52,13 @@ class QuoteOut(BaseModel):
     groups: list[GroupOut]
     slots: list[SlotOut]
     held_slot_id: str | None = None
+    # ที่มาของค่าส่ง: ตารางของเรา (ship_rules) หรือถอยไปใช้โซนของ SAP
+    ship_area: str | None = None
+    ship_source: str = "sap_zone"
+    ship_weight_kg: Decimal | None = None
+    ship_needs_review: bool = False
+    ship_warnings: list[str] = Field(default_factory=list)
+    ship_trace: list[dict] = Field(default_factory=list)
 
 
 class HoldIn(BaseModel):
