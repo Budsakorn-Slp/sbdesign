@@ -8,7 +8,8 @@ import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
-import { baht, num, thDate, thTime } from "../lib/format";
+import { baht, num, thDate } from "../lib/format";
+import { useSales } from "../lib/sales";
 import type { MaterialCard, MaterialDetail, SearchOut, StockOut, SupplyMode } from "../lib/types";
 
 const REL_PAGE = 24;
@@ -49,11 +50,11 @@ export default function ProductPage() {
   const nav = useNavigate();
   const auth = useAuth();
   const cart = useCart();
+  const sales = useSales();
   const { plant } = useContent();
   const [item, setItem] = useState<MaterialDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [stock, setStock] = useState<StockOut | null>(null);
-  const [checking, setChecking] = useState(false);
   const [qty, setQty] = useState(1);
   const [mode, setMode] = useState<SupplyMode>("ship");
   const [adding, setAdding] = useState(false);
@@ -151,22 +152,25 @@ export default function ProductPage() {
     setToast(r.in_wishlist ? "เก็บใส่รายการโปรดแล้ว" : "เอาออกจากรายการโปรดแล้ว");
   };
 
-  const checkStock = async () => {
-    setChecking(true);
+  /** เซลล์กดจากหน้าสินค้าได้เลย ไม่ต้องกลับไปค้น MATNR ซ้ำในหน้าตะกร้าที่ดูแล */
+  const addToSalesCart = async () => {
+    if (!item) return;
+    setAdding(true);
     try {
-      const qs = plant ? `?plant=${plant.plant_code}` : "";
-      setStock(await apiGet<StockOut>(`/materials/${matnr}/stock${qs}`));
+      const id = sales.activeId || (await sales.openCart()).id;
+      const use = fit(item, mode);
+      await sales.addItem(item.matnr, qty, use, use === "takeaway" ? plant?.plant_code || null : null, id);
+      setToast(`เพิ่ม ${item.name_th} × ${qty} ลงตะกร้าที่ดูแลแล้ว — เช็คสต็อกได้ที่หน้าตะกร้า`);
     } catch (e) {
-      setError(errorMessage(e));
+      setToast("เพิ่มไม่สำเร็จ: " + errorMessage(e));
     } finally {
-      setChecking(false);
+      setAdding(false);
     }
   };
 
-  // ลูกค้าไม่ต้องกดเช็คเอง — ดึงให้เลยตอนเปิดหน้า แล้วโชว์เป็นบรรทัดสถานะใต้ราคา
-  // ปุ่ม "เช็คสต็อก" เหลือไว้ให้พนักงานเท่านั้น เพราะของเขาคือดูข้ามสาขา
+  // ดึงสต็อกให้เลยตอนเปิดหน้า แล้วโชว์เป็นบรรทัดสถานะใต้ราคา (ลูกค้าไม่ต้องกดเอง)
   useEffect(() => {
-    if (isStaff || !matnr) return;
+    if (!matnr) return;
     let alive = true;
     const qs = plant ? `?plant=${plant.plant_code}` : "";
     apiGet<StockOut>(`/materials/${matnr}/stock${qs}`)
@@ -175,7 +179,7 @@ export default function ProductPage() {
     return () => {
       alive = false;
     };
-  }, [matnr, isStaff, plant?.plant_code]);
+  }, [matnr, plant?.plant_code]);
 
   // ลงตะกร้าได้ทุกตัวเสมอ — ถ้าวิธีที่ค้างไว้ใช้กับสินค้านี้ไม่ได้ (ยังไม่ได้เลือกสาขา / ตัวนี้ต้องให้ช่างติดตั้ง)
   // ก็ตกไปใช้วิธีที่ใช้ได้แทน แทนที่จะปิดปุ่มจนลูกค้าซื้อไม่ได้ · "จัดส่ง + ติดตั้ง" ใช้ได้กับทุกตัว
@@ -289,7 +293,24 @@ export default function ProductPage() {
             {item.weight_kg && <li><Icon name="scale" size={18} /> น้ำหนัก {num(item.weight_kg)} กก. · ปริมาตร {num(item.volume_m3)} ลบ.ม.</li>}
           </ul>
 
-          {isStaff ? (
+          {sales.enabled ? (
+            <div className="add-box">
+              <div className="product-actions">
+                <div className="qty">
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} aria-label="ลด"><Icon name="remove" size={18} /></button>
+                  <span>{qty}</span>
+                  <button onClick={() => setQty(qty + 1)} aria-label="เพิ่ม"><Icon name="add" size={18} /></button>
+                </div>
+                <button className="btn primary lg grow" onClick={addToSalesCart} disabled={adding}>
+                  <Icon name="add_shopping_cart" size={20} /> {adding ? "กำลังเพิ่ม…" : sales.activeId ? "เพิ่มลงตะกร้าที่ดูแล" : "เปิดตะกร้าใหม่แล้วเพิ่ม"}
+                </button>
+              </div>
+              <p className="small muted" style={{ marginTop: 6 }}>
+                {sales.active?.customer ? `ตะกร้าของ ${sales.active.customer.name}` : sales.activeId ? `ตะกร้า ${sales.active?.no || ""} · ยังไม่ผูกลูกค้า` : "ยังไม่มีตะกร้าที่ดูแล — กดปุ่มแล้วระบบเปิดให้เอง"}
+                {" · "}<Link to="/sales" className="strong">ไปหน้าตะกร้าที่กำลังดูแล</Link> เพื่อเช็คสต็อกและออกใบเสนอราคา
+              </p>
+            </div>
+          ) : isStaff ? (
             <div className="note">โหมดพนักงาน: เพิ่มสินค้าให้ลูกค้าได้จากหน้า <Link to="/sales" className="strong">ตะกร้าที่กำลังดูแล</Link> (ค้นหา MATNR → ลงตะกร้า)</div>
           ) : (
             <div className="add-box">
@@ -307,38 +328,9 @@ export default function ProductPage() {
               </div>
             </div>
           )}
-          {isStaff && (
-            <div className="product-actions">
-              <button className="btn lg" onClick={checkStock} disabled={checking}>
-                <Icon name="inventory_2" size={20} /> {checking ? "กำลังเช็ค…" : "เช็คสต็อกทุกสาขา"}
-              </button>
-            </div>
-          )}
           <p className="small muted" style={{ marginTop: 6 }}>
             {plant ? `สาขาที่เลือก: ${plant.name}` : "ยังไม่ได้เลือกสาขา (เลือกได้ที่ “รับที่สาขา” ด้านบน)"}
           </p>
-
-          {/* กล่องละเอียดรายสาขาเป็นของพนักงาน — ลูกค้าเห็นเป็นบรรทัดสถานะใต้ราคาแทน */}
-          {stock && isStaff && (
-            <div className={"stock-box" + (stock.stale ? " stale" : "")}>
-              <div className="row between">
-                <div className="strong"><Icon name={stock.stale ? "history" : "verified"} size={18} /> {stock.stale ? "ข้อมูลจาก cache (SAP ตอบช้า)" : "ข้อมูลสดจาก SAP"}</div>
-                <div className="small muted">อัปเดต {thTime(stock.fetched_at)}{stock.stale ? ` · เก่า ${stock.stale_minutes} นาที` : ""}</div>
-              </div>
-              <ul className="stock-rows">
-                {stock.rows.map((r) => (
-                  <li key={r.plant_code}>
-                    <Icon name={r.plant_type === "warehouse" ? "warehouse" : "storefront"} size={20} />
-                    <span className="grow">
-                      <b>{r.plant_name}</b>
-                      <small>{r.note || (r.atp_date ? `ATP: จัดส่งได้ ${thDate(r.atp_date)}` : "")}{r.reserved ? ` · จองแล้ว ${r.reserved}` : ""}</small>
-                    </span>
-                    <b className={r.available > 0 ? "green" : "red"}>{r.available} ชิ้น</b>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           {/* สี่หัวข้อนี้คือชุดเดียวกับที่ลูกค้าเห็นบน sbdesignsquare.com — เปิดหัวข้อแรกไว้ ที่เหลือพับ */}
           <div className="product-accs">

@@ -43,7 +43,7 @@ type SalesState = {
   closeCart: (id: string) => Promise<void>;
   attach: (customerKey: string) => Promise<Cart>;
   detach: () => Promise<Cart>;
-  addItem: (matnr: string, qty: number, supply_mode?: string | null, plant_code?: string | null) => Promise<Cart>;
+  addItem: (matnr: string, qty: number, supply_mode?: string | null, plant_code?: string | null, cartId?: string | null) => Promise<Cart>;
   updateItem: (itemId: string, patch: { qty?: number; supply_mode?: string; plant_code?: string | null; note?: string }) => Promise<Cart>;
   removeItem: (itemId: string) => Promise<Cart>;
   searchCustomers: (q: string) => Promise<CustomerHit[]>;
@@ -138,7 +138,8 @@ export function SalesProvider({ children }: { children: ReactNode }) {
       },
       attach: async (customerKey) => applyCart(await api<Cart>("POST", `/sales/carts/${activeId}/attach-customer`, { customer_key: customerKey })),
       detach: async () => applyCart(await api<Cart>("DELETE", `/sales/carts/${activeId}/attach-customer`)),
-      addItem: async (matnr, qty, supply_mode = null, plant_code = null) => applyCart(await api<Cart>("POST", `/sales/carts/${activeId}/items`, { matnr, qty, supply_mode, plant_code })),
+      // cartId ใส่ได้เมื่อเพิ่งเปิดตะกร้าใหม่ในจังหวะเดียวกัน — activeId ใน closure ยังเป็นค่าเก่าอยู่
+      addItem: async (matnr, qty, supply_mode = null, plant_code = null, cartId = null) => applyCart(await api<Cart>("POST", `/sales/carts/${cartId || activeId}/items`, { matnr, qty, supply_mode, plant_code })),
       updateItem: async (itemId, patch) => applyCart(await api<Cart>("PATCH", `/sales/carts/${activeId}/items/${itemId}`, patch)),
       removeItem: async (itemId) => applyCart(await api<Cart>("DELETE", `/sales/carts/${activeId}/items/${itemId}`)),
       searchCustomers: (q) => apiGet<CustomerHit[]>(`/customers/search?q=${encodeURIComponent(q)}`),
