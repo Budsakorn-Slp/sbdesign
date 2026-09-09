@@ -103,3 +103,9 @@ export function useCart(): CartState {
 }
 
 export const SUPPLY_LABEL: Record<string, string> = { takeaway: "ยกกลับ", ship: "จัดส่ง", install: "ส่ง + ติดตั้ง", pickup: "รับที่สาขา" };
+
+/** กฎค่าส่งชุดเดียวกันทั้งฝั่งลูกค้าและฝั่งเซลล์ — ตัดสินใจว่า "รอประเมิน" ที่เดียว จะได้ไม่เพี้ยนกันคนละหน้า
+ *  (บางตะกร้าไม่เข้ากฎข้อไหนเลย เช่น สินค้า Disney ที่ต้นทางกันออกจากเรตเหมา — ค่าส่ง 0 ตอนนั้นไม่ใช่ "ส่งฟรี") */
+export function shipNeedsReview(warnings: string[] | null | undefined): boolean {
+  return (warnings || []).some((w) => w.includes("ประเมิน"));
+}

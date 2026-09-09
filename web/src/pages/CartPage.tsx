@@ -5,7 +5,7 @@ import Placeholder from "../components/Placeholder";
 import PromoPanel from "../components/PromoPanel";
 import { apiPost, errorMessage } from "../lib/api";
 import { ROLE_PERMS, useAuth } from "../lib/auth";
-import { useCart } from "../lib/cart";
+import { shipNeedsReview, useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { bahtWord, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
@@ -93,7 +93,7 @@ export default function CartPage() {
   const shipFee = Number(t?.shipping_fee || 0);
   const shipDiscount = Number(t?.shipping_discount || 0);
   const needsShip = items.some((it) => it.selected && (it.supply_mode === "ship" || it.supply_mode === "install"));
-  const shipReview = (t?.warnings || []).some((w) => w.includes("ประเมิน"));
+  const shipReview = shipNeedsReview(t?.warnings);
 
   return (
     <main className="container sec cart">
