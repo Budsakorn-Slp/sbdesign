@@ -21,7 +21,10 @@ class Cart(Base, TimestampMixin):
     owner_sales_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
     anon_token: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
     label: Mapped[str | None] = mapped_column(String(120), nullable=True)
-    no: Mapped[str] = mapped_column(String(16), unique=True, nullable=False)  # #8823
+    # เลขตะกร้าจริง เรียงตามลำดับที่เปิด: seq = 1, 2, 3 ... · no = "001", "002" (เลขที่โชว์)
+    # ออกจาก doc_counters ผ่าน counter_service.cart_no() — ไม่ได้นับจาก COUNT(*) แล้ว
+    seq: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True)
+    no: Mapped[str] = mapped_column(String(16), unique=True, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="open", nullable=False, index=True)
     merged_into_cart_id: Mapped[str | None] = mapped_column(ForeignKey("carts.id"), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # ตะกร้าที่เซลล์ถือหมดอายุอัตโนมัติ
@@ -43,6 +46,13 @@ class Cart(Base, TimestampMixin):
     def is_open(self) -> bool:
         return self.status == "open" and (self.expires_at is None or self.expires_at > utcnow())
 
+    @property
+    def selected_items(self) -> list["CartItem"]:
+        """เฉพาะรายการที่ลูกค้าติ๊กไว้ — ใช้กับทุกอย่างที่เป็นเงิน (ยอดรวม ส่วนลด ค่าส่ง ใบเสนอราคา)
+        ของที่ไม่ติ๊กยังอยู่ในตะกร้าเหมือนเดิม แค่ไม่ถูกคิดเงินรอบนี้
+        """
+        return [it for it in self.items if it.selected]
+
 
 class CartItem(Base):
     __tablename__ = "cart_items"
@@ -63,6 +73,7 @@ class CartItem(Base):
     added_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     added_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     pending_ack: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    selected: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)  # ติ๊กในหน้าตะกร้า = คิดเงินรอบนี้
     supply_mode: Mapped[str] = mapped_column(String(16), default="ship", nullable=False)
     plant_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
     atp_date: Mapped[date | None] = mapped_column(Date, nullable=True)

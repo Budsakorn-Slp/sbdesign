@@ -6,7 +6,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException, Request, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
@@ -14,7 +14,7 @@ from app.models.cart import Cart, CartItem, CartItemHistory
 from app.models.catalog import Material, StockCache
 from app.models.common import utcnow
 from app.models.user import User
-from app.services import audit_service, catalog_service
+from app.services import audit_service, catalog_service, counter_service
 from app.services.auth_service import register_login_hook
 
 ANON_COOKIE = "sb_anon"
@@ -47,13 +47,16 @@ def new_anon_token() -> str:
 
 
 # ---------- lookup ----------
-def _next_no(db: Session) -> str:
-    base = 8823 + int(db.scalar(select(func.count()).select_from(Cart)) or 0)
-    while True:
-        no = f"#{base}"
-        if not db.scalar(select(Cart.id).where(Cart.no == no)):
-            return no
-        base += 1
+def new_cart(db: Session, **kw) -> Cart:
+    """เปิดตะกร้าใหม่พร้อมเลขจริงจากตัวนับ — ทุกที่ที่สร้าง Cart ต้องผ่านตรงนี้
+
+    เลขออกจาก doc_counters ไม่ใช่ COUNT(*) เลยไม่เลื่อนเมื่อมีการลบตะกร้า
+    และสองคนเปิดพร้อมกันก็ไม่ชนกัน
+    """
+    seq, no = counter_service.cart_no(db)
+    cart = Cart(seq=seq, no=no, **kw)
+    db.add(cart)
+    return cart
 
 
 def load_cart(db: Session, cart_id: str) -> Cart | None:
@@ -86,8 +89,7 @@ def get_or_create_cart(db: Session, user: User | None, anon_token: str | None) -
     if user and user.role == "customer":
         cart = find_customer_open_cart(db, user.id)
         if not cart:
-            cart = Cart(customer_user_id=user.id, no=_next_no(db), label=user.name)
-            db.add(cart)
+            cart = new_cart(db, customer_user_id=user.id, label=user.name)
             db.commit()
             cart = load_cart(db, cart.id)
         return cart
@@ -97,8 +99,7 @@ def get_or_create_cart(db: Session, user: User | None, anon_token: str | None) -
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="ไม่มี anon token")
     cart = find_guest_cart(db, anon_token)
     if not cart:
-        cart = Cart(anon_token=anon_token, no=_next_no(db), label="guest")
-        db.add(cart)
+        cart = new_cart(db, anon_token=anon_token, label="guest")
         db.commit()
         cart = load_cart(db, cart.id)
     return cart
@@ -299,8 +300,31 @@ def reprice(db: Session, cart: Cart) -> None:
 
 # ---------- totals ----------
 def totals(cart: Cart) -> dict:
-    subtotal = sum((it.line_total for it in cart.items), Decimal(0))
-    return {"count": sum(it.qty for it in cart.items), "subtotal": subtotal, "pending_count": sum(1 for it in cart.items if it.pending_ack)}
+    """นับเฉพาะรายการที่ติ๊กไว้ — ของที่ไม่ติ๊กยังอยู่ในตะกร้าแต่ไม่รวมยอด"""
+    sel = cart.selected_items
+    subtotal = sum((it.line_total for it in sel), Decimal(0))
+    return {
+        "count": sum(it.qty for it in sel),
+        "subtotal": subtotal,
+        "pending_count": sum(1 for it in cart.items if it.pending_ack),
+        "all_count": sum(it.qty for it in cart.items),  # ป้ายบนหัวเว็บนับของทั้งตะกร้า ไม่ใช่แค่ที่ติ๊ก
+        "item_count": len(cart.items),
+        "selected_count": len(sel),
+    }
+
+
+def set_selected(db: Session, cart: Cart, actor: User | None, item_ids: list[str] | None, selected: bool) -> Cart:
+    """ติ๊ก/เอาติ๊กออก — item_ids = None คือทำทั้งตะกร้า"""
+    targets = cart.items if item_ids is None else [it for it in cart.items if it.id in set(item_ids)]
+    changed = [it.id for it in targets if it.selected != selected]
+    for it in targets:
+        it.selected = selected
+    if changed:
+        cart.updated_at = utcnow()
+        audit_service.log(db, actor, "cart.item_select", "cart", cart.id, {"item_ids": changed, "selected": selected})
+        db.commit()
+        emit(cart, "items_selected", {"item_ids": changed, "selected": selected})
+    return cart
 
 
 # ---------- login hook: guest cart -> customer cart ----------

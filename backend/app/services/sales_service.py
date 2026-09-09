@@ -24,8 +24,7 @@ def list_my_carts(db: Session, sales: User) -> list[Cart]:
 
 
 def open_cart(db: Session, sales: User, label: str | None) -> Cart:
-    cart = Cart(owner_sales_id=sales.id, no=cart_service._next_no(db), label=label, expires_at=utcnow() + cart_service.sales_cart_ttl())
-    db.add(cart)
+    cart = cart_service.new_cart(db, owner_sales_id=sales.id, label=label, expires_at=utcnow() + cart_service.sales_cart_ttl())
     audit_service.log(db, sales, "sales.cart_open", "cart", None, {"label": label})
     db.commit()
     return cart_service.load_cart(db, cart.id)
@@ -168,8 +167,7 @@ def detach_customer(db: Session, sales: User, cart: Cart) -> Cart:
     customer_id = cart.customer_user_id
     mine = [it for it in cart.items if it.added_by == "customer"]
     if mine:
-        back = Cart(customer_user_id=customer_id, no=cart_service._next_no(db), label=cart.label)
-        db.add(back)
+        back = cart_service.new_cart(db, customer_user_id=customer_id, label=cart.label)
         db.flush()
         for it in mine:
             cart.items.remove(it)
