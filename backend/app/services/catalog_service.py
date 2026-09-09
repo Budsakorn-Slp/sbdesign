@@ -5,10 +5,25 @@ from decimal import Decimal
 from sqlalchemy import String, and_, case, cast, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.config import get_settings
 from app.integrations.sap.base import MaterialDTO
 from app.models.catalog import Brand, Category, Material, MaterialPrice, Plant, StockCache
 from app.models.common import utcnow
 from app.models.user import User
+
+
+def web_matnr_prefixes() -> tuple[str, ...]:
+    return tuple(p.strip() for p in get_settings().catalog_matnr_prefixes.split(",") if p.strip())
+
+
+def is_web_visible(matnr: str) -> bool:
+    """สินค้ากลุ่มไหนโชว์บนเว็บได้ — ดูจากตัวขึ้นต้นของ MATNR (ดู catalog_matnr_prefixes)
+
+    ตัดสินที่นี่ที่เดียว แล้วเก็บผลลงธง is_public ตอน import ทุกหน้าที่เช็ค is_public
+    อยู่แล้วจึงกรองตามไปเอง ไม่ต้องไล่เติม where ทีละ query (มีจุดที่หลุดง่ายหลายจุด)
+    """
+    pre = web_matnr_prefixes()
+    return not pre or (matnr or "").startswith(pre)
 
 
 def price_tier_for(user: User | None) -> str:

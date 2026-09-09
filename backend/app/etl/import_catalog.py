@@ -24,6 +24,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models.catalog import Brand, Category, Material, MaterialPrice
+from app.services.catalog_service import is_web_visible
 
 for _s in (sys.stdout, sys.stderr):
     if getattr(_s, "encoding", "") and _s.encoding.lower() not in ("utf-8", "utf8"):
@@ -171,7 +172,8 @@ def upsert_materials(db: Session, rows: list[dict]) -> int:
                 category_id=cat_id,
                 brand_id=_brand_id(bc) if bc else None,
                 image_url=r.get("image_url") or None,
-                is_public=bool(r.get("is_public")),
+                # เว็บโชว์เฉพาะกลุ่มที่ตั้งไว้ (ตอนนี้ MATNR ขึ้นต้น 19) ที่เหลือซ่อนแต่เซลล์ยังค้นเจอ
+                is_public=bool(r.get("is_public")) and is_web_visible(r["matnr"]),
                 # ชั้น MAABC มาจาก sb_products v3 — ถ้ายังเป็นตาราง v2 อยู่ ช่องนี้ไม่มี ได้ None/False
                 abc_class=(r.get("maabc") or None),
                 is_bestseller=bool(r.get("is_bestseller")),

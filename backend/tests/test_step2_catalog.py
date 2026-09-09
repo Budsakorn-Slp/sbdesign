@@ -90,3 +90,15 @@ def test_home_payload(client):
     assert body["categories"][0]["id"] == "bedroom"
     assert [c["id"] for c in kids] == ["bed", "wardrobe", "dresser"]
     assert len(body["new_products"]) >= 3 and len(body["deals"]) >= 3
+
+
+def test_only_configured_matnr_prefixes_show_on_web():
+    """เว็บโชว์เฉพาะ MATNR ขึ้นต้นตามที่ตั้งไว้ (ตอนนี้ 19 = สินค้าขายปกติ)
+    20 ตัวโชว์ · 25 ฝากวางขาย · 27 รวมห้อง · 59 ชุด ยังไม่เปิดขายบนเว็บ"""
+    from app.services.catalog_service import is_web_visible
+
+    assert is_web_visible("19248757") and is_web_visible("19205233")
+    assert not is_web_visible("25030643")
+    assert not is_web_visible("59064091")
+    assert not is_web_visible("39019171")
+    assert not is_web_visible("")

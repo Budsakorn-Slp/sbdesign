@@ -86,7 +86,9 @@ def merge_owner(db: Session, anon: str, user: User) -> None:
 def _materials_in_order(db: Session, matnrs: list[str]) -> list[Material]:
     if not matnrs:
         return []
-    found = {m.matnr: m for m in db.scalars(select(Material).where(Material.matnr.in_(matnrs))).all()}
+    # แถวพวกนี้ (ดูล่าสุด/รายการโปรด/ซื้อซ้ำ/ขายดี) เคยไม่กรอง is_public เลย
+    # ของที่ถอดออกจากเว็บแล้วจึงยังโผล่กลับมาทางนี้ได้
+    found = {m.matnr: m for m in db.scalars(select(Material).where(Material.matnr.in_(matnrs), Material.is_public.is_(True))).all()}
     return [found[m] for m in matnrs if m in found]
 
 

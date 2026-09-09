@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     sap_distr_chan: str = "18"
     sap_division: str = "20"
     sap_avail_lead_days: int = 7  # REQ_DATE = วันนี้ + 7
+    # กลุ่มสินค้าที่ให้โชว์บนเว็บ ตัดสินจากตัวขึ้นต้นของ MATNR
+    # 19 ขายปกติ · 20 ตัวโชว์ · 25 ฝากวางขาย · 27 รวมห้อง — ตอนนี้เอาแค่ 19 อนาคตเติมคั่นด้วย ,
+    # ตัวที่ไม่เข้ากลุ่มจะ is_public = false: ลูกค้าไม่เห็น แต่เซลล์ยังค้นเจอไว้เช็คสต็อกหน้าร้าน
+    catalog_matnr_prefixes: str = "19"
     sales_cart_ttl_hours: int = 4
     staff_discount_quota_percent: float = 3.0
     quotation_valid_days: int = 7
