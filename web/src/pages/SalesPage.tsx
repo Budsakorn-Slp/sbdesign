@@ -390,17 +390,9 @@ function MaterialSearchModal({ onClose, target, search, onAdd }: { onClose: () =
   const [q, setQ] = useState("");
   const [items, setItems] = useState<MaterialCard[]>([]);
   const [loading, setLoading] = useState(false);
-  // เช็คของรายตัวก่อนลงตะกร้า — ตัวเลขนี้ยังไม่หักของที่อยู่ในตะกร้าแล้ว ต้องกดเช็คทั้งบิลอีกทีหลังลงตะกร้า
-  const [one, setOne] = useState<Record<string, AvailabilityItem | "loading" | string>>({});
-  const checkOne = async (m: MaterialCard) => {
-    setOne((s) => ({ ...s, [m.matnr]: "loading" }));
-    try {
-      const r = await apiPost<AvailabilityItem>("/sales/availability", { matnr: m.matnr, qty: 1 });
-      setOne((s) => ({ ...s, [m.matnr]: r }));
-    } catch (e) {
-      setOne((s) => ({ ...s, [m.matnr]: errorMessage(e) }));
-    }
-  };
+  // ไม่มีปุ่มเช็คของรายตัวในหน้าค้นหาแล้ว — เลขที่ได้ยังไม่หักของที่อยู่ในตะกร้า
+  // ถามทีละตัวหลายรอบทุกตัวจะเห็นของก้อนเดียวกันเต็มเหมือนกันหมด = ขายเกิน
+  // เช็คได้ที่เดียวคือปุ่มเช็คสต็อกในสรุปคำสั่งซื้อ ซึ่งยิงทั้งตะกร้าครั้งเดียว
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -425,9 +417,7 @@ function MaterialSearchModal({ onClose, target, search, onAdd }: { onClose: () =
         {loading && items.length === 0 && <div className="ph" style={{ height: 120 }}>กำลังค้นหา…</div>}
         {!loading && items.length === 0 && <div className="muted small">ไม่พบสินค้า</div>}
         <div className="mat-results">
-          {items.map((m) => {
-            const res = one[m.matnr];
-            return (
+          {items.map((m) => (
               <div key={m.matnr} className="mat-hit">
                 <Placeholder src={m.image_url} label="1:1" className="mat-img" />
                 <div className="grow">
@@ -438,17 +428,12 @@ function MaterialSearchModal({ onClose, target, search, onAdd }: { onClose: () =
                     <b>{baht(m.standard_price)}</b>
                     {m.member_price && <span className="small green">สมาชิก {baht(m.member_price)}</span>}
                   </div>
-                  {res === "loading" && <div className="tiny muted" style={{ marginTop: 4 }}>กำลังเช็คสต็อก…</div>}
-                  {typeof res === "string" && res !== "loading" && <div className="note err small" style={{ marginTop: 4 }}>{res}</div>}
-                  {res && typeof res !== "string" && <AvailBadge a={res} />}
                 </div>
                 <div className="col">
-                  <button className="btn sm" onClick={() => checkOne(m)} disabled={res === "loading"}><Icon name="inventory_2" size={16} /> เช็คสต็อก</button>
                   <button className="btn dark sm" onClick={() => onAdd(m, m.requires_install ? "install" : store && m.is_takeaway_ok ? "takeaway" : "ship", store && m.is_takeaway_ok && !m.requires_install ? store.plant_code : null)}>ลงตะกร้า</button>
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       </div>
     </div>
