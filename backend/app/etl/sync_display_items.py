@@ -43,6 +43,8 @@ for _s in (sys.stdout, sys.stderr):
 # ฟิลด์ที่ตัวโชว์ใช้ร่วมกับตัวปกติได้ — เป็นของรุ่นเดียวกัน หน้าตาเดียวกัน กล่องเท่ากัน
 # ที่ไม่ก๊อปมาโดยตั้งใจ: is_new / is_bestseller / sold_qty / created_at / abc_class
 # เพราะเป็นสัญญาณการขายของ "ตัวปกติ" ถ้าก๊อปมาตัวโชว์จะไปแย่งอันดับในหน้า "มาใหม่/ขายดี"
+DISPLAY_LABEL = "สินค้าตัวโชว์"
+
 CLONE_FIELDS = (
     "name_th", "name_en", "name_raw", "variant", "spec", "description",
     "category_id", "brand_id", "room", "color", "style", "image_url",
@@ -69,6 +71,10 @@ def _upsert(db: Session, parent: Material, code: str, in_stock: bool) -> None:
     fields = {k: getattr(parent, k) for k in CLONE_FIELDS}
     # is_public คือธงเดียวที่ทุกหน้าใช้กรองอยู่แล้ว — ของหมดก็แค่ปิดธง ไม่ต้องลบแถวทิ้ง
     # เก็บแถวไว้เพราะรอบหน้าของอาจกลับมา แล้วจะได้ไม่ต้องปั้นใหม่ทั้งชุด
+    # ต่อท้ายชื่อไปเลย ไม่ใช่โชว์แค่ป้ายบนการ์ด — ชื่อเป็นตัวเดียวที่ติดไปทุกที่
+    # ทั้งตะกร้า ใบเสนอราคา ใบสั่งซื้อ และ MCP ลูกค้าจะได้ไม่มีทางเข้าใจผิดว่าซื้อของใหม่
+    # ก๊อปชื่อจากตัวปกติใหม่ทุกรอบแล้วค่อยต่อท้าย จึงไม่มีทางต่อซ้อนกันหลายรอบ
+    fields["name_th"] = f"{parent.name_th} ({DISPLAY_LABEL})"
     fields.update(sku=code, is_public=in_stock, is_new=False, is_bestseller=False, sold_qty=0, synced_at=utcnow())
     if row:
         for k, v in fields.items():
