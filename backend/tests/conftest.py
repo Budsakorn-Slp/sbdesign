@@ -5,6 +5,7 @@ os.environ["SAP_MODE"] = "mock"
 os.environ["OTP_DEBUG"] = "true"
 # เครื่อง dev ที่ตั้ง SAP_AVAIL_URL/SAP_API_KEY ไว้ใน .env เทสต้องไม่วิ่งไปยิง SAP ของจริง
 os.environ["SAP_AVAIL_URL"] = ""
+os.environ["SAP_STOCK_URL"] = ""
 os.environ["SAP_API_KEY"] = ""
 
 import pytest  # noqa: E402
