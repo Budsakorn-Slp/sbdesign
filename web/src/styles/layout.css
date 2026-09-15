@@ -3,8 +3,16 @@
 .app-body { flex: 1; }
 
 /* ===== header ===== */
-.hdr { background: #fff; position: relative; z-index: 50; }
-.hdr-util { border-bottom: 1px solid var(--line); font-size: 12.5px; }
+/* หัวเว็บลอยติดขอบบนตลอด เลื่อนหน้าไปไหนแถบเมนูก็ตามลงมาด้วย
+   พอเลื่อนลง (.shrink จาก Header.tsx) จะพับแถบบนสุดทิ้งแล้วย่อแถวโลโก้ให้เตี้ยลง
+   จะได้เหลือที่ให้เนื้อหา — ไม่ใช่เอาหัวสูง 160px มาบังจอครึ่งนึง */
+.hdr { background: #fff; position: sticky; top: 0; z-index: 50; transition: box-shadow .2s ease; }
+.hdr.shrink { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.hdr-util { border-bottom: 1px solid var(--line); font-size: 12.5px; box-sizing: border-box; height: 35px; overflow: hidden; transition: height .2s ease, opacity .15s ease; }
+.hdr.shrink .hdr-util { height: 0; opacity: 0; border-bottom-color: transparent; }
+.hdr-main, .hdr-logo { transition: height .2s ease; }
+.hdr.shrink .hdr-main { height: 60px; }
+.hdr.shrink .hdr-logo { height: 40px; }
 .hdr-util-in { display: flex; align-items: center; justify-content: space-between; height: 34px; }
 .hdr-free { color: var(--ink-3); }
 .hdr-util-links { display: flex; align-items: center; gap: 22px; }
@@ -37,13 +45,28 @@
 .hdr-user-txt { display: flex; flex-direction: column; line-height: 1.15; }
 .hdr-user-txt b { font-size: 13px; }
 .hdr-user-txt small { font-size: 11px; color: var(--ink-3); }
-.hdr-search { grid-area: search; display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 8px; height: 44px; overflow: hidden; width: 100%; max-width: 620px; justify-self: center; background: #fff; }
+.hdr-search-wrap { grid-area: search; position: relative; width: 100%; max-width: 620px; justify-self: center; }
+.hdr-search { display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 8px; height: 44px; overflow: hidden; width: 100%; background: #fff; }
 .hdr-search:focus-within { border-color: var(--ink); }
 .hdr-search-all { display: inline-flex; align-items: center; gap: 2px; padding: 0 14px; height: 100%; background: var(--bg-3); border-right: 1px solid var(--line-2); font-size: 13px; white-space: nowrap; }
 .hdr-search input { flex: 1; border: none; height: 100%; padding: 0 12px; font-size: 14px; min-width: 0; background: transparent; }
 .hdr-search input:focus { outline: none; }
-.hdr-search-ai { display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; border: 1px solid var(--ink); background: #fff; border-radius: 4px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+.hdr-search-clear { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 100%; border: none; background: transparent; color: var(--ink-3); cursor: pointer; }
 .hdr-search-go { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 100%; border: none; border-left: 1px solid var(--line-2); background: var(--ink); color: #fff; cursor: pointer; }
+
+/* กล่องแนะนำใต้ช่องค้นหา — คำแนะนำด้านบน สินค้าพร้อมรูปด้านล่าง */
+.hdr-suggest { position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; right: 0; background: #fff; border: 1px solid var(--line-2); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.14); overflow: hidden; max-height: min(70vh, 560px); overflow-y: auto; }
+.sug-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 4px; font-size: 12px; color: var(--ink-3); }
+.sug-row, .sug-item, .sug-all { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 14px; border: none; background: transparent; text-align: left; cursor: pointer; font-size: 14px; color: inherit; }
+.sug-row.on, .sug-item.on { background: var(--bg-3); }
+.sug-thumb { width: 40px; height: 40px; border-radius: 6px; background: var(--bg-3); flex: none; }
+.sug-thumb img { width: 100%; height: 100%; object-fit: contain; }
+.sug-name { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.sug-name small { color: var(--ink-3); font-size: 11.5px; }
+/* ชื่อสินค้ายาวกว่ากล่องเสมอ — ตัดบรรทัดเดียว ไม่งั้นแถวสูงไม่เท่ากันจนกล่องกระตุก */
+.sug-name > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sug-item b { font-size: 13px; white-space: nowrap; }
+.sug-all { justify-content: center; border-top: 1px solid var(--line); font-weight: 600; font-size: 13px; }
 
 .hdr-nav-wrap { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); position: relative; }
 .hdr-nav { display: flex; align-items: center; gap: 6px; height: 50px; overflow-x: auto; scrollbar-width: none; }
@@ -55,7 +78,7 @@
 .cats-all { display: inline-flex; align-items: center; gap: 4px; height: 50px; padding: 0 6px 0 0; color: inherit; }
 .cats-all:hover { text-decoration: underline; }
 .cats-toggle { display: inline-flex; align-items: center; border: none; background: none; height: 50px; padding: 0 10px 0 2px; color: inherit; cursor: pointer; }
-.mega { position: absolute; left: 0; right: 0; top: 100%; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.12); z-index: 55; }
+.mega { position: absolute; left: 0; right: 0; top: 100%; max-height: calc(100vh - 150px); overflow-y: auto; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.12); z-index: 55; }
 .mega-in { display: grid; grid-template-columns: 240px 1fr; gap: 24px; padding: 18px 0 24px; }
 .mega-side { max-height: 460px; overflow: auto; border-right: 1px solid var(--line); padding-right: 12px; }
 .mega-side li { padding: 8px 12px; border-radius: 6px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
@@ -90,7 +113,7 @@
 /* โน้ตบุ๊ก: ยังอยู่แถวเดียวกันได้ แค่บีบระยะห่างกับความกว้างช่องค้นหาลง */
 @media (max-width: 1279px) {
   .hdr-main { gap: 14px; }
-  .hdr-search { max-width: 460px; }
+  .hdr-search-wrap { max-width: 460px; }
   .hdr-loc-sep { display: none; }
 }
 @media (max-width: 1023px) {
@@ -98,7 +121,7 @@
   .hdr-free { display: none; }
   /* iPad ลงมา: ช่องค้นหาลงบรรทัดของตัวเอง เต็มความกว้าง จะได้ไม่โดนบีบจนพิมพ์ไม่เห็น */
   .hdr-main { grid-template-columns: auto 1fr auto; grid-template-areas: "logo locs icons" "search search search"; height: auto; row-gap: 10px; padding-top: 12px; padding-bottom: 12px; gap: 14px; }
-  .hdr-search { max-width: none; }
+  .hdr-search-wrap { max-width: none; }
   .hdr-locs { gap: 10px; }
   .mega-in { grid-template-columns: 1fr; }
   .mega-side { display: none; }
@@ -106,7 +129,14 @@
   .ftr-top { grid-template-columns: 1fr 1fr; }
   .ftr-promos { grid-column: 1 / -1; flex-direction: row; }
 }
+@media (max-width: 1023px) {
+  /* แถวนี้ตั้งครั้งเดียวจบ ระหว่างเลื่อนดูสินค้าไม่ต้องเห็นก็ได้ */
+  .hdr.shrink .hdr-locs { display: none; }
+  .hdr.shrink .hdr-main { height: auto; padding-top: 8px; padding-bottom: 8px; row-gap: 8px; }
+}
 @media (max-width: 599px) {
+  /* จอแคบแถบบนขึ้นสองบรรทัด ต้องปล่อยให้สูงเอง ไม่งั้นโดน height คงที่ตัดหาย */
+  .hdr-util { height: auto; }
   .hdr-util-in { height: auto; padding: 6px 0; flex-direction: column; align-items: flex-end; gap: 4px; }
   .hdr-util-links { gap: 10px; font-size: 12px; flex-wrap: wrap; justify-content: flex-end; }
   /* จอเล็ก: โลโก้กับไอคอนอยู่แถวเดียวกัน · ที่อยู่จัดส่ง/สาขาลงบรรทัดใหม่ */
@@ -126,7 +156,6 @@
   .hdr-locs { flex-wrap: wrap; gap: 8px; }
   .hdr-loc span { font-size: 12.5px; }
   .hdr-search-all { display: none; }
-  .hdr-search-ai { padding: 5px 8px; }
   .hdr-pop { width: min(320px, 90vw); }
 }
 /* จอแคบมาก (iPhone SE 320px) — บีบอีกชั้นให้ไม่ต้องเลื่อนซ้ายขวา */

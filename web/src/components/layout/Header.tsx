@@ -1,16 +1,15 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { useContent } from "../../lib/content";
 import { areaLabel, getProvinces, lookupPostcode } from "../../lib/geo";
 import type { Province } from "../../lib/types";
 import Icon from "../Icon";
+import SearchBox from "../SearchBox";
 
 export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCount?: number; cartHref?: string }) {
   const auth = useAuth();
   const { content, plants, plant, setPlantCode, postcode, shipTo, setShipTo } = useContent();
-  const nav = useNavigate();
-  const [q, setQ] = useState("");
   const [menu, setMenu] = useState<string | null>(null);
   const [sideIdx, setSideIdx] = useState(0);
   const [pop, setPop] = useState<"address" | "branch" | null>(null);
@@ -19,6 +18,22 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
   const [provQ, setProvQ] = useState("");
   const [pcErr, setPcErr] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const [shrink, setShrink] = useState(false);
+
+  // หัวเว็บติดขอบบนตลอด (position: sticky) พอเลื่อนลงจะย่อให้เตี้ยลง
+  // เหลือโลโก้ + ช่องค้นหา + แถบเมนู เพื่อไม่ให้กินจอเกินไป
+  // เข้า-ออกคนละระยะ (80/40) กันหัวกระพริบตอนเลื่อนค้างอยู่ตรงเส้นพอดี
+  useEffect(() => {
+    const onScroll = () => {
+      // ต้องอ่านค่าตรงนี้ก่อน — ถ้าไปอ่านข้างใน setShrink React อาจเรียกทีหลัง
+      // ตอนที่เลื่อนไปไกลแล้ว หัวเว็บจะค้างย่ออยู่ทั้งที่กลับขึ้นบนสุดแล้ว
+      const y = window.scrollY;
+      setShrink((on) => (on ? y > 40 : y > 80));
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   // โหลดรายชื่อจังหวัดตอนเปิด popup ครั้งแรก (แคชไว้ใน lib/geo แล้ว เปิดซ้ำไม่ยิงใหม่)
   useEffect(() => {
@@ -55,18 +70,12 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const submitSearch = (e: FormEvent) => {
-    e.preventDefault();
-    setMenu(null);
-    nav(q.trim() ? `/search?q=${encodeURIComponent(q.trim())}` : "/search");
-  };
-
   const cats = content?.categories || [];
   const mainNav = content?.main_nav || [];
   const openDef = mainNav.find((n) => n.label === menu && n.items.length > 0);
   const roleLabel = auth.user
     ? auth.user.role === "customer"
-      ? `สมาชิก ${auth.user.tier || ""}`.trim()
+      ? `สมาชิก · ${(auth.user.points || 0).toLocaleString()} พ้อยท์`
       : auth.user.role === "sales"
         ? `พนักงานขาย · ${auth.user.staff_code}`
         : auth.user.role === "manager"
@@ -75,7 +84,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
     : "";
 
   return (
-    <header className="hdr" ref={wrapRef}>
+    <header className={"hdr" + (shrink ? " shrink" : "")} ref={wrapRef}>
       {/* util bar */}
       <div className="hdr-util">
         <div className="container hdr-util-in">
@@ -155,12 +164,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
         </div>
 
         {/* ช่องค้นหาอยู่กลางแถวเดียวกับโลโก้ ช่องว่างตรงกลางจะได้ไม่โล่ง และไม่ต้องมีแถวแยกอีกแถว */}
-        <form className="hdr-search" onSubmit={submitSearch} role="search">
-          <span className="hdr-search-all">ทั้งหมด <Icon name="expand_more" size={16} /></span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหาสินค้า แบรนด์ หรือห้องที่ต้องการ" aria-label="ค้นหา" />
-          <span className="hdr-search-ai"><Icon name="auto_awesome" size={16} /> AI</span>
-          <button type="submit" className="hdr-search-go" aria-label="ค้นหา"><Icon name="search" size={20} /></button>
-        </form>
+        <SearchBox onNavigate={() => setMenu(null)} />
 
         <div className="hdr-icons">
           <button className="icon-btn" aria-label="แจ้งเตือน"><Icon name="notifications" /></button>
@@ -189,7 +193,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
             </div>
           ) : (
             <>
-              <button className="icon-btn hdr-icon-login" onClick={auth.openLogin} aria-label="บัญชี"><Icon name="group" /></button>
+              <button className="icon-btn hdr-icon-login" onClick={auth.openLogin} aria-label="เข้าสู่ระบบ"><Icon name="group" /></button>
               <button className="btn hdr-login-btn" onClick={auth.openLogin}><Icon name="login" size={18} /> เข้าสู่ระบบ</button>
             </>
           )}
