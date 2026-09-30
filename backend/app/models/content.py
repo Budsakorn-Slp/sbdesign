@@ -1,7 +1,7 @@
 """Group B: content ของหน้าแรก mirror มาจาก Magento CMS (ผ่าน sb_home_media บนฐานเว็บ)"""
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -32,4 +32,20 @@ class HomeMedia(Base):
     source_href: Mapped[str | None] = mapped_column(String(500), nullable=True)
     href: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class InfoPage(Base):
+    """หน้าเนื้อหาคงที่ (วิธีสั่งซื้อ/การรับประกัน/นโยบาย ฯลฯ) ที่ยกมาจาก CMS ของเว็บจริง
+
+    เก็บเป็น HTML ที่ล้างแล้วจาก Magento (ดู etl/sync_cms_pages.py) ไม่ได้เขียนใหม่เอง
+    เพราะเป็นข้อความเชิงนโยบาย/กฎหมาย ที่ต้องตรงกับที่บริษัทประกาศไว้จริงคำต่อคำ
+    """
+
+    __tablename__ = "info_pages"
+
+    slug: Mapped[str] = mapped_column(String(80), primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    body_html: Mapped[str] = mapped_column(Text, nullable=False)
+    source_url: Mapped[str | None] = mapped_column(String(300), nullable=True)
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

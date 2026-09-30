@@ -27,10 +27,12 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     # ---------- สาธารณะ ----------
     ("GET", "/healthz", ALL, None),
     ("GET", "/home", ALL, None),
+    ("GET", f"/pages/{BAD}", ALL, None),  # หน้าเนื้อหาคงที่ — เปิดให้ทุกคนอ่าน ไม่ต้องล็อกอิน
     ("GET", "/categories", ALL, None),
     ("GET", "/brands", ALL, None),
     ("GET", "/plants", ALL, None),
     ("GET", "/materials/search?q=โซฟา", ALL, None),
+    ("GET", "/materials/suggest?q=โซฟา", ALL, None),
     ("GET", f"/materials/{BAD}", ALL, None),
     ("GET", f"/materials/{BAD}/stock", ALL, None),
     ("GET", "/best-sellers", ALL, None),
@@ -46,6 +48,8 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", "/auth/logout", ALL, {}),
     ("POST", "/auth/otp/request", ALL, {}),
     ("POST", "/auth/otp/verify", ALL, {}),
+    ("POST", "/auth/password/forgot", ALL, {}),
+    ("POST", "/auth/password/reset", ALL, {}),
     # ---------- ตะกร้าของตัวเอง (guest ก็ใช้ได้) ----------
     ("GET", "/cart", ALL, None),
     ("POST", "/cart/items", ALL, {}),
@@ -70,6 +74,13 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", f"/payments/{BAD}/mock-confirm", ALL, None),
     # ---------- ต้องล็อกอิน (ลูกค้าขึ้นไป) ----------
     ("GET", "/me", AUTH, None),
+    ("PATCH", "/me", AUTH, {"name": 123}),  # ผิด type → 422 แต่ผ่านด่านสิทธิ์แล้ว
+    # สมุดที่อยู่จัดส่ง — ใครล็อกอินก็จัดการของตัวเองได้ (service กันข้ามบัญชีด้วย 404)
+    ("GET", "/me/addresses", AUTH, None),
+    ("POST", "/me/addresses", AUTH, {"receiver": 123}),  # ผิด type → 422 แต่ผ่านด่านสิทธิ์แล้ว
+    ("PATCH", f"/me/addresses/{BAD}", AUTH, {"receiver": 123}),
+    ("POST", f"/me/addresses/{BAD}/default", AUTH, {}),
+    ("DELETE", f"/me/addresses/{BAD}", AUTH, None),
     ("POST", "/events", ALL, {}),
     ("GET", "/me/recently-viewed", ALL, None),
     ("GET", "/me/wishlist", AUTH, None),
@@ -100,6 +111,18 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("DELETE", f"/sales/carts/{BAD}/items/{BAD}", STAFF, None),
     ("POST", f"/sales/carts/{BAD}/attach-customer", STAFF, {}),
     ("DELETE", f"/sales/carts/{BAD}/attach-customer", STAFF, None),
+    # ค่าขนส่งแบบ "เปิด Mat" — พนักงานขาย/ผู้จัดการเท่านั้น ลูกค้าแตะค่าขนส่งตัวเองไม่ได้
+    # ลูกค้ากดออกจากการดูแลของพนักงานเอง — เป็นปุ่มของลูกค้า พนักงานใช้ไม่ได้
+    ("DELETE", f"/cart/{BAD}/sales-owner", CUST, None),
+    # ติ๊กเลือกรายการที่จะคิดเงินในใบที่พนักงานถือ — เครื่องมือของหน้าขาย
+    ("POST", f"/sales/carts/{BAD}/select", STAFF, {"selected": True}),
+    ("GET", f"/sales/customers/{BAD}/owner", STAFF, None),
+    ("GET", "/sales/my-customers", STAFF, None),
+    ("GET", "/sales/fleets", STAFF, None),
+    ("GET", "/sales/delivery-extra?province=ภูเก็ต", STAFF, None),
+    ("GET", f"/sales/carts/{BAD}/shipping-charge", STAFF, None),
+    ("POST", f"/sales/carts/{BAD}/shipping-charge", STAFF, {"matnr": "A534", "fee": "600"}),
+    ("DELETE", f"/sales/carts/{BAD}/shipping-charge", STAFF, None),
     ("POST", f"/sales/carts/{BAD}/availability", STAFF, None),
     ("POST", "/sales/availability", STAFF, {"matnr": 123}),  # ผิด type → 422 ไม่ยิง SAP จริง
     ("POST", "/sales/availability/batch", STAFF, {"items": 1}),  # ผิด type → 422 ไม่ยิง SAP จริง
@@ -113,6 +136,8 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", f"/admin/sap-sync/{BAD}/retry", MGR, None),
     ("POST", "/admin/jobs/daily-stats", MGR, None),
     ("GET", "/admin/top-searches", MGR, None),
+    ("GET", "/admin/wishlist-report", MGR, None),  # รีพอร์ตของที่ลูกค้ากดหัวใจ — ผู้จัดการ/แอดมินเท่านั้น
+    ("GET", "/admin/analytics/overview", MGR, None),
     # ---------- แอดมิน ----------
     ("GET", "/admin/users", ADMIN, None),
     ("GET", "/admin/audit-logs", ADMIN, None),
@@ -124,7 +149,19 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
 # endpoint ที่ไม่ได้กันด้วย role แต่กันด้วยลายเซ็น HMAC จาก payment gateway
 SIGNATURE_ONLY = {("POST", "/webhooks/payment")}
 
-STAFF_LOGIN = {S: ("SA-104", "staff"), M: ("MG-001", "staff"), A: ("ADM-001", "staff"), C: ("4400182", "customer")}
+# ผูกเลขสมาชิก — ตารางนี้เช็คได้แค่ "role ไหนเข้าได้" แต่ด่านจริงของกลุ่มนี้คือ
+# "ยืนยันเบอร์ด้วย OTP แล้วหรือยัง" ซึ่งลูกค้าที่ล็อกอินด้วยรหัสผ่านก็ยังโดน 403
+# จึงใส่ตารางนี้ไม่ได้ (จะขัดกับกฎ "role ที่อนุญาตต้องไม่ได้ 401/403")
+# ความปลอดภัยทั้งชุดคุมด้วย tests/test_step14_auth_security.py แทน
+PHONE_VERIFIED_ONLY = {
+    ("GET", "/me/member/candidates"),
+    ("POST", "/me/member/lookup"),
+    ("POST", "/me/member/otp"),
+    ("POST", "/me/member/link"),
+    ("DELETE", "/me/member/link"),
+}
+
+STAFF_LOGIN = {S: ("SA-104", "staff"), M: ("MG-001", "staff"), A: ("ADM-001", "staff"), C: ("1100440182", "customer")}
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -158,7 +195,7 @@ def test_permission_matrix(client, method, path, allowed, body):
 
 def test_matrix_covers_every_endpoint():
     """กันลืม: endpoint ใหม่ที่ยังไม่มีในตารางต้องทำให้ test พัง"""
-    covered = {(m, p.split("?")[0]) for m, p, _, _ in MATRIX} | SIGNATURE_ONLY
+    covered = {(m, p.split("?")[0]) for m, p, _, _ in MATRIX} | SIGNATURE_ONLY | PHONE_VERIFIED_ONLY
     covered = {(m, p.replace(BAD, "{}")) for m, p in covered}
     actual = set()
     for path, ops in app.openapi()["paths"].items():

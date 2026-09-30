@@ -15,6 +15,8 @@ class OfferOut(BaseModel):
     discount_type: str = "amount"
     applied: bool = False
     applied_id: str | None = None
+    requires_code: bool = False
+    exclusive_group: str | None = None
 
 
 class DiscountLineOut(BaseModel):
@@ -49,7 +51,6 @@ class EvaluateIn(BaseModel):
 class EvaluateOut(BaseModel):
     cart_id: str
     customer_name: str | None = None
-    customer_tier: str | None = None
     eligible: list[OfferOut]
     ineligible: list[OfferOut]
     staff_discount_quota_percent: float

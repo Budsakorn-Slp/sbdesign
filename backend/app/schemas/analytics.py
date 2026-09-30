@@ -1,12 +1,14 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Field
 
 from app.schemas.catalog import MaterialCard
 
 
 class TrackIn(BaseModel):
+    # หน้าที่เกิด event — page_view ใช้บอกว่าเปิดหน้าไหน
+    path: str | None = Field(default=None, max_length=200)
     event: str
     matnr: str | None = None
     query: str | None = None

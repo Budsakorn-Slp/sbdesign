@@ -25,12 +25,12 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.db.session import SessionLocal
+from app.etl.progress import Progress
 from app.models.catalog import Material, MaterialPrice, ProductStock
 from app.models.common import utcnow
 from app.services import product_stock_service
@@ -100,13 +100,13 @@ def sync(db: Session, *, refresh_all: bool, limit: int | None, mock: bool) -> tu
 
     todo = codes if refresh_all else product_stock_service.stale_matnrs(db, codes)
     if todo:
-        print(f"  ถามสต็อก SAP {len(todo):,} รหัส" + (" (mock)" if mock else "") + " ...")
-        t0 = time.monotonic()
+        print(f"  ถามสต็อก SAP {len(todo):,} รหัส" + (" (mock)" if mock else ""))
+        bar = Progress(len(todo), "ถามไปแล้ว ")
         if mock:
-            product_stock_service.refresh_mock(db, todo)
+            product_stock_service.refresh_mock(db, todo, bar.step)
         else:
-            product_stock_service.refresh(db, todo)
-        print(f"  ถามเสร็จใน {time.monotonic() - t0:,.0f} วินาที")
+            product_stock_service.refresh(db, todo, on_batch=bar.step)
+        bar.close()
     else:
         print("  สต็อกยังไม่หมดอายุ ไม่ต้องถาม SAP")
 

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.catalog import ProductStockOut
 from app.schemas.promo import TotalsOut
 
 
@@ -30,12 +31,17 @@ class CartItemOut(BaseModel):
     requires_install: bool
     note: str | None = None
     selected: bool = True
+    # ยอดของจาก cache (อายุไม่เกิน TTL) ไว้โชว์ป้ายสต็อกในตะกร้าเหมือนการ์ดสินค้า
+    # ไม่ใช่ยอดสด — ตอนสั่งซื้อจริงระบบยิงเช็คทั้งตะกร้าอีกรอบอยู่แล้ว
+    stock: ProductStockOut | None = None
+    group: str | None = None      # regular | display | consign (จากตัวขึ้นต้น MATNR)
+    pickup_only: bool = False     # ใส่ตะกร้าได้ แต่ยังชำระเงินออนไลน์ไม่ได้ ต้องรับที่สาขา
 
 
 class CartPersonOut(BaseModel):
     id: str
     name: str
-    tier: str | None = None
+    points: int = 0
     sap_customer_no: str | None = None
     staff_code: str | None = None
     phone: str | None = None
@@ -58,6 +64,23 @@ class DeliveryInfoOut(BaseModel):
     quoted_at: datetime | None = None
 
 
+class PresoStepOut(BaseModel):
+    """หนึ่งด่านก่อนบันทึกใบ PRE — หน้าเซลล์เอาไปทำเป็นเช็คลิสต์"""
+
+    key: str
+    title: str
+    ok: bool
+    note: str
+    blocked: bool = False  # ติดอยู่ที่ด่านก่อนหน้า ยังไม่ถึงคิวทำอันนี้
+
+
+class PresoReadyOut(BaseModel):
+    ready: bool
+    next: str | None = None
+    message: str
+    steps: list[PresoStepOut] = []
+
+
 class CartOut(BaseModel):
     id: str
     no: str
@@ -77,6 +100,7 @@ class CartOut(BaseModel):
     updated_at: datetime
     totals: TotalsOut | None = None
     delivery: DeliveryInfoOut | None = None
+    preso: PresoReadyOut | None = None  # เฉพาะตะกร้าที่เซลล์ถือ — ด่านก่อนบันทึกใบ PRE
 
 
 class AddItemIn(BaseModel):

@@ -90,11 +90,11 @@ cd web && npm test
 4. test: `cd backend && .venv/Scripts/python -m pytest` → ผ่าน 2 เคส (healthz ok + 404)
 
 ### STEP 1 — Auth + Roles
-บัญชีทดสอบ (รหัสผ่านทุกบัญชี = `1234`, สร้างโดย `python -m app.seed`)
+บัญชีทดสอบ (รหัสผ่านทุกบัญชี = `1122`, สร้างโดย `python -m app.seed`)
 
 | role | ล็อกอินด้วย | account_type |
 |---|---|---|
-| customer (Gold) | `089-234-4471` / `napat@email.com` / เลขสมาชิก `4400182` | customer |
+| customer (Gold) | `094-916-4600` / `napat@email.com` / เลขสมาชิก `1100440182` | customer |
 | customer (Silver) | `081-222-3333` | customer |
 | sales | `SA-104` (สมชาย ก. · สาขาบางนา), `SA-105` | staff |
 | manager | `MG-001` | staff |
@@ -128,7 +128,7 @@ cd web && npm test
 วิธีลอง
 1. ไม่ต้องล็อกอิน เปิดหน้าสินค้า → เลือกวิธีรับ (ยกกลับจากสาขา / จัดส่ง / ส่ง+ติดตั้ง) → **ลงตะกร้า** → ไอคอนตะกร้าขึ้นจำนวน
 2. เปิด /cart แก้จำนวน / ลบ / ดูยอดรวม → กดชำระเงินจะถูกบังคับให้ล็อกอิน
-3. ล็อกอินเป็น ณภัทร (089-234-4471) → ของยังอยู่ในตะกร้าเดิม แต่ราคาเปลี่ยนเป็นราคาสมาชิก Gold
+3. ล็อกอินเป็น ณภัทร (094-916-4600) → ของยังอยู่ในตะกร้าเดิม แต่ราคาเปลี่ยนเป็นราคาสมาชิก Gold
 4. API: `GET /cart` · `POST /cart/items {matnr, qty, supply_mode?, plant_code?}` · `PATCH /cart/items/{id}` · `DELETE /cart/items/{id}` · `POST /cart/items/{id}/ack` · `POST /carts/{id}/merge {source_cart_id}`
 5. test: `pytest tests/test_step3_cart.py` (5 เคส: guest→login ของยังอยู่, history/audit, ข้ามตะกร้าคนอื่น 403, พนักงานใช้ /cart ไม่ได้, แมทไม่มี 404)
 
@@ -153,7 +153,7 @@ cd web && npm test
 - ลูกค้ากด **เก็บไว้** = `POST /cart/items/{id}/ack` · **ลบออก** = `DELETE /cart/items/{id}` · ป้าย "พนักงานเพิ่มให้ · ชื่อเซลล์ · เวลา" ค้างบนบรรทัดสินค้า
 
 วิธีลอง
-1. แท็บ 1 ล็อกอินลูกค้า ณภัทร เปิด `/cart` · แท็บ 2 ล็อกอิน SA-104 เปิด `/sales` → ผูกลูกค้า 4400182 → "เพิ่มสินค้าให้ลูกค้า"
+1. แท็บ 1 ล็อกอินลูกค้า ณภัทร เปิด `/cart` · แท็บ 2 ล็อกอิน SA-104 เปิด `/sales` → ผูกลูกค้า 1100440182 → "เพิ่มสินค้าให้ลูกค้า"
 2. แท็บ 1 เด้งการ์ด "พนักงานเพิ่มสินค้าให้คุณ 1 รายการ" ภายใน 1 วินาที → กด เก็บไว้ / ลบออก → แท็บ 2 เห็นผลทันที
 3. test: `pytest tests/test_step5_realtime.py` (3 เคส: เซลล์เพิ่ม→ลูกค้าได้ event/ack/remove, ไม่มีสิทธิ์ถูกปิด 1008, guest ใช้ anon token)
 

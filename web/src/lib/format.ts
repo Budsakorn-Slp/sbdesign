@@ -9,6 +9,12 @@ export function baht(v: string | number | null | undefined): string {
   return num(v).toLocaleString("en-US", { maximumFractionDigits: 0 }) + ".-";
 }
 
+/** 24900 -> "฿24,900" — ใช้ในการ์ดสินค้าที่ราคาจริงกับราคาเต็มอยู่ติดกัน
+ * สัญลักษณ์นำหน้าช่วยให้เห็นทันทีว่าตัวเลขสองชุดนี้เป็นเงินทั้งคู่ ไม่ใช่ขนาดหรือจำนวน */
+export function bahtSign(v: string | number | null | undefined): string {
+  return "฿" + num(v).toLocaleString("en-US", { maximumFractionDigits: 0 });
+}
+
 /** 24900 -> "24,900 บาท" */
 export function bahtWord(v: string | number | null | undefined): string {
   return num(v).toLocaleString("en-US", { maximumFractionDigits: 0 }) + " บาท";
@@ -42,4 +48,17 @@ export function relTime(iso: string | null | undefined): string {
   if (diff < 60 * 24) return `${Math.round(diff / 60)} ชั่วโมงที่แล้ว`;
   if (diff < 60 * 48) return "เมื่อวาน";
   return `${Math.round(diff / 1440)} วันก่อน`;
+}
+
+/** ขนาดสินค้าจากต้นทาง (GROES) — คืน null ถ้าเป็นค่าที่ใส่ไว้ให้ผ่านระบบเฉยๆ
+ *
+ * ของหลายตัวถูกคีย์เป็น "1X1X1" ตอนเปิดรหัสสินค้าเพราะช่องขนาดบังคับกรอก แล้วไม่มีใครกลับมา
+ * แก้ — โชว์ไปก็ได้ "กว้าง 1 × ลึก 1 × สูง 1 ซม." ซึ่งผิดและทำให้ลูกค้าไม่เชื่อข้อมูลอื่นในหน้าด้วย
+ * ซ่อนดีกว่าโชว์ของที่รู้อยู่ว่าไม่จริง
+ */
+export function realSpec(spec: string | null | undefined): string | null {
+  if (!spec) return null;
+  const parts = spec.split(/[xX*×]/).map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 3 && parts.every((p) => /^[\d.]+$/.test(p) && Number(p) <= 1)) return null;
+  return spec;
 }

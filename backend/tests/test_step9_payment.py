@@ -19,11 +19,16 @@ def _seed():
 def _quotation(client, hs):
     cart = client.post("/sales/carts", json={}, headers=hs).json()
     client.post(f"/sales/carts/{cart['id']}/items", json={"matnr": "10023841", "qty": 1, "supply_mode": "ship"}, headers=hs)
-    client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "4400310"}, headers=hs)
+    client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "1100440310"}, headers=hs)
     q = client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10310"}, headers=hs).json()
     slot = next(s for s in q["slots"] if s["remaining"] > 0)
     client.post(f"/delivery/slots/{slot['id']}/hold", json={"cart_id": cart["id"]}, headers=hs)
-    p = client.post("/presos", json={"cart_id": cart["id"]}, headers=hs).json()
+    # ด่านก่อน Save PRE: กดเช็คโปรฯ 1 รอบ แล้วเช็คสต็อกทั้งตะกร้า
+    client.post("/promotions/evaluate", json={"cart_id": cart["id"]}, headers=hs)
+    client.post(f"/sales/carts/{cart['id']}/availability", headers=hs)
+    pr = client.post("/presos", json={"cart_id": cart["id"], "force": True}, headers=hs)
+    assert pr.status_code == 201, pr.text
+    p = pr.json()
     r = client.post(f"/presos/{p['preso_no']}/quotation", json={"force": True}, headers=hs)
     assert r.status_code == 201, r.text
     return r.json()
@@ -98,7 +103,7 @@ def test_sap_down_queues_retry_and_manager_can_resync(client):
 
 
 def test_customer_online_checkout_then_pay(client):
-    hs = {"Authorization": "Bearer " + login(client, "4400182")["access_token"]}
+    hs = {"Authorization": "Bearer " + login(client, "1100440182")["access_token"]}
     client.post("/cart/items", json={"matnr": "10031002", "qty": 1, "supply_mode": "ship"}, headers=hs)
     cart = client.get("/cart", headers=hs).json()
     q = client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110"}, headers=hs).json()
@@ -123,3 +128,76 @@ def test_failed_payment_keeps_quotation_issued(client):
     assert again["payment_no"] != pay["payment_no"]
     ok = client.post(f"/payments/{again['payment_no']}/mock-confirm", headers=hs).json()
     assert ok["status"] == "paid" and ok["sap_so_no"]
+
+
+# ---------- payload ที่ส่งไปสร้าง Sales Order (STEP 16) ----------
+
+def test_sales_order_payload_carries_everything_sap_needs(client):
+    """SAP ต้องสร้าง SO ได้จาก payload ใบเดียว ไม่ต้องย้อนมาถามเราอีก"""
+    from sqlalchemy import select
+
+    from app.integrations.sap import get_sap_client
+    from app.models.quotation import Quotation
+    from app.services.payment_service import build_sales_order
+
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs).json()
+    assert _webhook(client, pay["payment_no"]).status_code == 200
+
+    with SessionLocal() as db:
+        row = db.scalar(select(Quotation).where(Quotation.quotation_no == q["quotation_no"]))
+        doc = build_sales_order(db, row).to_payload()
+
+    assert doc["quotation_no"] == q["quotation_no"]
+    assert doc["customer_no"]            # ไม่ผูกสมาชิกก็ต้องมีเลข walk-in เสมอ
+    assert doc["order_type"] and doc["sales_org"] and doc["distr_chan"] and doc["division"]
+    assert doc["items"], "ต้องมีบรรทัดสินค้า"
+    first = doc["items"][0]
+    assert first["line_no"] == 10        # POSNR 10, 20, 30...
+    assert set(first) >= {"matnr", "qty", "unit_price", "line_total", "supply_mode"}
+    # ยอดเงินต้องเป็น string ทศนิยม 2 ตำแหน่ง — float ทำให้สตางค์เพี้ยนได้
+    assert doc["amounts"]["grand_total"] == f'{float(doc["amounts"]["grand_total"]):.2f}'
+    assert isinstance(doc["amounts"]["grand_total"], str)
+    # mock เก็บ payload ล่าสุดไว้ = push_to_sap ส่งทั้งใบไปจริง ไม่ได้ส่งแค่เลขเอกสาร
+    assert getattr(get_sap_client(), "last_so_payload", None) is not None
+
+
+def test_http_adapter_refuses_to_start_without_a_url():
+    """SAP_MODE=http แต่ไม่ตั้ง URL ต้องล้มตั้งแต่ตอนสร้าง ไม่ใช่ตอนมีออร์เดอร์จริงเข้ามา"""
+    import pytest
+
+    from app.core.config import Settings
+    from app.integrations.sap.http import HttpSapClient
+
+    with pytest.raises(RuntimeError, match="SAP_SO_URL"):
+        HttpSapClient.from_settings(Settings(sap_so_url=""))
+
+
+def test_http_adapter_rejects_a_200_without_an_so_number(monkeypatch):
+    """SAP ตอบ 200 แต่ไม่มีเลข SO = ไม่สำเร็จ ห้ามนับว่าผ่าน ไม่งั้นออร์เดอร์หายเงียบ"""
+    import httpx
+
+    from app.core.config import Settings
+    from app.integrations.sap.http import HttpSapClient
+
+    c = HttpSapClient.from_settings(Settings(sap_so_url="http://sap.test/so"))
+
+    class FakeResp:
+        status_code = 200
+
+        def raise_for_status(self): ...
+
+        def json(self):
+            return {"message": "ไม่ผ่านการตรวจเครดิต"}
+
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: FakeResp())
+
+    class Doc:
+        quotation_no = "QT-TEST"
+
+        def to_payload(self):
+            return {}
+
+    res = c.create_sales_order_doc(Doc())
+    assert res.ok is False and res.sap_so_no is None and "เครดิต" in res.message

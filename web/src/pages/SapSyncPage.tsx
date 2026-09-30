@@ -30,7 +30,7 @@ export default function SapSyncPage() {
         <div className="card" style={{ maxWidth: 520 }}>
           <b>คิวส่งข้อมูลเข้า SAP</b>
           <p className="muted small">เฉพาะผู้จัดการสาขา / แอดมิน</p>
-          <button className="btn dark" onClick={auth.openLogin}>เข้าสู่ระบบ</button>
+          <Link className="btn dark" to="/staff">เข้าสู่ระบบพนักงาน</Link>
         </div>
       </main>
     );

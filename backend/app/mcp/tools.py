@@ -253,7 +253,11 @@ def _quotation(q: dict) -> dict:
     ["cart_id"],
 )
 def create_quotation(api: Api, a: dict) -> Any:
-    preso = api.post("/presos", {"cart_id": a["cart_id"], "note": a.get("note")})
+    # ใบ PRE มีด่านบังคับ (เช็คสต็อก + เช็คโปรฯ ต้องทำกับของชุดปัจจุบัน) — เดินให้ครบตรงนี้เลย
+    # ผู้ช่วยจะได้ไม่ต้องสั่งทีละขั้น และผลที่ได้ตรงกับที่เซลล์กดเองในหน้าตะกร้า
+    api.post(f"/sales/carts/{a['cart_id']}/availability", {})
+    api.post("/promotions/evaluate", {"cart_id": a["cart_id"]})
+    preso = api.post("/presos", {"cart_id": a["cart_id"], "note": a.get("note"), "force": bool(a.get("force"))})
     q = api.post(f"/presos/{preso['preso_no']}/quotation", {"force": bool(a.get("force"))})
     return {"preso_no": preso["preso_no"], **_quotation(q)}
 

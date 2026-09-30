@@ -44,11 +44,11 @@ def test_other_sales_gets_403(client):
     assert client.delete(f"/sales/carts/{a['id']}", headers=h2).status_code == 403
     # ลูกค้าเข้า endpoint เซลล์ไม่ได้
     assert client.get("/sales/carts", headers=auth_headers(client, "081-222-3333")).status_code == 403
-    assert client.get("/customers/search", params={"q": "4400"}, headers=auth_headers(client, "081-222-3333")).status_code == 403
+    assert client.get("/customers/search", params={"q": "1100"}, headers=auth_headers(client, "081-222-3333")).status_code == 403
 
 
 def test_attach_customer_merges_online_cart_and_customer_sees_it(client):
-    hc = auth_headers(client, "089-234-4471")
+    hc = auth_headers(client, "094-916-4600")
     # ลูกค้าใส่ของจากบ้าน
     online = client.post("/cart/items", json={"matnr": "10052277", "qty": 1}, headers=hc).json()
     assert online["owner_sales"] is None
@@ -56,28 +56,29 @@ def test_attach_customer_merges_online_cart_and_customer_sees_it(client):
     hs = auth_headers(client, "SA-104", "staff")
     cart = _open(client, hs)
     client.post(f"/sales/carts/{cart['id']}/items", json={"matnr": "10071100", "qty": 2, "plant_code": "BKN", "supply_mode": "takeaway"}, headers=hs)
-    found = client.get("/customers/search", params={"q": "089-234"}, headers=hs).json()
-    assert found and found[0]["sap_customer_no"] == "4400182" and found[0]["online_cart_count"] == online_count
-    r = client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "4400182"}, headers=hs)
+    found = client.get("/customers/search", params={"q": "094-916"}, headers=hs).json()
+    assert found and found[0]["sap_customer_no"] == "1100440182" and found[0]["online_cart_count"] == online_count
+    r = client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "1100440182"}, headers=hs)
     assert r.status_code == 200, r.text
     merged = r.json()
-    assert merged["customer"]["tier"] == "Gold" and merged["count"] == online_count + 2
+    assert merged["customer"]["points"] == 1250 and merged["count"] == online_count + 2
     mats = {it["matnr"]: it for it in merged["items"]}
-    assert mats["10052277"]["added_by"] == "customer" and mats["10052277"]["price_tier"] == "Gold"
-    assert mats["10071100"]["added_by"] == "sales" and mats["10071100"]["pending_ack"] is True
+    assert mats["10052277"]["added_by"] == "customer" and mats["10052277"]["price_tier"] == "standard"
+    # ของที่เซลล์ใส่เข้าตะกร้าลูกค้าเลย ไม่มีขั้น "รอลูกค้ากดรับ" (ป้ายบอกที่มาอยู่ที่ตัวรายการ)
+    assert mats["10071100"]["added_by"] == "sales" and mats["10071100"]["pending_ack"] is False
     # ลูกค้าเปิดตะกร้าตัวเอง → เห็นใบเดียวกันที่เซลล์ถือ พร้อมป้ายเซลล์เพิ่ม
     mine = client.get("/cart", headers=hc).json()
-    assert mine["id"] == merged["id"] and mine["owner_sales"]["staff_code"] == "SA-104" and mine["pending_count"] >= 1
+    assert mine["id"] == merged["id"] and mine["owner_sales"]["staff_code"] == "SA-104" and mine["pending_count"] == 0
     # ตะกร้าออนไลน์เดิมถูกปิดเป็น merged
     assert client.post(f"/carts/{online['id']}/merge", json={"source_cart_id": online["id"]}, headers=hc).status_code == 403
-    # ลูกค้ากด "เก็บไว้"
+    # ปุ่มล้างป้าย "รอยืนยัน" ยังเรียกได้ (เผื่อตะกร้าเก่าที่ค้างป้ายไว้) แต่ไม่เปลี่ยนอะไรแล้ว
     lamp = mats["10071100"]
     acked = client.post(f"/cart/items/{lamp['id']}/ack", headers=hc).json()
     assert next(it for it in acked["items"] if it["id"] == lamp["id"])["pending_ack"] is False
     # เซลล์คนอื่นจะผูกลูกค้าคนเดียวกันไม่ได้
     h2 = auth_headers(client, "SA-105", "staff")
     c2 = _open(client, h2)
-    assert client.post(f"/sales/carts/{c2['id']}/attach-customer", json={"customer_key": "4400182"}, headers=h2).status_code == 409
+    assert client.post(f"/sales/carts/{c2['id']}/attach-customer", json={"customer_key": "1100440182"}, headers=h2).status_code == 409
     # ปิดเซสชัน → ตะกร้ากลับเป็นของลูกค้า, เซลล์หมดสิทธิ์ทันที
     closed = client.delete(f"/sales/carts/{cart['id']}", headers=hs).json()
     assert closed["outcome"] == "returned_to_customer"
@@ -106,5 +107,5 @@ def test_unknown_customer_404_and_sap_only_customer_gets_created(client):
     hs = auth_headers(client, "SA-104", "staff")
     cart = _open(client, hs)
     assert client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "no-such@x.com"}, headers=hs).status_code == 404
-    r = client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "4400310"}, headers=hs)  # มีเฉพาะใน SAP mock
+    r = client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "1100440310"}, headers=hs)  # มีเฉพาะใน SAP mock
     assert r.status_code == 200 and r.json()["customer"]["name"].startswith("บริษัท ทรัพย์ทวี")

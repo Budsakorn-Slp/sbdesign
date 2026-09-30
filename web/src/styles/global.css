@@ -13,6 +13,12 @@
   --red-dark: #8e0b20;
   --green: #0b6b58;
   --green-dark: #0f2c25;
+  /* สีแบรนด์จากโลโก้ SB (ดูดค่าจากไฟล์โลโก้จริง: ตัวมาร์ค #4862FC · ตัวอักษร #2B261F)
+     ใช้กับ "โหมดพนักงานขาย" ทุกที่ — เดิมเป็นเขียวเข้มซึ่งไม่ได้มาจากแบรนด์
+     สีเขียวที่เหลือในระบบเก็บไว้ใช้กับความหมาย "ผ่าน/มีของ" อย่างเดียว */
+  --brand: #4862fc;
+  --brand-dark: #171e3f;
+  --brand-soft: #eef0ff;
   --amber: #b08514;
   --amber-bg: #fffcf3;
   --radius: 10px;
@@ -299,6 +305,12 @@ ul {
   outline: 2px solid var(--ink);
   outline-offset: -1px;
 }
+/* พอคลิกเข้าช่องแล้วตัวอย่างในช่องหายไปเลย ไม่ต้องรอให้พิมพ์ตัวแรก
+   สำคัญกับช่องรหัสผ่านที่ตัวอย่างเป็นจุด ••••• — ค้างอยู่แล้วดูเหมือนมีรหัสกรอกไว้แล้ว */
+.field input:focus::placeholder,
+.field textarea:focus::placeholder {
+  color: transparent;
+}
 /* ช่องรหัสไปรษณีย์แบบพิมพ์ไปหาไป — ลิสต์ลอยทับฟอร์ม ไม่ดันช่องอื่นลง */
 .geo-ac {
   position: relative;
@@ -420,6 +432,10 @@ ul {
 .chip.green {
   background: var(--green);
 }
+/* ป้ายของ "โหมดพนักงานขาย" — ใช้สีแบรนด์ ไม่ใช่เขียวซึ่งในระบบนี้แปลว่า "มีของ/ผ่าน" */
+.chip.brand {
+  background: var(--brand);
+}
 .chip.amber {
   background: #f3e7c0;
   color: #6b5310;
@@ -469,6 +485,30 @@ ul {
 .modal.wide {
   max-width: 720px;
 }
+/* จอเล็ก: กล่องกางเต็มจอแทนการ์ดลอยกลางจอ
+   เหตุผล: กล่อง 440px กลางจอมือถือเหลือขอบข้างละนิดเดียว พอคีย์บอร์ดเด้งขึ้นมาก็ทับ
+   ปุ่มยืนยันพอดี · เต็มจอได้พื้นที่เต็ม เลื่อนได้ และหัวกล่องยังอยู่ให้กดปิดเสมอ
+   iPad (768px ขึ้นไป) ยังเป็นการ์ดลอยตามเดิม เพราะพื้นที่เหลือเฟือ */
+@media (max-width: 599px) {
+  .modal-backdrop { padding: 0; align-items: stretch; }
+  .modal.sheet {
+    max-width: none;
+    max-height: none;
+    min-height: 100%;
+    border-radius: 0;
+    padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  /* หัวกล่องติดขอบบนไว้ เลื่อนดูเนื้อหายาวๆ แล้วยังกดปิดได้โดยไม่ต้องเลื่อนกลับขึ้นไป */
+  .modal.sheet .modal-head {
+    position: sticky;
+    top: -16px;
+    z-index: 1;
+    margin: -16px -16px 8px;
+    padding: 14px 16px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+}
 .modal-head {
   display: flex;
   align-items: center;
@@ -477,6 +517,13 @@ ul {
 }
 .modal-head h2 {
   font-size: 20px;
+}
+/* หัวกล่องที่มีแต่ปุ่มปิด — ใช้กับกล่องที่มีหัวเรื่องของตัวเองอยู่ข้างใน (ดู AuthShell)
+   ห้ามตั้งชื่อว่า .bare ซ้ำกับโครงหน้าเปล่าใน BareLayout — คลาสเดียวกันจะไปโดนกฎ
+   .bare { display:flex; flex-direction:column; min-height:100vh } เข้าเต็มๆ */
+.modal-head.close-only {
+  justify-content: flex-end;
+  margin-bottom: 0;
 }
 .demo-accounts {
   margin-top: 18px;
@@ -611,4 +658,29 @@ table.tbl tr:last-child td {
   .form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== ปุ่มลอยกลับขึ้นบนสุด =====
+   โผล่เมื่อเลื่อนลงไปไกล · อยู่มุมขวาล่าง เหนือขอบจอพอให้ไม่ชนแถบล่างของมือถือ */
+.to-top {
+  position: fixed;
+  right: 20px;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  z-index: 60;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .16);
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease;
+}
+.to-top:hover { background: var(--ink); color: #fff; border-color: var(--ink); transform: translateY(-2px); }
+@media (max-width: 599px) {
+  .to-top { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); width: 40px; height: 40px; }
 }

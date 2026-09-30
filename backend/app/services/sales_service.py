@@ -8,7 +8,7 @@ from app.integrations.sap.base import SapError
 from app.models.cart import Cart
 from app.models.common import utcnow
 from app.models.user import User
-from app.services import audit_service, cart_service
+from app.services import audit_service, cart_service, relationship_service
 from app.services.auth_service import normalize_phone
 
 
@@ -88,7 +88,7 @@ def search_customers(db: Session, actor: User, q: str, limit: int = 10) -> list[
         except SapError:
             sap_c = None
         if sap_c and sap_c.sap_customer_no not in seen:
-            out.append({"id": None, "name": sap_c.name, "tier": sap_c.tier, "sap_customer_no": sap_c.sap_customer_no, "phone": sap_c.phone, "email": sap_c.email, "address": sap_c.address, "postcode": sap_c.postcode, "online_cart_count": 0, "source": "sap"})
+            out.append({"id": None, "name": sap_c.name, "points": sap_c.points, "sap_customer_no": sap_c.sap_customer_no, "phone": sap_c.phone, "email": sap_c.email, "address": sap_c.address, "postcode": sap_c.postcode, "online_cart_count": 0, "source": "sap"})
     audit_service.log(db, actor, "customer.search", "user", None, {"q": ql, "results": len(out)})
     db.commit()
     return out
@@ -97,7 +97,7 @@ def search_customers(db: Session, actor: User, q: str, limit: int = 10) -> list[
 def _customer_row(db: Session, u: User) -> dict:
     online = db.scalar(select(Cart).options(selectinload(Cart.items)).where(Cart.customer_user_id == u.id, Cart.status == "open", Cart.owner_sales_id.is_(None)))
     return {
-        "id": u.id, "name": u.name, "tier": u.tier, "sap_customer_no": u.sap_customer_no, "phone": _mask_phone(u.phone), "email": u.email, "address": u.default_address,
+        "id": u.id, "name": u.name, "points": u.points, "sap_customer_no": u.sap_customer_no, "phone": _mask_phone(u.phone), "email": u.email, "address": u.default_address,
         "postcode": u.default_postcode, "online_cart_count": sum(it.qty for it in online.items) if online else 0, "source": "local",
     }
 
@@ -123,7 +123,8 @@ def resolve_customer(db: Session, key: str) -> User:
         raise HTTPException(status_code=404, detail="ไม่พบลูกค้า (เลขสมาชิก / เบอร์โทร / อีเมล)")
     u = db.scalar(select(User).where(User.sap_customer_no == c.sap_customer_no))
     if not u:
-        u = User(role="customer", name=c.name, phone=normalize_phone(c.phone or "") or None, email=(c.email or "").lower() or None, sap_customer_no=c.sap_customer_no, tier=c.tier, is_guest=False, default_address=c.address, default_postcode=c.postcode)
+        u = User(role="customer", name=c.name, phone=normalize_phone(c.phone or "") or None, email=(c.email or "").lower() or None, sap_customer_no=c.sap_customer_no, points=c.points, is_guest=False,
+                 default_address=c.address, default_postcode=c.postcode, sap_address=c.address, sap_postcode=c.postcode)
         db.add(u)
         db.commit()
     return u
@@ -139,10 +140,15 @@ def attach_customer(db: Session, sales: User, cart: Cart, customer_key: str) -> 
     cart.customer = customer
     cart.customer_user_id = customer.id
     cart.label = customer.name
-    # ของที่เซลล์ใส่ไว้ก่อนผูกลูกค้า → ต้องให้ลูกค้ายืนยัน
+    # ของที่เซลล์ใส่ไว้ก่อนผูกลูกค้า เข้าตะกร้าลูกค้าได้เลย ไม่ต้องให้กดยืนยันทีละชิ้น
+    # (ลูกค้าหน้าร้านส่วนใหญ่เดินดูของแล้วให้พนักงานกดใส่ให้จากแท็บเล็ต การบังคับกดรับ
+    #  ทีละชิ้นบนมือถือตัวเองคือความยุ่งยากที่ไม่ได้ช่วยอะไร — ยังลบเองได้ตลอดถ้าไม่เอา
+    #  และทุกแถวติดป้ายบอกอยู่แล้วว่าใครเป็นคนเพิ่มและเพิ่มตอนไหน)
     for it in cart.items:
-        if it.added_by == "sales":
-            it.pending_ack = True
+        it.pending_ack = False
+        # ของที่ลูกค้าเคยไม่ติ๊กไว้บนเว็บ ต้องติ๊กให้หมดตอนพนักงานรับดูแล
+        # ไม่งั้นมันเงียบหายจากยอดบิลโดยที่พนักงานไม่รู้ว่าทำไมยอดไม่ตรงกับของตรงหน้า
+        it.selected = True
     cart_service.reprice(db, cart)  # ราคาตาม tier ลูกค้า
     db.commit()
     merged_from = None
@@ -153,11 +159,13 @@ def attach_customer(db: Session, sales: User, cart: Cart, customer_key: str) -> 
         merged_from = online.id
         cart_service.merge_carts(db, online, cart, sales)
     audit_service.log(db, sales, "sales.attach_customer", "cart", cart.id, {"customer_id": customer.id, "merged_from": merged_from, "moved": moved})
+    # จดว่าใครดูแลใคร — ลูกค้าที่เคยซื้อกับพนักงานคนไหน ครั้งหน้าควรได้คนเดิม
+    rel = relationship_service.record_attach(db, customer.id, sales, cart_id=cart.id)
     db.commit()
     cart = cart_service.load_cart(db, cart.id)
     touch(db, cart)
     cart_service.emit(cart, "customer_attached", {"customer_name": customer.name, "sales_name": sales.name, "moved": moved})
-    return cart, {"customer_id": customer.id, "merged_online_items": moved}
+    return cart, {"customer_id": customer.id, "merged_online_items": moved, **rel}
 
 
 def detach_customer(db: Session, sales: User, cart: Cart) -> Cart:
@@ -179,6 +187,7 @@ def detach_customer(db: Session, sales: User, cart: Cart) -> Cart:
         it.pending_ack = False
     cart_service.reprice(db, cart)
     audit_service.log(db, sales, "sales.detach_customer", "cart", cart.id, {"customer_id": customer_id, "returned_items": len(mine)})
+    relationship_service.record_release(db, customer_id, sales.id, "detach", cart_id=cart.id)
     db.commit()
     cart = cart_service.load_cart(db, cart.id)
     cart_service.emit(cart, "customer_detached", {"customer_id": customer_id})

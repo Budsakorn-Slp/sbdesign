@@ -59,7 +59,7 @@ class MockSapClient:
     @staticmethod
     def _to_material(m: dict) -> MaterialDTO:
         price = float(m["price"])
-        prices = {"standard": price, "Gold": round(price * 0.94), "Silver": round(price * 0.97)}
+        prices = {"standard": price}
         if m.get("compare_at"):
             prices["compare_at"] = float(m["compare_at"])
         return MaterialDTO(
@@ -147,6 +147,11 @@ class MockSapClient:
         so = "26" + "".join(random.choices(string.digits, k=8))
         self.created_orders.append(so)
         return SapSoResult(ok=True, sap_so_no=so, message="mock SO created")
+
+    def create_sales_order_doc(self, order) -> SapSoResult:
+        """mock: เก็บ payload ล่าสุดไว้ให้เทสตรวจว่าเราส่งอะไรออกไป"""
+        self.last_so_payload = order.to_payload()
+        return self.create_sales_order(order.quotation_no)
 
     def get_order_history(self, sap_customer_no: str) -> list[OrderDTO]:
         """mock: สุ่มแบบ deterministic จากเลขลูกค้า — ลูกค้าคนเดิมได้ประวัติเดิมทุกครั้ง"""

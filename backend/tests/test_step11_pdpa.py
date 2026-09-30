@@ -10,7 +10,7 @@ from app.models.user import User
 from app.seed import seed_catalog
 from tests.helpers import auth_headers, ensure_seed
 
-CUSTOMER = "4400205"
+CUSTOMER = "1100440205"
 MATNR = "10023841"
 
 

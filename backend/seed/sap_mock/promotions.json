@@ -1,11 +1,155 @@
 [
-  {"code": "SEP-SOFA15", "title": "โซฟาลด 15%", "condition_text": "หมวดโซฟา ยอด ≥ 20,000 · ใช้ร่วมกับบัตรสมาชิกได้",
-   "condition": {"type": "category_percent", "category_root": "sofa", "min_category_subtotal": 20000, "percent": 15},
-   "discount_type": "percent", "discount_value": 15, "stackable": true, "valid_from": "2026-09-01", "valid_to": "2026-09-30"},
-  {"code": "GOLD-FREESHIP", "title": "ส่งฟรีในเขต กทม.", "condition_text": "สมาชิก Gold + ยอด ≥ 30,000 · ไม่รวมค่าติดตั้ง",
-   "condition": {"type": "free_shipping", "tier": "Gold", "min_subtotal": 30000, "zones": ["A", "B"], "max_amount": 800},
-   "discount_type": "amount", "discount_value": 800, "stackable": true, "valid_from": "2026-09-01", "valid_to": "2026-12-31"},
-  {"code": "BUNDLE-BED", "title": "ซื้อที่นอนแถมหมอน 2 ใบ", "condition_text": "มีที่นอนในบิลอย่างน้อย 1 ชิ้น",
-   "condition": {"type": "bundle_gift", "category_root": "mattress", "min_qty": 1, "gift_value": 1290, "gift_text": "หมอนหนุน 2 ใบ"},
-   "discount_type": "gift", "discount_value": 1290, "stackable": true, "valid_from": "2026-09-01", "valid_to": "2026-10-31"}
+  {
+    "code": "SBWELCOME",
+    "title": "ลูกค้าใหม่ ลด 500.-",
+    "condition_text": "ยอด ≥ 5,000 · 1 สิทธิ์/บิล",
+    "condition": {
+      "type": "code_amount",
+      "min_subtotal": 5000,
+      "amount": 500
+    },
+    "discount_type": "amount",
+    "discount_value": 500,
+    "stackable": true,
+    "requires_code": true,
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-12-31"
+  },
+  {
+    "code": "SEP10",
+    "title": "ลด 10% สูงสุด 2,000.-",
+    "condition_text": "ยอด ≥ 10,000 · ลดสูงสุด 2,000.-",
+    "condition": {
+      "type": "code_percent",
+      "min_subtotal": 10000,
+      "percent": 10,
+      "max_amount": 2000
+    },
+    "discount_type": "percent",
+    "discount_value": 10,
+    "stackable": true,
+    "requires_code": true,
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-12-31"
+  },
+  {
+    "code": "STAFF300",
+    "title": "คูปองพนักงาน 300.-",
+    "condition_text": "ยอด ≥ 3,000 · ใช้ร่วมกับโปรอื่นไม่ได้",
+    "condition": {
+      "type": "code_amount",
+      "min_subtotal": 3000,
+      "amount": 300
+    },
+    "discount_type": "amount",
+    "discount_value": 300,
+    "stackable": false,
+    "requires_code": true,
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-12-31"
+  },
+  {
+    "code": "SAVE10",
+    "title": "ยอดครบ 5,000 ลด 10%",
+    "condition_text": "ยอด ≥ 5,000 · เลือกใช้ได้ทีละขั้น",
+    "condition": {
+      "type": "subtotal_percent",
+      "min_subtotal": 5000,
+      "percent": 10
+    },
+    "discount_type": "percent",
+    "discount_value": 10,
+    "stackable": true,
+    "requires_code": false,
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-12-31",
+    "exclusive_group": "tier"
+  },
+  {
+    "code": "SAVE15",
+    "title": "ยอดครบ 10,000 ลด 15%",
+    "condition_text": "ยอด ≥ 10,000 · เลือกใช้ได้ทีละขั้น",
+    "condition": {
+      "type": "subtotal_percent",
+      "min_subtotal": 10000,
+      "percent": 15
+    },
+    "discount_type": "percent",
+    "discount_value": 15,
+    "stackable": true,
+    "requires_code": false,
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-12-31",
+    "exclusive_group": "tier"
+  },
+  {
+    "code": "SAVE20",
+    "title": "ยอดครบ 15,000 ลด 20%",
+    "condition_text": "ยอด ≥ 15,000 · เลือกใช้ได้ทีละขั้น",
+    "condition": {
+      "type": "subtotal_percent",
+      "min_subtotal": 15000,
+      "percent": 20
+    },
+    "discount_type": "percent",
+    "discount_value": 20,
+    "stackable": true,
+    "requires_code": false,
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-12-31",
+    "exclusive_group": "tier"
+  },
+  {
+    "code": "TESTCODE",
+    "title": "โค้ดทดสอบ ลด 50.-",
+    "condition_text": "ไม่มียอดขั้นต่ำ · ใช้ร่วมกับโปรโมชั่นอื่นไม่ได้",
+    "condition": {
+      "type": "code_amount",
+      "min_subtotal": 0,
+      "amount": 50
+    },
+    "discount_type": "amount",
+    "discount_value": 50,
+    "stackable": false,
+    "requires_code": true,
+    "valid_from": "2026-01-01",
+    "valid_to": "2030-12-31"
+  },
+  {
+    "code": "MEMBER-FREESHIP",
+    "title": "ส่งฟรีในเขต กทม.",
+    "condition_text": "สมาชิก + ยอด ≥ 30,000 · ไม่รวมค่าติดตั้ง",
+    "condition": {
+      "type": "free_shipping",
+      "min_subtotal": 30000,
+      "zones": [
+        "A",
+        "B"
+      ],
+      "max_amount": 800
+    },
+    "discount_type": "amount",
+    "discount_value": 800,
+    "stackable": true,
+    "requires_code": true,
+    "valid_from": "2026-09-01",
+    "valid_to": "2026-12-31"
+  },
+  {
+    "code": "ONTOP",
+    "title": "ON TOP ลด 50.-",
+    "condition_text": "ไม่มียอดขั้นต่ำ · ใช้ทับโปรโมชั่นได้",
+    "condition": {
+      "type": "code_amount",
+      "min_subtotal": 0,
+      "amount": 50
+    },
+    "discount_type": "amount",
+    "discount_value": 50,
+    "stackable": true,
+    "requires_code": true,
+    "exclusive_group": null,
+    "valid_from": "2026-01-01",
+    "valid_to": "2030-12-31"
+  }
 ]

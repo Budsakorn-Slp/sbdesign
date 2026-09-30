@@ -2,16 +2,22 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon";
 import ProductCard from "../components/ProductCard";
-import ProductRow from "../components/ProductRow";
+import { ProductCardSkeletonGrid } from "../components/ProductCardSkeleton";
+import SuggestFeed from "../components/SuggestFeed";
 import { apiGet, errorMessage } from "../lib/api";
 import { useContent } from "../lib/content";
-import type { MaterialCard, SearchOut } from "../lib/types";
+import type { Category, MaterialCard, SearchOut } from "../lib/types";
 
-const PAGE = 48;
-const TOP = 10; // จำนวนการ์ดในแถวขายดี (โชว์ทีละ 5 ที่เหลือเลื่อนดู)
+// 20 ใบต่อรอบ — ใหญ่พอให้เลื่อนได้ลื่นโดยไม่ยิงถี่ ถ้าเล็กกว่านี้จะยิงบ่อยจนสะดุด
+const PAGE = 20;
 
 const TAG_LABEL: Record<string, string> = { deal: "ดีลพิเศษ", new: "สินค้าใหม่", bestseller: "สินค้าขายดี" };
 const ROOM_LABEL: Record<string, string> = { bedroom: "ห้องนอน", living: "ห้องนั่งเล่น", dining: "ห้องทานอาหาร / ครัว", office: "โฮมออฟฟิศ", outdoor: "นอกบ้าน", kids: "เด็ก" };
+/** ชั้นสินค้าจาก SAP (MAABC) ที่เอามาทำเป็นหน้าของตัวเอง */
+const ABC_LABEL: Record<string, string> = { N: "สินค้าใหม่", Z: "สินค้าขายดี" };
+
+/** กลุ่มสินค้าตามตัวขึ้นต้น MATNR — หลังบ้านแปลชื่อกลุ่มเป็นเลขให้ (ดู catalog_matnr_groups) */
+const GROUP_LABEL: Record<string, string> = { display: "สินค้าตัวโชว์", consign: "สินค้าฝากขาย", regular: "สินค้าขายปกติ" };
 
 const SORTS: { key: string; label: string }[] = [
   { key: "relevance", label: "แนะนำ" },
@@ -22,30 +28,19 @@ const SORTS: { key: string; label: string }[] = [
   { key: "discount", label: "ส่วนลดมากสุด" },
 ];
 
-/** ตัวเลือกแบบติ๊กเปิด/ปิด ที่เก็บค่าเป็น "1" ใน query string */
-const SWITCHES: { key: string; label: string }[] = [
-  { key: "discount_only", label: "มีส่วนลด" },
-  { key: "in_stock", label: "มีของพร้อมส่ง" },
-  { key: "has_image", label: "มีรูปสินค้า" },
+/** ตัวเลือกที่ยกขึ้นมาเป็นชิปกดเร็วบนแถบบนสุด — เอาเฉพาะที่ลูกค้าใช้ตัดสินใจจริง
+ * (มีรูปสินค้าไม่อยู่ในนี้ เป็นเครื่องมือของหลังบ้านมากกว่าของคนซื้อ) */
+const QUICK: { key: string; label: string }[] = [
+  { key: "in_stock", label: "พร้อมส่ง" },
+  { key: "discount_only", label: "ลดราคา" },
 ];
 
-/** แถวการ์ดแนวนอน 10 ตัว — เลื่อนดูได้ ความกว้างช่องหารตามจอ การ์ดจะได้ไม่โดนตัดครึ่ง */
-function TopRow({ title, path, more }: { title: string; path: string; more: string }) {
-  const [items, setItems] = useState<MaterialCard[] | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    apiGet<SearchOut>(path)
-      .then((d) => alive && setItems(d.items))
-      .catch(() => alive && setItems([]));
-    return () => {
-      alive = false;
-    };
-  }, [path]);
-
-  if (!items) return <div className="ph" style={{ height: 260 }} />;
-  return <ProductRow title={title} items={items} more={more} />;
-}
+/** ตัวเลือกแบบติ๊กเปิด/ปิด ที่เก็บค่าเป็น "1" ใน query string */
+const SWITCHES: { key: string; label: string }[] = [
+  { key: "discount_only", label: "ลดราคา" },
+  { key: "in_stock", label: "พร้อมส่ง" },
+  { key: "has_image", label: "มีรูปสินค้า" },
+];
 
 export default function SearchPage() {
   const [params, setParams] = useSearchParams();
@@ -55,6 +50,8 @@ export default function SearchPage() {
   const room = params.get("room") || "";
   const tag = params.get("tag") || "";
   const sort = params.get("sort") || "relevance";
+  const group = params.get("group") || "";
+  const abc = params.get("abc") || ""; // ชั้นสินค้าจาก SAP (MAABC) — N = ของเข้าใหม่
   const brands = params.getAll("brand");
 
   const [data, setData] = useState<SearchOut | null>(null);
@@ -67,13 +64,22 @@ export default function SearchPage() {
   // กันยิงซ้ำ: state ช้าไปหนึ่งจังหวะ observer ยิงติดกันได้ก่อน re-render
   const busy = useRef(false);
 
+  /** เลขสุ่มประจำการเปิดหน้านี้หนึ่งครั้ง — ใช้สลับลำดับสินค้าตอนเปิดดูเฉยๆ
+   *
+   * เกิดครั้งเดียวตอน mount แล้วส่งตัวเดิมไปทุกหน้าของการเลื่อน ไม่งั้นแต่ละหน้าจะเป็นลำดับ
+   * คนละชุด ของที่เพิ่งเห็นหน้าแรกจะเด้งมาซ้ำอีกตอนเลื่อนลง · รีเฟรชทีก็ได้เลขใหม่ = ชุดใหม่
+   */
+  const [seed] = useState(() => 1 + Math.floor(Math.random() * 2147483645));
+
   // ตัวกรองทั้งชุดในรูป query string — เปลี่ยนตัวไหนก็ค้นใหม่ทั้งหมด
   const filterQs = useMemo(() => {
     const qs = new URLSearchParams();
     for (const [k, v] of params) if (k !== "sort" && v) qs.append(k, v);
     if (sort !== "relevance") qs.set("sort", sort);
+    // มีคำค้นให้เรียงตามความตรงอยู่แล้ว การสลับลำดับใช้เฉพาะตอนเปิดดูเฉยๆ
+    if (!params.get("q") && sort === "relevance") qs.set("seed", String(seed));
     return qs.toString();
-  }, [params, sort]);
+  }, [params, sort, seed]);
 
   const fetchPage = useCallback(
     (offset: number) => {
@@ -130,26 +136,27 @@ export default function SearchPage() {
   }, [loadMore]);
 
   const cats = content?.categories || [];
-  const catObj = cats.find((c) => c.id === category) || cats.flatMap((c) => c.children).find((c) => c.id === category);
-  const parent = cats.find((c) => c.id === category || c.children.some((ch) => ch.id === category));
-  const title = q ? `ผลการค้นหา “${q}”` : catObj ? catObj.name_th : room ? ROOM_LABEL[room] || room : tag ? TAG_LABEL[tag] || tag : "สินค้าทั้งหมด";
-
-  // แถวขายดีต้องเป็น "ขายดีของหมวดที่กำลังดู" ไม่ใช่ขายดีทั้งเว็บ — ผูกกับหมวด/ห้อง/แท็ก/คำค้น
-  // ไม่ผูกกับแบรนด์และตัวเลือกเสริม เพราะนั่นเป็นการกรองผลลัพธ์ ไม่ใช่หัวข้อของหน้า
-  const topRow = useMemo(() => {
-    const scope = new URLSearchParams();
-    for (const [k, v] of Object.entries({ q, category, room, tag })) if (v) scope.set(k, v);
-    const search = new URLSearchParams(scope);
-    search.set("sort", "bestseller");
-    search.set("has_image", "true");
-    search.set("limit", String(TOP));
-    const scoped = scope.toString();
-    return {
-      title: q ? "สินค้าขายดีจากการค้นหานี้" : scoped ? `สินค้าขายดีใน${title}` : "สินค้าขายดี",
-      path: `/materials/search?${search.toString()}`,
-      more: `/search?${scoped ? scoped + "&" : ""}sort=bestseller`,
-    };
-  }, [q, category, room, tag, title]);
+  // ต้นไม้หมวดลึกได้หลายชั้น (หมวดชุดเว็บจริง = ห้องนอน > ที่นอน > ที่นอนสปริง)
+  // ค้นแค่สองชั้นแบบเดิมจะหาหมวดชั้นในไม่เจอ แล้วป้ายตัวกรองจะโชว์รหัสดิบ (w-826) แทนชื่อ
+  const findCat = (list: Category[], id: string): Category | undefined => {
+    for (const c of list) {
+      if (c.id === id) return c;
+      const hit = findCat(c.children ?? [], id);
+      if (hit) return hit;
+    }
+    return undefined;
+  };
+  const findParent = (list: Category[], id: string): Category | undefined => {
+    for (const c of list) {
+      if (c.id === id || (c.children ?? []).some((ch) => ch.id === id)) return c;
+      const hit = findParent(c.children ?? [], id);
+      if (hit) return hit;
+    }
+    return undefined;
+  };
+  const catObj = findCat(cats, category);
+  const parent = findParent(cats, category);
+  const title = q ? `ผลการค้นหา “${q}”` : catObj ? catObj.name_th : room ? ROOM_LABEL[room] || room : tag ? TAG_LABEL[tag] || tag : group ? GROUP_LABEL[group] || group : abc ? ABC_LABEL[abc] || "สินค้าทั้งหมด" : "สินค้าทั้งหมด";
 
   /** เปลี่ยนตัวกรองทีไรก็กลับไปหน้าแรกของผลลัพธ์เสมอ (offset อยู่ใน state ไม่ใช่ URL) */
   const set = (key: string, val: string) => {
@@ -184,7 +191,8 @@ export default function SearchPage() {
     ...SWITCHES.filter((s) => params.get(s.key)).map((s) => ({ key: s.key, label: s.label, clear: () => set(s.key, "") })),
   ];
 
-  const clearAll = () => setParams(q ? new URLSearchParams({ q }) : new URLSearchParams());
+  // q / group / abc คือ "หัวข้อของหน้า" ไม่ใช่ตัวกรอง — ล้างตัวกรองแล้วต้องยังอยู่หน้าเดิม
+  const clearAll = () => setParams(new URLSearchParams({ ...(q ? { q } : {}), ...(group ? { group } : {}), ...(abc ? { abc } : {}) }));
 
   const facets = (
     <>
@@ -248,25 +256,37 @@ export default function SearchPage() {
       </nav>
       <div className="search-head">
         <h1>{title}</h1>
-        {data && <span className="muted">{data.total.toLocaleString("th-TH")} รายการ</span>}
       </div>
 
+      {/* แถบตัวกรอง: เลื่อนซ้าย-ขวาได้ ส่วนปุ่ม "ตัวกรอง" ตรึงไว้ริมขวาเสมอ
+          ตัวเลือกที่กดบ่อยสุด (พร้อมส่ง / ลดราคา) อยู่หน้าสุดให้กดได้เลย ไม่ต้องเปิดแผง
+          — แผงเต็มยังอยู่ครบสำหรับแบรนด์/ช่วงราคา ซึ่งยัดลงแถวเดียวไม่ไหว */}
       <div className="search-tools">
-        <button className="btn sm filter-btn" onClick={() => setDrawer(true)}>
-          <Icon name="tune" size={18} /> ตัวกรอง{chips.length ? ` (${chips.length})` : ""}
-        </button>
-        <div className="chips grow">
-          {chips.map((c) => (
-            <button key={c.key} className="chip on" onClick={c.clear}>{c.label} <Icon name="close" size={14} /></button>
+        <div className="tool-scroll">
+          <label className="sortbox">
+            <select value={sort} onChange={(e) => set("sort", e.target.value === "relevance" ? "" : e.target.value)}>
+              {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+            </select>
+          </label>
+          {QUICK.map((s) => {
+            const on = !!params.get(s.key);
+            return (
+              <button key={s.key} className={"tool-chip" + (on ? " on" : "")} onClick={() => set(s.key, on ? "" : "1")}>
+                {s.label}
+              </button>
+            );
+          })}
+          {/* ตัวกรองที่เปิดอยู่จากแผงเต็ม (แบรนด์ ช่วงราคา ฯลฯ) — กดที่ชิปเพื่อเอาออกได้เลย */}
+          {chips.filter((c) => !QUICK.some((s) => s.key === c.key)).map((c) => (
+            <button key={c.key} className="tool-chip on" onClick={c.clear}>{c.label} <Icon name="close" size={14} /></button>
           ))}
-          {chips.length > 0 && <button className="link-btn small" onClick={clearAll}>ล้างทั้งหมด</button>}
+          {chips.length > 0 && <button className="tool-chip ghost" onClick={clearAll}>ล้างทั้งหมด</button>}
         </div>
-        <label className="sortbox">
-          <span className="muted small">เรียงตาม</span>
-          <select value={sort} onChange={(e) => set("sort", e.target.value === "relevance" ? "" : e.target.value)}>
-            {SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
-        </label>
+        <button className="tool-pin" onClick={() => setDrawer(true)} aria-label="ตัวกรอง">
+          <Icon name="tune" size={20} />
+          <span>ตัวกรอง</span>
+          {chips.length > 0 && <i className="tool-dot" />}
+        </button>
       </div>
 
       <div className="search-body">
@@ -280,10 +300,33 @@ export default function SearchPage() {
         {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
 
         <div className="grow">
-          <TopRow title={topRow.title} path={topRow.path} more={topRow.more} />
-
+          {/* บอกเสมอว่าระบบทำอะไรกับคำค้นไปบ้าง — แก้ตัวสะกด, ตีความเป็นตัวกรอง, หรือผ่อนเงื่อนไข
+              ผลลัพธ์ที่ไม่ตรงเป๊ะแล้วไม่บอก คือที่มาของความรู้สึกว่า "เสิร์ชมั่ว" */}
+          {data?.corrected && (
+            <div className="note">
+              แสดงผลของ <b>“{data.corrected}”</b> · <Link to={`/search?q=${encodeURIComponent(q)}&mode=keyword`}>ค้นด้วย “{q}” แบบตรงตัว</Link>
+            </div>
+          )}
+          {data?.understood && data.understood.labels.length > 0 && (
+            <div className="note">
+              <span>เข้าใจว่ากำลังหา: </span>
+              {data.understood.labels.map((l) => <span key={l} className="chip on" style={{ marginRight: 6 }}>{l}</span>)}
+              {data.understood.dropped.length > 0 && (
+                <span className="muted small">
+                  · ไม่มีของที่ตรงครบทุกข้อ เลยตัด{data.understood.dropped.map((d) => (d === "color" ? "สี" : "ขนาด")).join(" และ ")}ออก
+                </span>
+              )}
+              {" · "}
+              <Link to={`/search?q=${encodeURIComponent(q)}&mode=keyword`}>ค้นแบบตรงตัวแทน</Link>
+            </div>
+          )}
+          {data?.relaxed && data.items.length > 0 && (
+            <div className="note">ไม่พบสินค้าที่ตรงครบทุกคำ — แสดงสินค้าที่ตรงบางคำแทน</div>
+          )}
           {error && <div className="note err">{error}</div>}
-          {!data && !error && <div className="ph" style={{ height: 320 }}>กำลังค้นหา…</div>}
+          {!data && !error && (
+            <div className="pgrid"><ProductCardSkeletonGrid count={PAGE} /></div>
+          )}
           {data && data.items.length === 0 && (
             <div className="card flat" style={{ textAlign: "center", padding: 48 }}>
               <div className="strong">ไม่พบสินค้าที่ตรงกับ “{q || title}”</div>
@@ -297,11 +340,14 @@ export default function SearchPage() {
                 {data.items.map((it) => (
                   <ProductCard key={it.matnr} item={it} />
                 ))}
+                {/* โครงเปล่าต่อท้ายตอนกำลังโหลดหน้าถัดไป — เห็นทันทีว่ามีของกำลังมา ไม่ใช่จบแค่นี้ */}
+                {loadingMore && <ProductCardSkeletonGrid count={Math.min(PAGE, data.total - data.items.length)} />}
               </div>
               <div ref={sentinel} style={{ height: 1 }} />
               <div className="search-more">
+                {/* ยังมีของเหลือ = บอกว่าเหลืออีกเท่าไหร่ · ครบแล้ว = บอกแค่ว่าจบ ไม่ต้องทวนจำนวนซ้ำ */}
                 <div className="muted small">
-                  {data.items.length >= data.total ? `แสดงครบ ${data.total.toLocaleString("th-TH")} รายการ` : `${data.items.length} จาก ${data.total.toLocaleString("th-TH")} รายการ`}
+                  {data.items.length >= data.total ? "แสดงครบแล้ว" : `${data.items.length} จาก ${data.total.toLocaleString("th-TH")} รายการ`}
                 </div>
                 {/* ปกติเลื่อนถึงก็โหลดเอง — ปุ่มนี้เป็นทางสำรองเผื่อ IntersectionObserver
                     ไม่ทำงาน (เบราว์เซอร์เก่า / แท็บพื้นหลัง) จะได้ไม่ตันอยู่แค่หน้าแรก */}
@@ -311,6 +357,9 @@ export default function SearchPage() {
                   </button>
                 )}
               </div>
+              {/* ผลค้นหาหมดแล้ว (เช่น "สินค้าใหม่" มีแค่ 9 ชิ้น) — ต่อของให้เลื่อนดูได้อีก
+                  แยกหัวข้อชัดเจน ไม่เอาไปต่อท้ายกริดเดิม ลูกค้าจะได้ไม่สับสนว่าเป็นผลค้นหาด้วย */}
+              {data.items.length >= data.total && <SuggestFeed exclude={data.items.map((it) => it.matnr)} />}
             </>
           )}
         </div>

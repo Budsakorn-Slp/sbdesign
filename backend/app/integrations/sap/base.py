@@ -4,7 +4,10 @@
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:  # กันวนกันเอง — sales_order import base
+    from app.integrations.sap.sales_order import SalesOrderDTO
 
 
 class SapError(Exception):
@@ -72,7 +75,7 @@ class CartDTO:
 class CustomerDTO:
     sap_customer_no: str
     name: str
-    tier: str | None = None
+    points: int = 0
     phone: str | None = None
     email: str | None = None
     address: str | None = None
@@ -89,6 +92,14 @@ class PromoOffer:
     reason: str | None = None  # ทำไมยังไม่เข้าเงื่อนไข / ขาดอะไร
     stackable: bool = True
     discount_type: str = "amount"
+    # True = ต้องกรอก/เลือกโค้ดถึงจะใช้ได้ (คูปอง) · False = ระบบเช็คจากของในตะกร้าให้เอง
+    # หน้าจอแยกสองขั้นตามนี้: เช็คโปรฯ ก่อน แล้วค่อยเปิดช่องโปรโมโค้ด
+    requires_code: bool = False
+    # ชื่อกลุ่มที่ "เลือกได้ทีละอัน" — โปรฯ ในกลุ่มเดียวกันใช้พร้อมกันไม่ได้ แต่ของนอกกลุ่มมาทับได้
+    # ต่างจาก stackable=False ที่แปลว่าห้ามซ้อนกับอะไรทั้งนั้น
+    #   ขั้นบันได 10/15/20  -> กลุ่ม "tier"  เลือกทีละขั้น แต่โค้ด ON TOP มาบวกได้
+    #   TESTCODE            -> stackable=False ห้ามซ้อนกับใครเลย
+    exclusive_group: str | None = None
 
 
 @dataclass
@@ -165,6 +176,10 @@ class SapClient(Protocol):
     def quote_delivery(self, cart: CartDTO, postcode: str) -> DeliveryQuote: ...
 
     def create_sales_order(self, quotation_no: str) -> SapSoResult: ...
+
+    # ตัวที่ใช้จริงตอนต่อ SAP — ส่งทั้งใบไป ไม่ใช่ส่งแค่เลขเอกสาร
+    # (ตัวบนเก็บไว้เพื่อความเข้ากันได้ของ mock เดิม ดู payment_service.push_to_sap)
+    def create_sales_order_doc(self, order: "SalesOrderDTO") -> SapSoResult: ...
 
     def get_customer(self, key: str) -> CustomerDTO | None: ...
 

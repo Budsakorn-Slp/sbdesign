@@ -38,7 +38,7 @@ def customer_dto(cart: Cart) -> CustomerDTO | None:
     c = cart.customer
     if not c:
         return None
-    return CustomerDTO(sap_customer_no=c.sap_customer_no or c.id, name=c.name, tier=c.tier, phone=c.phone, email=c.email, address=c.default_address, postcode=c.default_postcode)
+    return CustomerDTO(sap_customer_no=c.sap_customer_no or c.id, name=c.name, points=c.points, phone=c.phone, email=c.email, address=c.default_address, postcode=c.default_postcode)
 
 
 def evaluate_with_sap(db: Session, cart: Cart, zone: str | None = None) -> PromoResult:
@@ -73,9 +73,18 @@ class Totals:
 
 def compute_totals(db: Session, cart: Cart, promo_result: PromoResult | None = None) -> Totals:
     """ส่วนลดจริง ณ ตอนนี้ — โปรที่ apply ไว้จะถูกประเมินใหม่ตามตะกร้าปัจจุบัน ถ้าไม่เข้าเงื่อนไขแล้วจะเป็น 0 + warning"""
+    from app.services import staff_shipping_service  # ตรงนี้กัน circular import
+
     subtotal = cart_service.totals(cart)["subtotal"]
+    # ต้องตัดบรรทัดค่าบริการขนส่ง (A534/A761) ออกให้ตรงกับ subtotal
+    #
+    # รหัสพวกนี้ถูก ETL ดึงเข้ามาอยู่ในแคตตาล็อกด้วยราคาตั้งต้น 1.00 บาท พอเอามานับเป็น
+    # "ราคาปกติ" แต่ subtotal ไม่นับ ผลต่างเลยโผล่เป็นส่วนลดปลอม 1 บาททุกบิลที่เปิด Mat
+    charges = staff_shipping_service.charge_matnrs()
     standard = Decimal(0)
     for it in cart.selected_items:
+        if it.matnr in charges:
+            continue
         m = catalog_service.get_material(db, it.matnr)
         std = catalog_service.prices_of(m).get("standard", it.unit_price_snapshot) if m else it.unit_price_snapshot
         standard += std * it.qty
@@ -134,6 +143,20 @@ def compute_totals(db: Session, cart: Cart, promo_result: PromoResult | None = N
     return Totals(subtotal=subtotal, standard_subtotal=standard, member_savings=member_savings, discount_total=total, net_total=net, shipping_fee=shipping_fee, install_fee=install_fee, shipping_discount=shipping_discount, grand_total=grand, vat_included=vat, lines=lines, warnings=warnings)
 
 
+def _conflict(message: str, offer) -> HTTPException:
+    """409 พร้อมมูลค่าของโค้ดใหม่
+
+    ลูกค้าต้องตัดสินใจว่าจะทิ้งโค้ดเดิมไปใช้ตัวใหม่ไหม ถ้าบอกแค่ว่า "ใช้ร่วมกันไม่ได้"
+    เขาต้องเดาเอาเองว่าตัวใหม่คุ้มกว่าหรือเปล่า — ส่งตัวเลขไปด้วยเลย
+    """
+    return HTTPException(status_code=409, detail={
+        "message": message,
+        "code": offer.code,
+        "title": offer.title,
+        "amount": str(q1(offer.amount)),
+    })
+
+
 def apply_promotion(db: Session, cart: Cart, actor: User | None, code: str) -> AppliedDiscount:
     res = evaluate_with_sap(db, cart)
     offer = next((o for o in res.eligible if o.code == code), None)
@@ -143,10 +166,24 @@ def apply_promotion(db: Session, cart: Cart, actor: User | None, code: str) -> A
     existing = next((d for d in active_discounts(db, cart) if d.kind == "promotion" and d.promo_code == code), None)
     if existing:
         return existing
-    if not offer.stackable:
-        for d in active_discounts(db, cart):
-            if d.kind == "promotion":
-                raise HTTPException(status_code=409, detail=f"{code} ใช้ร่วมกับโปรอื่นไม่ได้")
+    # ต้องกันสองทาง: ตัวใหม่ห้ามซ้อนของเดิม และของเดิมที่ห้ามซ้อนก็ต้องกันตัวใหม่ด้วย
+    # (เช็คทางเดียวแบบเดิม ใส่โปรฯ ขั้นบันได 20% ก่อน แล้วตามด้วยโปรฯ หมวดได้ ซึ่งผิด)
+    # กติกาการซ้อนส่วนลดมีสองชั้น อย่าเอามาปนกัน:
+    #   stackable=False   ห้ามซ้อนกับอะไรทั้งนั้น (เช่น TESTCODE)
+    #   exclusive_group   เลือกได้ทีละอันเฉพาะในกลุ่มเดียวกัน แต่ของนอกกลุ่มมาทับได้
+    #                     (ขั้นบันได 10/15/20 อยู่กลุ่ม tier · โค้ด ON TOP อยู่นอกกลุ่ม จึงบวกได้)
+    # ธงพวกนี้อยู่ที่แคตตาล็อก ไม่ได้เก็บติดไปกับส่วนลดที่ใส่แล้ว ต้องเปิดดูจากผลประเมินรอบนี้
+    meta = {o.code: o for o in (*res.eligible, *res.ineligible)}
+    for d in active_discounts(db, cart):
+        if d.kind != "promotion":
+            continue
+        other = meta.get(d.promo_code or "")
+        if not offer.stackable:
+            raise _conflict(f"{code} ใช้ร่วมกับโปรอื่นไม่ได้ — เอา {d.promo_code} ออกก่อน", offer)
+        if other and not other.stackable:
+            raise _conflict(f"{d.promo_code} ใช้ร่วมกับโปรอื่นไม่ได้ — เอาออกก่อนถึงจะใส่ {code} ได้", offer)
+        if offer.exclusive_group and other and other.exclusive_group == offer.exclusive_group:
+            raise _conflict(f"เลือกได้ทีละขั้น — เอา {d.promo_code} ออกก่อนถึงจะใช้ {code} ได้", offer)
     d = AppliedDiscount(cart_id=cart.id, kind="promotion", promo_code=code, title=offer.title, amount=q1(offer.amount), status="applied", applied_by_user_id=actor.id if actor else None)
     db.add(d)
     audit_service.log(db, actor, "discount.apply", "cart", cart.id, {"kind": "promotion", "code": code, "amount": str(d.amount)})

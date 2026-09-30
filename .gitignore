@@ -7,6 +7,12 @@ venv/
 *.egg-info/
 backend/*.db
 backend/*.db-journal
+# โหมด WAL สร้างไฟล์คู่มาด้วย เปลี่ยนตลอดเวลาและไม่มีประโยชน์ใน repo
+backend/*.db-wal
+backend/*.db-shm
+backend/*.db.bak-*
+# สำเนาฐานที่ sync_all.ps1 ทำก่อนอัปเดตทุกรอบ (ไฟล์ละ ~46MB เก็บ 7 ชุด)
+backend/backups/
 backend/.env
 backend/logs/
 
@@ -28,3 +34,4 @@ web/*.tsbuildinfo
 Thumbs.db
 .idea/
 .vscode/
+.lsp/

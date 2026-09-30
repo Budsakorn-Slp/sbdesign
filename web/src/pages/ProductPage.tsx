@@ -1,21 +1,25 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
 import ProductCard from "../components/ProductCard";
 import ProductRow from "../components/ProductRow";
 import { apiGet, apiPost, errorMessage } from "../lib/api";
+import { imageSources, normalizeImageUrl } from "../lib/images";
 import { useAuth } from "../lib/auth";
 import { useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
-import { baht, num, thDate } from "../lib/format";
+import { baht, num, realSpec, thDate } from "../lib/format";
 import { useSales } from "../lib/sales";
 import type { MaterialCard, MaterialDetail, SearchOut, StockOut, SupplyMode } from "../lib/types";
 
-const REL_PAGE = 24;
+const FEED_PAGE = 24;
+/** จำนวนแหล่งที่ยอมไล่ต่อการโหลดหนึ่งครั้ง — กันกรณีแหล่งต้นๆ คืนแต่ของซ้ำจนต้องข้ามยาว */
+const FEED_MAX_HOPS = 6;
 
 /** "167.5X40X75" → "กว้าง 167.5 × ลึก 40 × สูง 75 ซม." — ต้นทางเก็บเป็นสตริงเดียว (GROES) */
-function sizeText(spec: string | null): string | null {
+function sizeText(raw: string | null): string | null {
+  const spec = realSpec(raw);
   if (!spec) return null;
   const parts = spec.split(/[xX*×]/).map((s) => s.trim()).filter(Boolean);
   if (parts.length !== 3 || parts.some((p) => !/^[\d.]+$/.test(p))) return spec;
@@ -56,16 +60,45 @@ export default function ProductPage() {
   const [error, setError] = useState<string | null>(null);
   const [stock, setStock] = useState<StockOut | null>(null);
   const [qty, setQty] = useState(1);
+  const [shot, setShot] = useState(0);  // รูปที่กำลังดูอยู่ในแกลเลอรี
+  const stripRef = useRef<HTMLDivElement | null>(null);
   const [mode, setMode] = useState<SupplyMode>("ship");
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [wished, setWished] = useState(false);
   const [liked, setLiked] = useState<MaterialCard[]>([]);
   const [relCat, setRelCat] = useState<string | null>(null);
-  const [rel, setRel] = useState<MaterialCard[]>([]);
-  const [relTotal, setRelTotal] = useState(0);
-  const [relBusy, setRelBusy] = useState(false);
+  const [feed, setFeed] = useState<MaterialCard[]>([]);
+  const [feedBusy, setFeedBusy] = useState(false);
+  const [feedEnd, setFeedEnd] = useState(false);
+  // ตำแหน่งที่ดึงค้างไว้ (แหล่งที่เท่าไร · ข้ามไปกี่ตัวแล้ว) กับรายการที่เคยเห็น
+  // เก็บเป็น ref ไม่ใช่ state เพราะ loadMore ต้องอ่าน/เขียนค่าล่าสุดกลางลูป async
+  const cursor = useRef({ src: 0, offset: 0 });
+  const seen = useRef<Set<string>>(new Set());
+  const sentinel = useRef<HTMLDivElement | null>(null);
   const isStaff = auth.role === "sales" || auth.role === "manager" || auth.role === "admin";
+
+  // เปลี่ยนสินค้า (กดสี/ขนาด) ต้องกลับไปรูปแรกเสมอ ไม่งั้นค้างที่รูปที่ 5 ของตัวเก่า
+  // ซึ่งตัวใหม่อาจมีรูปไม่ถึง แล้วจะขึ้นเป็นกรอบว่าง
+  useEffect(() => { setShot(0); }, [matnr]);
+
+  // เลื่อนรูปย่อยที่กำลังเลือกให้อยู่ในสายตาเสมอ — กดลูกศรบนรูปใหญ่แล้วแถบข้างล่างต้องตามด้วย
+  // ไม่งั้นพอเลื่อนไปรูปที่ 8 แถบยังค้างอยู่รูปที่ 1 มองไม่ออกว่าตอนนี้อยู่ตรงไหน
+  useEffect(() => {
+    const el = stripRef.current?.children[shot] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [shot]);
+
+  // ดึงรูปถัดไป/ก่อนหน้ามาไว้ในแคชล่วงหน้า — กดลูกศรแล้วรูปขึ้นทันที ไม่ต้องรอโหลดใหม่ทุกครั้ง
+  // อ่านจาก item ตรงๆ ไม่ใช้ตัวแปร shots เพราะ shots ประกาศหลังจุดนี้ (hook ต้องอยู่เหนือ early return)
+  useEffect(() => {
+    const list = item?.images ?? [];
+    if (list.length < 2) return;
+    for (const i of [shot + 1, shot - 1]) {
+      const u = list[(i + list.length) % list.length];
+      if (u) new Image().src = normalizeImageUrl(u);
+    }
+  }, [shot, item]);
 
   useEffect(() => {
     setItem(null);
@@ -73,8 +106,7 @@ export default function ProductPage() {
     setError(null);
     setQty(1);
     setLiked([]);
-    setRel([]);
-    setRelTotal(0);
+    setFeed([]);
     setRelCat(null);
     window.scrollTo({ top: 0 }); // กดสินค้าที่เกี่ยวข้องแล้วต้องขึ้นต้นหน้าใหม่ ไม่ใช่ค้างอยู่กลางหน้า
     apiGet<MaterialDetail>(`/materials/${matnr}`)
@@ -101,37 +133,90 @@ export default function ProductPage() {
     };
   }, [item?.matnr, auth.user?.id]);
 
-  // "สินค้าที่เกี่ยวข้อง" = หมวดเดียวกัน (สลับไปหมวดพี่น้องได้ด้วยชิปด้านบน) — เลื่อนดูต่อได้ยาวๆ
-  useEffect(() => {
-    if (!relCat) return;
-    let alive = true;
-    setRelBusy(true);
-    apiGet<SearchOut>(`/materials/search?category=${encodeURIComponent(relCat)}&has_image=true&limit=${REL_PAGE}`)
-      .then((r) => {
-        if (!alive) return;
-        setRel(r.items);
-        setRelTotal(r.total);
-      })
-      .catch(() => alive && setRel([]))
-      .finally(() => alive && setRelBusy(false));
-    return () => {
-      alive = false;
+  /** ลำดับแหล่งของฟีด "สินค้าที่เกี่ยวข้อง" — ไล่ลงไปเรื่อยๆ จนกว่าจะหมดทุกแหล่ง
+   *
+   * ใกล้ตัวที่สุดมาก่อน แล้วค่อยกว้างออก: หมวดที่เลือก → หมวดพี่น้อง → หมวดของที่อยู่ในตะกร้า
+   * → แบรนด์เดียวกัน → ห้องเดียวกัน → ขายดีทั้งร้าน
+   *
+   * ของในตะกร้าอยู่ในลิสต์ด้วยเพราะตอนหมวดนี้หมด สิ่งที่ลูกค้ากำลังเล็งอยู่จริงๆ คือของที่เขา
+   * หยิบใส่ตะกร้าไว้แล้ว — เดาจากตรงนั้นแม่นกว่าโยนของขายดีทั้งร้านใส่หน้าเขา
+   */
+  const cartCats = (cart.cart?.items || []).map((i) => i.category_id).filter(Boolean).join(",");
+  const sources = useMemo(() => {
+    if (!item) return [] as { key: string; query: string }[];
+    const out: { key: string; query: string }[] = [];
+    const keys = new Set<string>();
+    const push = (key: string, query: string) => {
+      if (keys.has(key)) return;
+      keys.add(key);
+      out.push({ key, query });
     };
-  }, [relCat, auth.user?.id]);
+    if (relCat) push(`cat:${relCat}`, `category=${encodeURIComponent(relCat)}`);
+    for (const c of item.related_categories) push(`cat:${c.id}`, `category=${encodeURIComponent(c.id)}`);
+    for (const id of cartCats.split(",").filter(Boolean)) push(`cat:${id}`, `category=${encodeURIComponent(id)}`);
+    if (item.brand_id) push(`brand:${item.brand_id}`, `brand=${encodeURIComponent(item.brand_id)}`);
+    if (item.room) push(`room:${item.room}`, `room=${encodeURIComponent(item.room)}`);
+    push("all", "sort=bestseller");
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- related_categories เปลี่ยนพร้อม matnr เสมอ
+  }, [item?.matnr, relCat, cartCats]);
 
-  const moreRelated = async () => {
-    if (!relCat) return;
-    setRelBusy(true);
+  // เปลี่ยนสินค้า/สลับชิปหมวด = เริ่มฟีดใหม่ทั้งหมด
+  useEffect(() => {
+    if (!item) return;
+    cursor.current = { src: 0, offset: 0 };
+    seen.current = new Set([item.matnr]); // ตัวที่กำลังดูอยู่ไม่ต้องโผล่ในฟีดของตัวเอง
+    setFeed([]);
+    setFeedEnd(false);
+  }, [item?.matnr, relCat]);
+
+  const loadMore = useCallback(async () => {
+    if (feedBusy || feedEnd || !sources.length) return;
+    setFeedBusy(true);
     try {
-      const r = await apiGet<SearchOut>(`/materials/search?category=${encodeURIComponent(relCat)}&has_image=true&limit=${REL_PAGE}&offset=${rel.length}`);
-      setRel((prev) => [...prev, ...r.items.filter((x) => !prev.some((p) => p.matnr === x.matnr))]);
-      setRelTotal(r.total);
+      let added = 0;
+      let hops = 0;
+      // ขอจนได้ของใหม่ครบหนึ่งหน้า — แหล่งหนึ่งอาจคืนแต่ของที่โชว์ไปแล้ว ต้องข้ามไปแหล่งถัดไป
+      // ไม่งั้นจะได้กริดที่โตทีละ 2-3 ตัวแล้วหยุด ทั้งที่ยังมีของให้ดูอีกเยอะ
+      while (added < FEED_PAGE && cursor.current.src < sources.length && hops < FEED_MAX_HOPS) {
+        hops += 1;
+        const s = sources[cursor.current.src];
+        const r = await apiGet<SearchOut>(
+          `/materials/search?${s.query}&has_image=true&limit=${FEED_PAGE}&offset=${cursor.current.offset}`,
+        );
+        if (!r.items.length || cursor.current.offset + r.items.length >= r.total) {
+          cursor.current = { src: cursor.current.src + 1, offset: 0 }; // แหล่งนี้หมดแล้ว
+        } else {
+          cursor.current = { ...cursor.current, offset: cursor.current.offset + r.items.length };
+        }
+        const fresh = r.items.filter((x) => !seen.current.has(x.matnr));
+        fresh.forEach((x) => seen.current.add(x.matnr));
+        if (fresh.length) setFeed((prev) => [...prev, ...fresh]);
+        added += fresh.length;
+      }
+      if (cursor.current.src >= sources.length) setFeedEnd(true);
     } catch {
-      /* กดใหม่ได้ ไม่ต้องขึ้น error ทั้งหน้า */
+      /* เลื่อนขึ้นลงใหม่แล้วลองอีกรอบได้ ไม่ต้องขึ้น error ทั้งหน้า */
     } finally {
-      setRelBusy(false);
+      setFeedBusy(false);
     }
-  };
+  }, [feedBusy, feedEnd, sources]);
+
+  /** โหลดเพิ่มเองเมื่อเลื่อนใกล้ถึงท้ายกริด
+   *
+   * rootMargin กว้าง 800px = เริ่มโหลดตั้งแต่ยังเลื่อนไม่ถึง ของชุดถัดไปจึงมาถึงก่อนที่ลูกค้า
+   * จะเห็นที่ว่าง (รูปในการ์ดเป็น loading="lazy" อยู่แล้ว จึงไม่ได้ดึงรูปทั้งหมดพร้อมกัน)
+   *
+   * feed.length อยู่ใน deps ตั้งใจ — observer ไม่ยิงซ้ำถ้าจุดสังเกตยังค้างอยู่ในจอเหมือนเดิม
+   * สร้างใหม่หลังต่อของทุกครั้งจึงเป็นวิธีให้มันเช็คอีกทีว่ายังต้องโหลดต่อไหม
+   */
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || feedEnd) return;
+    const io = new IntersectionObserver((es) => es[0]?.isIntersecting && void loadMore(), { rootMargin: "800px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loadMore, feedEnd, feed.length]);
 
   useEffect(() => {
     if (!toast) return;
@@ -209,7 +294,24 @@ export default function ProductPage() {
 
   // rows ของลูกค้าถูกกรองเหลือเฉพาะสาขาที่เลือกมาแล้วจากฝั่ง API
   const inStoreQty = stock?.rows.reduce((n, r) => n + r.available, 0) ?? 0;
+  // สถานะของจาก product_stock — กติกาเดียวกับการ์ดในหน้ารายการสินค้า
+  const stChecked = !!item?.stock;
+  const stReady = item?.stock?.ready_qty ?? 0;
+  const stLater = item?.stock?.later_qty ?? 0;
+  const stMadeToOrder = !!item?.stock?.made_to_order;
+  const stPreOrder = stChecked && stReady <= 0 && (stLater > 0 || stMadeToOrder);
+  const stSoldOut = stChecked && stReady <= 0 && stLater <= 0 && !stMadeToOrder;
+  const stLow = stChecked && stReady > 0 && stReady <= 5;
   const size = sizeText(item.spec);
+  // แกลเลอรีรูปจริงของสินค้าตัวนี้ · ว่างเมื่อยังไม่ได้ดึงรูปมา แล้วค่อยตกไปใช้รูปหลักใบเดียว
+  const shots = item.images ?? [];
+  // เลื่อนทีละ ~3 ใบ ไม่ใช่ทีละใบ — กดทีเดียวเห็นชุดใหม่ ไม่ต้องกดรัว
+  // ตั้ง scrollLeft ตรงๆ ไม่ใช้ scrollBy({behavior:"smooth"}) เพราะบางเบราว์เซอร์ไม่ขยับเลย
+  // (เจอกับตัว) ส่วนความลื่นได้จาก CSS scroll-behavior อยู่แล้ว ที่ไหนไม่รองรับก็แค่กระโดดไปเลย
+  const scrollStrip = (dir: number) => {
+    const el = stripRef.current;
+    if (el) el.scrollLeft += dir * 260;
+  };
   const sibs = item.related_categories;
 
   return (
@@ -220,19 +322,41 @@ export default function ProductPage() {
       <div className="product-grid">
         <div className="product-gallery">
           <div className="gallery-main">
-            <Placeholder src={item.image_url} alt={item.name_th} label={<>PRODUCT SHOT<br />1:1 · 1200 × 1200</>} />
+            <Placeholder src={shots.length ? [normalizeImageUrl(shots[shot])] : imageSources(item.matnr, item.image_url)}
+                         alt={item.name_th} priority label={<>PRODUCT SHOT<br />1:1 · 1200 × 1200</>} />
+            {/* ปุ่มเลื่อนรูป — โชว์เมื่อมีมากกว่าหนึ่งใบ วนกลับหัวท้ายได้ ไม่ต้องกดย้อนยาว */}
+            {shots.length > 1 && (
+              <>
+                <button className="gallery-nav prev" onClick={() => setShot((i) => (i - 1 + shots.length) % shots.length)} aria-label="รูปก่อนหน้า">
+                  <Icon name="chevron_left" size={22} />
+                </button>
+                <button className="gallery-nav next" onClick={() => setShot((i) => (i + 1) % shots.length)} aria-label="รูปถัดไป">
+                  <Icon name="chevron_right" size={22} />
+                </button>
+                <span className="gallery-count">{shot + 1}/{shots.length}</span>
+              </>
+            )}
             <button className={"gallery-wish" + (wished ? " on" : "")} onClick={toggleWish} aria-label="รายการโปรด" title={wished ? "เอาออกจากรายการโปรด" : "เก็บใส่รายการโปรด"}>
               <Icon name="favorite" size={20} fill={wished} />
             </button>
           </div>
-          {/* รูปสีอื่นของรุ่นเดียวกันใช้เป็นแถวรูปย่อยไปก่อน — ต้นทางยังส่งมาสินค้าละรูปเดียว */}
-          {item.colors.length > 1 && (
-            <div className="thumbs">
-              {item.colors.map((c) => (
-                <Link key={c.matnr} to={`/p/${c.matnr}`} className={c.matnr === item.matnr ? "on" : ""} title={c.color || c.name_th}>
-                  <Placeholder src={c.image_url} alt={c.name_th} label={c.color || ""} />
-                </Link>
-              ))}
+          {/* แถวรูปย่อย = รูปจริงของสินค้าตัวนี้ (ตาราง material_images) ไม่ใช่รูปของสีอื่นแบบเดิม
+              แถวเดียวเลื่อนซ้ายขวา — รูปมีได้ถึง 24 ใบ ถ้าปล่อยให้ตกบรรทัดจะดันเนื้อหาข้างล่างหายไปทั้งจอ */}
+          {shots.length > 1 && (
+            <div className="thumb-strip">
+              <button className="strip-nav" onClick={() => scrollStrip(-1)} aria-label="เลื่อนรูปย่อยไปทางซ้าย">
+                <Icon name="chevron_left" size={18} />
+              </button>
+              <div className="thumbs" ref={stripRef}>
+                {shots.map((u, i) => (
+                  <button key={u} className={i === shot ? "on" : ""} onClick={() => setShot(i)} aria-label={`รูปที่ ${i + 1}`}>
+                    <Placeholder src={[normalizeImageUrl(u)]} alt={`${item.name_th} รูปที่ ${i + 1}`} label="" />
+                  </button>
+                ))}
+              </div>
+              <button className="strip-nav" onClick={() => scrollStrip(1)} aria-label="เลื่อนรูปย่อยไปทางขวา">
+                <Icon name="chevron_right" size={18} />
+              </button>
             </div>
           )}
         </div>
@@ -256,18 +380,39 @@ export default function ProductPage() {
             {item.compare_at_price && <span className="was">{baht(item.compare_at_price)}</span>}
             {item.discount_percent ? <span className="chip red">-{item.discount_percent}%</span> : null}
           </div>
-          {item.price_tier !== "standard" ? (
-            <div className="note ok">ราคาสมาชิก {item.price_tier} · ราคาปกติ {baht(item.standard_price)}</div>
-          ) : auth.user ? null : (
-            <div className="note">เข้าสู่ระบบเพื่อดูราคาสมาชิกและโปรเฉพาะสมาชิก <button className="link-btn" onClick={auth.openLogin}>เข้าสู่ระบบ</button></div>
+          {auth.user ? null : (
+            <div className="note">เข้าสู่ระบบเพื่อสะสมพ้อยท์และชำระเงินได้ทันที <button className="link-btn" onClick={auth.openLogin}>เข้าสู่ระบบ</button></div>
           )}
           {num(item.price) >= 10000 && <div className="small muted" style={{ marginTop: 6 }}>ผ่อน 0% นาน 10 เดือน · บัตรที่ร่วมรายการ</div>}
 
-          {!isStaff && stock && (
+          {/* ของตัวโชว์/ฝากขาย — บอกเงื่อนไขตั้งแต่หน้าสินค้า ไม่ใช่ให้ไปรู้ตอนจ่ายเงินหรือตอนอยากคืน */}
+          {item.pickup_only && (
+            <div className="pickup-terms">
+              <div className="row" style={{ gap: 6 }}><Icon name="storefront" size={18} /> <b>ซื้อได้ที่สาขาเท่านั้น</b></div>
+              <div className="row" style={{ gap: 6 }}><Icon name="block" size={18} /> <b>ซื้อแล้วไม่รับเปลี่ยนหรือคืน</b></div>
+              <p className="small">
+                เป็นสินค้าจัดแสดงหน้าร้าน มีชิ้นเดียวและอาจมีร่องรอยจากการโชว์ —
+                กรุณาตรวจสภาพสินค้าที่สาขาก่อนตัดสินใจซื้อ
+              </p>
+            </div>
+          )}
+
+          {!isStaff && (
             <div className="stock-line">
-              <b className={stock.available ? "green" : "amber"}>{stock.available ? "สินค้ามีสต็อก" : "สั่งจอง · รอของเข้า"}</b>
-              {stock.available && <><span className="sep">|</span><span><Icon name="local_shipping" size={16} /> พร้อมจัดส่ง</span></>}
-              {stock.earliest_atp && <><span className="sep">|</span><span>ส่งได้เร็วสุด {thDate(stock.earliest_atp)}</span></>}
+              {/* จำนวนของมาจาก product_stock เหมือนหน้ารายการสินค้า — ยอดสดยืนยันตอนสั่งซื้อ */}
+              {stChecked ? (
+                stSoldOut ? (
+                  <b className="amber">สินค้าหมด</b>
+                ) : stPreOrder ? (
+                  <b className="amber">พรีออเดอร์</b>
+                ) : (
+                  <b className={stLow ? "red" : ""}>มีสต็อก {stReady} ชิ้น</b>
+                )
+              ) : (
+                <b>มีสต็อก - ชิ้น</b>
+              )}
+              {stock?.available && <><span className="sep">|</span><span><Icon name="local_shipping" size={16} /> พร้อมจัดส่ง</span></>}
+              {stock?.earliest_atp && <><span className="sep">|</span><span>ส่งได้เร็วสุด {thDate(stock.earliest_atp)}</span></>}
               {inStoreQty > 0 && plant && <><span className="sep">|</span><span><Icon name="storefront" size={16} /> {plant.name} มี {inStoreQty} ชิ้น</span></>}
             </div>
           )}
@@ -279,8 +424,23 @@ export default function ProductPage() {
               <div className="color-list">
                 {item.colors.map((c) => (
                   <Link key={c.matnr} to={`/p/${c.matnr}`} className={"color-opt" + (c.matnr === item.matnr ? " on" : "")}>
-                    <Placeholder src={c.image_url} alt={c.name_th} label={c.color || ""} />
-                    <small>{c.color}</small>
+                    <Placeholder src={imageSources(c.matnr, c.image_url)} alt={c.label} label={c.label} />
+                    <small>{c.label}</small>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* แกนขนาด — คนละแกนกับสี กดเลือกขนาดแล้วระบบพยายามคงสีเดิมไว้ (ดู variant_axes ฝั่งหลังบ้าน)
+              เป็นปุ่มตัวหนังสือ ไม่ใช่รูป เพราะขนาดดูจากรูปไม่ออก ต้องอ่านตัวเลข */}
+          {item.sizes.length > 1 && (
+            <div className="sizes">
+              <b className="small">เลือกขนาด:</b>
+              <div className="size-list">
+                {item.sizes.map((z) => (
+                  <Link key={z.matnr} to={`/p/${z.matnr}`} className={"size-opt" + (z.matnr === item.matnr ? " on" : "")}>
+                    {z.label}
                   </Link>
                 ))}
               </div>
@@ -289,7 +449,9 @@ export default function ProductPage() {
 
           <ul className="product-flags">
             <li><Icon name={item.is_takeaway_ok ? "shopping_bag" : "local_shipping"} size={18} /> {item.is_takeaway_ok ? "ยกกลับได้จากสาขา" : "จัดส่งจากคลังเท่านั้น"}</li>
-            <li><Icon name="handyman" size={18} /> {item.requires_install ? "ต้องติดตั้งโดยช่าง (มีค่าติดตั้ง)" : "ไม่ต้องติดตั้ง / ประกอบเองได้"}</li>
+            {/* โชว์เฉพาะตอนที่ต้องใช้ช่าง — "ไม่ต้องติดตั้ง" เป็นค่าปกติของสินค้าส่วนใหญ่
+                บอกไปก็ไม่ได้ช่วยตัดสินใจ มีแต่ทำให้บรรทัดที่ต้องรู้จริงๆ จมหายไป */}
+            {item.requires_install && <li><Icon name="handyman" size={18} /> ต้องติดตั้งโดยช่าง (มีค่าติดตั้ง)</li>}
             {item.weight_kg && <li><Icon name="scale" size={18} /> น้ำหนัก {num(item.weight_kg)} กก. · ปริมาตร {num(item.volume_m3)} ลบ.ม.</li>}
           </ul>
 
@@ -350,7 +512,7 @@ export default function ProductPage() {
                 {item.style && <SpecRow label="สไตล์" value={item.style} />}
                 {item.weight_kg && <SpecRow label="น้ำหนัก" value={`${num(item.weight_kg)} กก.`} />}
                 {item.volume_m3 && <SpecRow label="ปริมาตรบรรจุ" value={`${num(item.volume_m3)} ลบ.ม.`} />}
-                <SpecRow label="การประกอบ" value={item.requires_install ? "ต้องติดตั้งโดยช่าง (มีค่าบริการ)" : "ประกอบเองได้ / ไม่ต้องติดตั้ง"} />
+                {item.requires_install && <SpecRow label="การประกอบ" value="ต้องติดตั้งโดยช่าง (มีค่าบริการ)" />}
                 <SpecRow label="ยกกลับจากสาขา" value={item.is_takeaway_ok ? "ได้ (ถ้าสาขามีของ)" : "ไม่ได้ · จัดส่งจากคลังเท่านั้น"} />
                 {item.name_en && <SpecRow label="ชื่อภาษาอังกฤษ" value={item.name_en} />}
               </div>
@@ -379,6 +541,15 @@ export default function ProductPage() {
         </div>
       </div>
 
+      {/* คำบรรยายเต็ม (LONG_DESC) — วางเป็นบล็อกกว้างเต็มใต้ส่วนบน เหมือนหน้าสินค้าของเว็บจริง
+          ไม่ยัดลงในกล่อง "ข้อมูลสินค้า" เพราะข้อความยาวกว่าช่องขวามาก อ่านในคอลัมน์แคบแล้วอึดอัด
+          เนื้อหาถูกล้าง script/style ตั้งแต่ตอน import แล้ว (ดู etl/html_clean.py) */}
+      {item.description_long && (
+        <section className="product-long">
+          <div dangerouslySetInnerHTML={{ __html: item.description_long }} />
+        </section>
+      )}
+
       {/* แถวแนะนำแถวเดียว — ของขายดีจากแบรนด์/ห้องเดียวกัน */}
       <div className="sec-gap">
         <ProductRow title="สินค้าที่คุณอาจจะชอบ" items={liked} more={item.brand_id ? `/search?brand=${item.brand_id}` : undefined} />
@@ -400,18 +571,22 @@ export default function ProductPage() {
             </div>
           )}
           <div className="pgrid">
-            {rel.filter((r) => r.matnr !== item.matnr).map((r) => (
+            {feed.map((r) => (
               <ProductCard key={r.matnr} item={r} />
             ))}
           </div>
-          {!rel.length && !relBusy && <div className="note">ยังไม่มีสินค้าอื่นในหมวดนี้</div>}
-          {rel.length < relTotal && (
-            <div className="center" style={{ marginTop: 16 }}>
-              <button className="btn lg" onClick={moreRelated} disabled={relBusy}>
-                {relBusy ? "กำลังโหลด…" : `ดูเพิ่ม (เหลืออีก ${num(relTotal - rel.length)} รายการ)`}
-              </button>
+
+          {/* จุดสังเกตท้ายกริด — เลื่อนมาใกล้เมื่อไหร่ก็โหลดชุดถัดไปเอง ไม่ต้องกดปุ่ม
+              ให้ความสูงไว้เผื่อ: เบราว์เซอร์บางตัวไม่รายงานอิลิเมนต์ที่พื้นที่เป็นศูนย์ */}
+          <div ref={sentinel} style={{ height: 24 }} aria-hidden />
+
+          {feedBusy && (
+            <div className="pgrid feed-skeleton" aria-hidden>
+              {Array.from({ length: 4 }, (_, i) => <div key={i} className="ph" style={{ aspectRatio: "3 / 4", borderRadius: 12 }} />)}
             </div>
           )}
+          {!feedBusy && !feed.length && feedEnd && <div className="note">ยังไม่มีสินค้าอื่นในหมวดนี้</div>}
+          {!feedBusy && feed.length > 0 && feedEnd && <p className="center small muted" style={{ marginTop: 16 }}>ดูครบทุกรายการแล้ว</p>}
         </section>
       )}
 

@@ -16,9 +16,9 @@ SAP_MOCK_DIR = Path(__file__).resolve().parents[1] / "seed" / "sap_mock"
 
 SEED_USERS = [
     # ลูกค้า
-    dict(role="customer", name="ณภัทร พงษ์ศรี", phone="0892344471", email="napat@email.com", sap_customer_no="4400182", tier="Gold",
+    dict(role="customer", name="ณภัทร พงษ์ศรี", phone="0949164600", email="napat@email.com", sap_customer_no="1100440182", points=1250,
          default_address="88/12 ซ.สุขุมวิท 71 คลองตันเหนือ วัฒนา กทม.", default_postcode="10110"),
-    dict(role="customer", name="วีระ ศรีสุข", phone="0812223333", email="weera@email.com", sap_customer_no="4400205", tier="Silver",
+    dict(role="customer", name="วีระ ศรีสุข", phone="0812223333", email="weera@email.com", sap_customer_no="1100440205", points=340,
          default_address="55 ถ.บางนา-ตราด บางนา กทม.", default_postcode="10260"),
     # พนักงาน
     dict(role="sales", name="สมชาย ก.", staff_code="SA-104", branch_id="BKN", email="somchai@sb.local"),
@@ -26,7 +26,7 @@ SEED_USERS = [
     dict(role="manager", name="มานะ ผู้จัดการ", staff_code="MG-001", branch_id="BKN", email="mana@sb.local"),
     dict(role="admin", name="แอดมินระบบ", staff_code="ADM-001", email="admin@sb.local"),
 ]
-DEFAULT_PASSWORD = "1234"
+DEFAULT_PASSWORD = "1122"
 
 
 def _load(name: str):

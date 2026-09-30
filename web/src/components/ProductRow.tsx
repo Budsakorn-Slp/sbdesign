@@ -23,7 +23,9 @@ export default function ProductRow({ title, items, more }: { title: string; item
   const step = (dir: number) => {
     const el = ref.current;
     if (!el) return;
-    el.scrollTo({ left: el.scrollLeft + dir * Math.round(el.clientWidth * 0.8), behavior: "smooth" });
+    // ตั้ง scrollLeft ตรงๆ ไม่ใช้ scrollTo({behavior:"smooth"}) เพราะบางเบราว์เซอร์ไม่ขยับเลย
+    // ความลื่นได้จาก CSS scroll-behavior ของแถวอยู่แล้ว ที่ไหนไม่รองรับก็กระโดดไป ไม่ใช่ค้างนิ่ง
+    el.scrollLeft += dir * Math.round(el.clientWidth * 0.8);
   };
 
   if (!items.length) return null;

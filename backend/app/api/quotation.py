@@ -24,7 +24,7 @@ def preso_summary(db: Session, p: Preso) -> PresoSummaryOut:
     snap = p.snapshot_json or {}
     return PresoSummaryOut(
         id=p.id, preso_no=p.preso_no, status=p.status, cart_id=p.cart_id, customer_name=p.customer.name if p.customer else (snap.get("customer") or {}).get("name"),
-        customer_tier=p.customer.tier if p.customer else None, sales_name=p.sales.name if p.sales else None, item_count=sum(int(i["qty"]) for i in snap.get("items", [])),
+        sales_name=p.sales.name if p.sales else None, item_count=sum(int(i["qty"]) for i in snap.get("items", [])),
         grand_total=(snap.get("totals") or {}).get("grand_total", "0"), note=p.note, quotation_no=q.quotation_no if q else None, quotation_status=q.status if q else None,
         updated_at=p.updated_at, created_at=p.created_at,
     )
@@ -53,7 +53,7 @@ def quotation_out(db: Session, q: Quotation, user: User | None) -> QuotationOut:
 def save_preso(body: PresoIn, ctx: CartCtx = Depends(), me: User = Depends(staff)):
     """Save Preso — snapshot ตะกร้า (save ซ้ำ = อัปเดตใบร่างเดิม)"""
     cart = ctx.by_id(body.cart_id)
-    return preso_out(ctx.db, quotation_service.save_preso(ctx.db, cart, me, body.note))
+    return preso_out(ctx.db, quotation_service.save_preso(ctx.db, cart, me, body.note, force_stock=body.force))
 
 
 @router.get("/presos", response_model=list[PresoSummaryOut])

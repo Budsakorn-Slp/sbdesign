@@ -26,7 +26,15 @@ def get_current_user_optional(
         return None
     payload = decode_access_token(token)
     if not payload:
-        return None
+        # ส่ง token มาแต่ใช้ไม่ได้ (หมดอายุ/ปลอม) ไม่เหมือนกับ "ไม่ได้ล็อกอิน"
+        #
+        # ของเดิมคืน None เงียบๆ = ปฏิบัติกับคนที่ล็อกอินค้างไว้เหมือน guest
+        # ผลคือลูกค้าที่เปิดหน้าตะกร้าทิ้งไว้จนโทเคนหมดอายุ พอกดใช้โค้ดส่วนลด
+        # จะโดน 403 "ไม่มีสิทธิ์เข้าถึงตะกร้านี้" ทั้งที่เป็นตะกร้าของตัวเอง
+        # และหน้าเว็บไม่มีทางรู้ว่าต้องไปต่ออายุโทเคน เพราะไม่เคยเห็น 401
+        #
+        # ตอบ 401 ตรงนี้ หน้าเว็บจะวิ่งไป /auth/refresh แล้วยิงซ้ำให้เองอัตโนมัติ
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="เซสชันหมดอายุ — กรุณาเข้าสู่ระบบใหม่")
     user = db.get(User, payload["sub"])
     if user and user.anonymized_at:
         return None  # ขอลบข้อมูลแล้ว — access token ที่ออกไปก่อนหน้าต้องใช้ไม่ได้ทันที

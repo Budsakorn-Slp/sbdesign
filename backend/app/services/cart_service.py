@@ -63,9 +63,60 @@ def load_cart(db: Session, cart_id: str) -> Cart | None:
     return db.scalar(select(Cart).options(selectinload(Cart.items), selectinload(Cart.customer), selectinload(Cart.owner_sales)).where(Cart.id == cart_id))
 
 
+def release_to_customer(db: Session, cart: Cart) -> Cart:
+    """เซสชันเซลล์หมดอายุแต่ตะกร้าผูกลูกค้าไว้ → คืนใบให้ลูกค้าถือต่อ ไม่ใช่ทิ้ง
+
+    ของในใบเป็นของลูกค้า (ทั้งที่ใส่เองและที่พนักงานเลือกให้) การหมดอายุคือเรื่องของ
+    "เซลล์ถือใบค้างไว้นานเกินไป" ไม่ใช่ "ลูกค้าไม่เอาของแล้ว" — ปิดใบทิ้งคือทำของหาย
+    """
+    cart.owner_sales_id = None
+    cart.owner_sales = None
+    cart.expires_at = None
+    audit_service.log(db, None, "cart.released_to_customer", "cart", cart.id, {"customer_user_id": cart.customer_user_id}, role="system")
+    db.commit()
+    return load_cart(db, cart.id)
+
+
+def leave_sales_care(db: Session, cart: Cart, actor) -> Cart:
+    """ลูกค้ากด "ออกจากการดูแลของพนักงาน" เอง — ต่างจาก release_to_customer ตรงที่ตั้งใจ
+
+    release_to_customer คือเซสชันเซลล์หมดอายุ ส่วนลดที่ให้ไว้ยังถือว่าตกลงกันแล้ว
+    อันนี้คือลูกค้าเลือกจะไปสั่งออนไลน์เอง ส่วนลดหน้าร้านจึงต้องถอดออกทั้งหมด
+    ไม่งั้นรับโค้ดหน้าสโตร์แล้วหนีไปจ่ายออนไลน์ได้ฟรีๆ (ดู BUILD_PROMPT เคสที่ 3)
+
+    ของในตะกร้ายังอยู่ครบ ทั้งที่ลูกค้าหยิบเองและที่พนักงานเลือกให้
+    """
+    from app.models.promo import AppliedDiscount
+
+    was = cart.owner_sales_id
+    dropped = db.scalars(select(AppliedDiscount).where(
+        AppliedDiscount.cart_id == cart.id, AppliedDiscount.status.in_(("applied", "pending_approval")),
+    )).all()
+    for d in dropped:
+        db.delete(d)
+    cart.owner_sales_id = None
+    cart.owner_sales = None
+    cart.expires_at = None
+    cart.promo_rev = None        # ส่วนลดเปลี่ยนแล้ว ด่านเช็คโปรฯ ต้องเริ่มใหม่
+    audit_service.log(db, actor, "cart.left_sales_care", "cart", cart.id,
+                      {"sales_id": was, "discounts_removed": [d.promo_code or d.kind for d in dropped]})
+    if cart.customer_user_id:
+        from app.services import relationship_service  # ตรงนี้กัน circular import
+
+        relationship_service.record_release(db, cart.customer_user_id, was, "left_care", cart_id=cart.id,
+                                            note="ลูกค้ากดออกจากการดูแลเอง")
+    db.commit()
+    # พนักงานที่ถือใบนี้อยู่ต้องรู้ทันที ไม่งั้นเช็คสต็อก/ออกใบเสนอราคาค้างไว้แล้วงง
+    emit(cart, "left_sales_care", {"cart_id": cart.id})
+    return load_cart(db, cart.id)
+
+
 def expire_stale_sales_carts(db: Session, sales_id: str) -> None:
     now = utcnow()
     for c in db.scalars(select(Cart).where(Cart.owner_sales_id == sales_id, Cart.status == "open", Cart.expires_at.is_not(None), Cart.expires_at < now)).all():
+        if c.customer_user_id:
+            release_to_customer(db, c)  # ผูกลูกค้าไว้แล้ว → คืนใบให้ลูกค้า ของไม่หาย
+            continue
         c.status = "abandoned"
         c.closed_at = now
         audit_service.log(db, None, "cart.expired", "cart", c.id, {"owner_sales_id": sales_id}, role="system")
@@ -88,6 +139,11 @@ def find_guest_cart(db: Session, token: str) -> Cart | None:
 def get_or_create_cart(db: Session, user: User | None, anon_token: str | None) -> Cart:
     if user and user.role == "customer":
         cart = find_customer_open_cart(db, user.id)
+        # ใบที่เซลล์ถือแล้วหมดอายุ ยังเป็น status=open อยู่ ลูกค้าจึงยังเห็นใบนั้นในหน้าตะกร้า
+        # แต่ทำอะไรกับมันไม่ได้เลย (can_access ตีเป็นใบปิด) — เด้ง "ไม่มีสิทธิ์เข้าถึงตะกร้านี้"
+        # ตอนคิดค่าส่ง/แก้จำนวน ทั้งที่เป็นตะกร้าของตัวเอง · คืนใบให้ลูกค้าตรงนี้เลย
+        if cart and not cart.is_open and cart.owner_sales_id:
+            cart = release_to_customer(db, cart)
         if not cart:
             cart = new_cart(db, customer_user_id=user.id, label=user.name)
             db.commit()
@@ -123,6 +179,11 @@ def require_cart(db: Session, cart_id: str, user: User | None, anon_token: str |
     if not cart:
         raise HTTPException(status_code=404, detail="ไม่พบตะกร้า")
     if not can_access(cart, user, anon_token):
+        # ข้อความแยกสองเรื่อง: ใบปิด/หมดอายุ (เรื่องของเวลา) กับ ใบของคนอื่น (เรื่องของสิทธิ์)
+        # ของเดิมบอก "ไม่มีสิทธิ์" ทั้งสองกรณี ทำให้ตามหาสาเหตุผิดทาง
+        # คงรหัสเป็น 403 เหมือนเดิม — หน้าเว็บกับเทสต์ยึดรหัสนี้อยู่ ที่ต้องแก้คือข้อความ
+        if not cart.is_open:
+            raise HTTPException(status_code=403, detail="ตะกร้าใบนี้ปิดหรือหมดอายุแล้ว — เปิดหน้าตะกร้าใหม่อีกครั้ง")
         raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์เข้าถึงตะกร้านี้")
     return cart
 
@@ -186,13 +247,14 @@ def add_item(db: Session, cart: Cart, actor: User | None, matnr: str, qty: int, 
         item = CartItem(
             cart_id=cart.id, matnr=m.matnr, sku=m.sku, name_snapshot=m.name_th, variant_snapshot=m.variant, spec_snapshot=m.spec, image_url=m.image_url,
             category_id=m.category_id, qty=qty, unit_price_snapshot=price, price_tier=tier, added_by="sales" if by_sales else "customer",
-            added_by_user_id=actor.id if actor else None, pending_ack=by_sales and cart.customer_user_id is not None, supply_mode=mode,
+            added_by_user_id=actor.id if actor else None, pending_ack=False, supply_mode=mode,
             plant_code=plant_code, atp_date=atp_from_cache(db, matnr, plant_code), requires_install=m.requires_install, note=note,
         )
         db.add(item)
         cart.items.append(item)
         _history(db, cart, matnr, "add", 0, qty, actor)
     cart.updated_at = utcnow()
+    bump_rev(cart)
     audit_service.log(db, actor, "cart.item_add", "cart", cart.id, {"matnr": matnr, "qty": qty, "supply_mode": mode, "plant_code": plant_code, "unit_price": str(price)})
     from app.services import analytics_service  # import ตรงนี้กัน circular import
 
@@ -228,6 +290,7 @@ def update_item(db: Session, cart: Cart, actor: User | None, item_id: str, qty: 
         item.note = note
     _history(db, cart, item.matnr, "update", before, item.qty, actor)
     cart.updated_at = utcnow()
+    bump_rev(cart)
     audit_service.log(db, actor, "cart.item_update", "cart", cart.id, {"item_id": item.id, "matnr": item.matnr, "qty_before": before, "qty_after": item.qty, "supply_mode": item.supply_mode})
     db.commit()
     db.refresh(item)
@@ -243,12 +306,26 @@ def remove_item(db: Session, cart: Cart, actor: User | None, item_id: str) -> No
     cart.items.remove(item)
     db.delete(item)
     cart.updated_at = utcnow()
+    bump_rev(cart)
     db.commit()
     emit(cart, "item_removed", payload)
 
 
+def bump_rev(cart: Cart) -> None:
+    """ของในตะกร้าเปลี่ยน → เดินเลขรุ่นขึ้นหนึ่ง ผลเช็คสต็อก/เช็คโปรฯ รอบก่อนถือว่าหมดอายุทันที
+
+    ผังงานใบ PRE บังคับว่าแก้ตะกร้าแล้วต้องวนกลับไปเช็คสต็อกใหม่ ถ้าไม่มีเลขรุ่น
+    เซลล์เพิ่มของหลังเช็คแล้วกด Save ได้เลย ทั้งที่ของชิ้นใหม่ยังไม่เคยถาม SAP
+    """
+    cart.rev = (cart.rev or 0) + 1
+
+
 def ack_item(db: Session, cart: Cart, actor: User | None, item_id: str) -> CartItem:
-    """ลูกค้ากด 'เก็บไว้' ของที่เซลล์เพิ่มให้"""
+    """ล้างป้าย "รอยืนยัน" ของรายการหนึ่ง
+
+    ตั้งแต่เลิกใช้ขั้นตอน "ลูกค้ากดรับ" ของที่เซลล์ใส่จะเข้าตะกร้าเลย ป้ายนี้จึงไม่เกิดใหม่แล้ว
+    เก็บฟังก์ชันไว้เผื่อตะกร้าเก่าที่ค้างป้ายไว้ตั้งแต่ก่อนเปลี่ยน กดแล้วป้ายหาย ไม่ต้องรอหมดอายุ
+    """
     item = _get_item(cart, item_id)
     item.pending_ack = False
     _history(db, cart, item.matnr, "ack", item.qty, item.qty, actor)
@@ -280,6 +357,8 @@ def merge_carts(db: Session, source: Cart, target: Cart, actor: User | None) -> 
         moved += 1
     # ราคา snapshot ของ guest เป็นราคาปกติ → คิดใหม่ตาม tier ลูกค้าเจ้าของตะกร้าปลายทาง
     reprice(db, target)
+    if moved:
+        bump_rev(target)
     source.status = "merged"
     source.merged_into_cart_id = target.id
     source.closed_at = utcnow()
@@ -300,8 +379,18 @@ def reprice(db: Session, cart: Cart) -> None:
 
 # ---------- totals ----------
 def totals(cart: Cart) -> dict:
-    """นับเฉพาะรายการที่ติ๊กไว้ — ของที่ไม่ติ๊กยังอยู่ในตะกร้าแต่ไม่รวมยอด"""
-    sel = cart.selected_items
+    """นับเฉพาะรายการที่ติ๊กไว้ — ของที่ไม่ติ๊กยังอยู่ในตะกร้าแต่ไม่รวมยอด
+
+    บรรทัดค่าบริการขนส่งที่พนักงาน "เปิด Mat" ไว้ (A534/A761) ไม่นับเป็นยอดสินค้า
+    ถึงมันจะเป็นบรรทัดสินค้าจริงในบิลก็ตาม เพราะถ้านับรวม:
+      - ส่วนลด % จะไปลดค่าขนส่งด้วย ซึ่งไม่ใช่เจตนาของโปรโมชั่น
+      - เทียร์ค่าขนส่งจะคิดจากยอดที่มีค่าขนส่งอยู่แล้ว กลายเป็นเปลี่ยนตัวเองวนไม่จบ
+    ยอดมันไปโผล่ที่ช่อง "ค่าขนส่ง" แทน ยอดรวมทั้งบิลจึงเท่าเดิม แค่แยกช่องให้ถูก
+    """
+    from app.services import staff_shipping_service  # ตรงนี้กัน circular import
+
+    charges = staff_shipping_service.charge_matnrs()
+    sel = [it for it in cart.selected_items if it.matnr not in charges]
     subtotal = sum((it.line_total for it in sel), Decimal(0))
     return {
         "count": sum(it.qty for it in sel),
@@ -347,6 +436,7 @@ def set_selected(db: Session, cart: Cart, actor: User | None, item_ids: list[str
         it.selected = selected
     if changed:
         cart.updated_at = utcnow()
+        bump_rev(cart)
         audit_service.log(db, actor, "cart.item_select", "cart", cart.id, {"item_ids": changed, "selected": selected})
         db.commit()
         emit(cart, "items_selected", {"item_ids": changed, "selected": selected})

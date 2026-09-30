@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import AddressBook from "../components/AddressBook";
 import Icon from "../components/Icon";
+import MemberLink from "../components/MemberLink";
 import ProductCard from "../components/ProductCard";
-import { apiGet, apiPost, errorMessage } from "../lib/api";
+import { apiGet, apiPatch, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useWishlist } from "../lib/wishlist";
 import { baht } from "../lib/format";
 import type { MaterialCard, OrderHistory } from "../lib/types";
 
 const TABS = [
   { key: "orders", label: "ประวัติการสั่งซื้อ", icon: "receipt_long" },
+  { key: "profile", label: "ข้อมูลส่วนตัว", icon: "person" },
+  { key: "addresses", label: "ที่อยู่จัดส่ง", icon: "location_on" },
   { key: "wishlist", label: "รายการโปรด", icon: "favorite" },
   { key: "recent", label: "ดูล่าสุด", icon: "history" },
   { key: "privacy", label: "ความเป็นส่วนตัว", icon: "shield_person" },
@@ -54,6 +59,218 @@ function OrderRow({ o }: { o: OrderHistory }) {
 }
 
 type Privacy = { consent_marketing: boolean; consent_marketing_at: string | null; anonymized_at: string | null; history: { granted: boolean; source: string; created_at: string }[] };
+
+/** แท็บ "ที่อยู่จัดส่ง" — สมุดที่อยู่ของเรา + ที่อยู่ทะเบียนสมาชิกจาก SAP (ถ้าผูกไว้)
+ *
+ *  สองอย่างนี้คนละความหมายและต้องไม่ปนกัน:
+ *    ทะเบียนสมาชิก (SAP) = ที่อยู่ที่ให้ไว้ตอนสมัครที่สาขา ใช้อ้างอิง/ออกเอกสาร แก้บนเว็บไม่ได้
+ *    สมุดที่อยู่จัดส่ง    = ปลายทางที่จะให้ไปส่งของ มีได้หลายที่ ลูกค้าจัดการเองทั้งหมด
+ *  สมาชิกที่มีที่อยู่ในทะเบียนอยู่แล้วจึงกด "ใช้ที่อยู่นี้" คัดลอกเข้าสมุดได้ในคลิกเดียว
+ */
+function AddressPanel() {
+  const auth = useAuth();
+  const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const sap = auth.user?.sap_address;
+
+  const copyFromSap = async () => {
+    if (!sap) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      await apiPost("/me/addresses", {
+        label: "ตามทะเบียนสมาชิก",
+        receiver: auth.user?.name || "",
+        phone: auth.user?.phone || "",
+        address: sap,
+        postcode: auth.user?.sap_postcode || "",
+      });
+      setCopied(true);   // remount สมุดที่อยู่ให้โหลดรายการใหม่
+    } catch (e) {
+      setErr(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="col" style={{ gap: 14 }}>
+      {sap && (
+        <section className="card flat">
+          <div className="row between wrap" style={{ marginBottom: 6 }}>
+            <b><Icon name="badge" size={18} /> ที่อยู่ในทะเบียนสมาชิก</b>
+            <span className="small muted">เลขสมาชิก {auth.user?.sap_customer_no}</span>
+          </div>
+          <div className="small">{sap} {auth.user?.sap_postcode}</div>
+          <p className="tiny muted" style={{ margin: "6px 0 10px" }}>
+            ที่อยู่นี้มาจากตอนสมัครสมาชิกที่สาขา ใช้อ้างอิงและออกเอกสาร — แก้ไขได้ที่สาขาเท่านั้น
+            ส่วนจะให้ส่งของไปที่ไหน เลือกจากสมุดที่อยู่ด้านล่าง
+          </p>
+          <button className="btn sm" disabled={busy} onClick={copyFromSap}>
+            <Icon name="content_copy" size={16} /> {busy ? "กำลังคัดลอก…" : "ใช้ที่อยู่นี้เป็นที่อยู่จัดส่ง"}
+          </button>
+          {err && <div className="note err small" style={{ marginTop: 8 }}>{err}</div>}
+        </section>
+      )}
+
+      <section className="card flat">
+        <div className="row between wrap" style={{ marginBottom: 6 }}>
+          <b><Icon name="local_shipping" size={18} /> สมุดที่อยู่จัดส่ง</b>
+          <span className="small muted">เลือกใช้ตอนสั่งซื้อ · ปุ่มกลม = ที่อยู่เริ่มต้น</span>
+        </div>
+        <AddressBook key={String(copied)} manage selectedId={null} onSelect={() => {}} defaults={{
+          receiver: auth.user?.name || "",
+          phone: auth.user?.phone || "",
+        }} />
+      </section>
+    </div>
+  );
+}
+
+
+function ProfilePanel() {
+  const auth = useAuth();
+  const u = auth.user;
+  // ผูกบัตรสมาชิกแล้ว = ชื่อเป็นของ SAP แก้ที่นี่ไม่ได้ (หลังบ้านก็ปฏิเสธเหมือนกัน)
+  const nameLocked = !!u?.sap_customer_no;
+  // ค่าเริ่มต้นเป็นโหมดดูอย่างเดียว — กันแก้โดนโดยไม่ตั้งใจ ต้องกด "แก้ไข" ก่อนถึงพิมพ์ได้
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(u?.name || "");
+  const [email, setEmail] = useState(u?.email || "");
+  const [pw, setPw] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  // auth.user โหลดทีหลัง — ค่าเริ่มต้นตอน render แรกจึงเป็นค่าว่าง ต้องเติมให้ตอนข้อมูลมาถึง
+  // ไม่งั้นกดบันทึกแล้วอีเมลเดิมโดนล้างทิ้ง
+  useEffect(() => {
+    setName(u?.name || "");
+    setEmail(u?.email || "");
+  }, [u?.id, u?.name, u?.email]);
+
+  if (!u) return <p className="muted">เข้าสู่ระบบเพื่อดูข้อมูลส่วนตัวของคุณ</p>;
+
+  const startEdit = () => {
+    setMsg(null);
+    setErr(null);
+    setEditing(true);
+  };
+
+  const cancel = () => {
+    setName(u.name);
+    setEmail(u.email || "");
+    setPw("");
+    setErr(null);
+    setEditing(false);
+  };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    setErr(null);
+    try {
+      const body: Record<string, string> = { email: email.trim() };
+      if (!nameLocked) body.name = name.trim();
+      if (pw) body.password = pw;
+      await apiPatch("/me", body);
+      await auth.refreshMe();
+      setPw("");
+      setMsg("บันทึกแล้ว");
+      setEditing(false);
+    } catch (e2) {
+      setErr(errorMessage(e2));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="privacy" onSubmit={save}>
+      {/* บัตรสมาชิกอยู่บนสุด — รหัสลูกค้ากับแต้มคือสิ่งที่ลูกค้าเปิดหน้านี้มาดูบ่อยที่สุด
+          ส่วนชื่อ/อีเมล/เบอร์ เข้ามาแก้นานๆ ครั้ง */}
+      <section className="privacy-box">
+        <h2>บัตรสมาชิก</h2>
+        {u.sap_customer_no ? (
+          <p className="small">แต้มสะสม <b>{u.points.toLocaleString()}</b> พ้อยท์
+            <span className="d-block muted">ผูกกับรหัสลูกค้า {u.sap_customer_no}</span>
+            <span className="d-block muted">ข้อมูลสมาชิกและแต้มมาจากระบบหลังบ้าน อัปเดตอัตโนมัติ</span>
+          </p>
+        ) : (
+          <p className="small muted">ยังไม่ได้ผูกบัตรสมาชิก — ผูกแล้วจะเห็นแต้มสะสมและประวัติการซื้อจากหน้าร้าน</p>
+        )}
+      </section>
+
+      <section className="privacy-box">
+        <div className="row between" style={{ marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>ข้อมูลของคุณ</h2>
+          {!editing && (
+            <button className="btn sm" type="button" onClick={startEdit}>
+              <Icon name="edit" size={16} /> แก้ไข
+            </button>
+          )}
+        </div>
+
+        {/* รหัสลูกค้ามาก่อนทุกช่อง — เวลาโทรหาศูนย์บริการหรือคุยกับเซลล์ เขาถามเลขนี้เป็นอย่างแรก
+            ของเดิมไปอยู่ท้ายสุดในกล่อง "บัตรสมาชิก" ต้องเลื่อนหาทุกครั้ง
+            เลขของ SAP มีหลายชุด (ขึ้นต้น 11 สำหรับลูกค้าทั่วไป · 44 สำหรับสมาชิก) โชว์ตามที่ผูกไว้จริง */}
+        <div className={"cust-id" + (u.sap_customer_no ? "" : " none")}>
+          <span className="cust-id-lbl"><Icon name="badge" size={16} /> รหัสลูกค้า (CUST ID)</span>
+          {u.sap_customer_no ? (
+            <b className="mono">{u.sap_customer_no}</b>
+          ) : (
+            <span className="small muted">ยังไม่มี — ผูกบัตรสมาชิกเพื่อรับรหัสลูกค้า</span>
+          )}
+        </div>
+
+        <label className="field">
+          <span className="field-lbl">ชื่อ-นามสกุล</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} disabled={!editing || nameLocked} maxLength={120} />
+          {nameLocked && (
+            <span className="small muted">
+              ชื่อมาจากบัตรสมาชิก {u.sap_customer_no} — แก้ไขได้ที่สาขาหรือศูนย์บริการลูกค้า
+              เพื่อให้ตรงกับใบเสร็จและใบกำกับภาษี
+            </span>
+          )}
+        </label>
+
+        <label className="field">
+          <span className="field-lbl">อีเมล</span>
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!editing} placeholder="ใช้ส่งใบเสร็จและการแจ้งเตือน" />
+        </label>
+
+        <label className="field">
+          <span className="field-lbl">เบอร์โทร</span>
+          <input value={u.phone || "—"} disabled />
+          <span className="small muted">เบอร์นี้ใช้เข้าสู่ระบบ — เปลี่ยนได้ที่สาขาหรือศูนย์บริการลูกค้า</span>
+        </label>
+
+        {u.has_password ? (
+          <p className="small muted">รหัสผ่าน: ตั้งไว้แล้ว — เปลี่ยนได้ที่เมนู “ลืมรหัสผ่าน” (ยืนยันด้วย OTP)</p>
+        ) : (
+          <label className="field">
+            <span className="field-lbl">ตั้งรหัสผ่าน (ไม่บังคับ)</span>
+            <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} disabled={!editing} placeholder="เข้าระบบด้วย OTP ได้อยู่แล้ว" />
+          </label>
+        )}
+
+        {err && <p className="small err">{err}</p>}
+        {msg && !editing && <p className="small ok">{msg}</p>}
+
+        {editing && (
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn dark" type="submit" disabled={busy}>{busy ? "กำลังบันทึก…" : "บันทึก"}</button>
+            <button className="btn ghost" type="button" onClick={cancel} disabled={busy}>ยกเลิก</button>
+          </div>
+        )}
+      </section>
+
+    </form>
+  );
+}
+
 
 function PrivacyPanel() {
   const auth = useAuth();
@@ -151,6 +368,7 @@ function PrivacyPanel() {
 }
 
 export default function AccountPage() {
+  const wishStore = useWishlist(true);  // ตัวเก็บสถานะร่วมกับปุ่มหัวใจบนการ์ด
   const { tab: raw } = useParams();
   const tab = (TABS.find((t) => t.key === raw)?.key || "orders") as (typeof TABS)[number]["key"];
   const auth = useAuth();
@@ -170,8 +388,10 @@ export default function AccountPage() {
     if (tab === "wishlist") apiGet<MaterialCard[]>("/me/wishlist").then(setWish).catch((e) => setError(errorMessage(e)));
   }, [tab, auth.user]);
 
+  // ใช้ตัวเก็บสถานะร่วมกับปุ่มหัวใจบนการ์ด ไม่ยิง API เอง —
+  // ของเดิมยิงตรงทำให้ตัวเก็บสถานะไม่รู้เรื่อง หัวใจบนการ์ดในหน้านี้เลยเป็นสีเข้มทั้งที่อยู่ในรายการโปรด
   const unwish = async (matnr: string) => {
-    await apiPost(`/me/wishlist/${matnr}`);
+    await wishStore.toggle(matnr);
     setWish((cur) => (cur || []).filter((m) => m.matnr !== matnr));
   };
 
@@ -186,9 +406,15 @@ export default function AccountPage() {
         ))}
       </nav>
 
+      {/* ผูกเลขสมาชิกทีหลังได้ — คนที่ข้ามตอนเข้าสู่ระบบ หรือเพิ่งไปสมัครที่สาขามา
+          ผูกแล้วไม่ต้องโชว์อีก ไม่งั้นทุกแท็บจะมีกล่องชวนผูก/ชวนกรอกโปรไฟล์ค้างอยู่ตลอด */}
+      {auth.user?.role === "customer" && !auth.user.sap_customer_no && <MemberLink compact />}
+
       {error && <p className="err">{error}</p>}
       {!auth.user && tab !== "recent" && <p className="muted">เข้าสู่ระบบเพื่อดู{TABS.find((t) => t.key === tab)?.label}ของคุณ</p>}
 
+      {tab === "profile" && <ProfilePanel />}
+      {tab === "addresses" && auth.user && <AddressPanel />}
       {tab === "orders" && auth.user && (
         orders === null ? <p className="muted">กำลังโหลด…</p>
           : orders.length === 0 ? <p className="muted">ยังไม่มีประวัติการสั่งซื้อ</p>

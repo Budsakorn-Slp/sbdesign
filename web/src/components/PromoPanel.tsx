@@ -1,33 +1,76 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, apiPost, errorMessage } from "../lib/api";
+import { ApiError, api, apiGet, apiPost, errorMessage } from "../lib/api";
 import { bahtWord } from "../lib/format";
-import type { Cart, EvaluateOut } from "../lib/types";
+import type { Cart, EvaluateOut, Offer } from "../lib/types";
 import Icon from "./Icon";
 
 type Props = {
   cart: Cart;
-  isStaff: boolean;
+  /** ใครเปิดแผงนี้ · คนละสิทธิ์กันคนละโหมด
+   *    staff     พนักงานถือตะกร้า — เช็คโปรฯ เป็นขั้น ติ๊กเลือก กรอกโค้ด ครบทุกอย่าง
+   *    customer  ลูกค้าสั่งออนไลน์เอง — กรอกโค้ดได้อย่างเดียว ไม่มีแผงเช็คโปรฯ
+   *    readonly  ลูกค้าที่พนักงานกำลังดูแล — ดูส่วนลดที่ได้รับ แก้อะไรไม่ได้
+   */
+  mode?: "staff" | "customer" | "readonly";
+  /** @deprecated ใช้ mode แทน — เหลือไว้ให้หน้าเก่าที่ยังส่งมาไม่พัง */
+  isStaff?: boolean;
   onClose: () => void;
   onCartChange: (c: Cart) => void;
 };
 
-/** S3 · เช็คโปรโมชั่น / ส่วนลด / เงื่อนไข — ใช้ทั้งฝั่งเซลล์ (มีส่วนลดพนักงาน) และลูกค้า */
-export default function PromoPanel({ cart, isStaff, onClose, onCartChange }: Props) {
+/** S3 · เช็คโปรโมชั่น / โปรโมโค้ด / ส่วนลดพนักงาน — ใช้ทั้งฝั่งเซลล์และลูกค้า
+ *
+ *  โฟลว์เป็น 2 ขั้นในหน้าเดียว ตามที่หน้าร้านใช้จริง:
+ *    ขั้น 1  เช็คโปรโมชั่น  — ระบบไล่ดู MATNR ทุกตัวในตะกร้าให้เอง แล้วติ๊กเลือกใช้
+ *    ขั้น 2  โปรโมโค้ด     — เปิดให้ใช้ "หลังเช็คขั้น 1 แล้ว" เลือกจากคูปองที่มี หรือพิมพ์โค้ดเอง
+ *
+ *  ทำไมต้องล็อกขั้น 2 ไว้ก่อน: ส่วนลดหลายตัวชนกัน (ตัวที่ stackable=false ใช้ร่วมกับใครไม่ได้)
+ *  ถ้าปล่อยให้กรอกโค้ดตั้งแต่ยังไม่รู้ว่าโปรฯ อัตโนมัติให้อะไรบ้าง พนักงานจะเลือกทางที่แย่กว่า
+ *  โดยไม่รู้ตัว — เช็คก่อนแล้วค่อยเติมโค้ด ทำให้เห็นครบว่าอันไหนคุ้มกว่า
+ */
+export default function PromoPanel({ cart, mode, isStaff, onClose, onCartChange }: Props) {
+  const view = mode ?? (isStaff ? "staff" : "customer");
+  const staff = view === "staff";
+  const staffMode = staff;
+  const readonly = view === "readonly";
   const [data, setData] = useState<EvaluateOut | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [customPct, setCustomPct] = useState("");
-  const [reason, setReason] = useState("");
+  const [checked, setChecked] = useState(false);   // ขั้น 1 เช็คไปแล้วอย่างน้อย 1 รอบ
+  const [codeInput, setCodeInput] = useState("");
 
   const load = useCallback(async () => {
     try {
       setData(await apiPost<EvaluateOut>("/promotions/evaluate", { cart_id: cart.id }));
+      setChecked(true);
       setErr(null);
     } catch (e) {
+      // ตะกร้าใบที่หน้าจอถืออยู่ใช้ไม่ได้แล้ว — เกิดตอนพนักงานปลดลูกค้าออกจากใบนั้น
+      // หรือใบถูกปิด/หมดอายุ ระหว่างที่ลูกค้าเปิดหน้าค้างไว้
+      //
+      // ของเดิมโชว์ "ไม่มีสิทธิ์เข้าถึงตะกร้านี้" ให้ลูกค้าอ่าน ซึ่งไม่ได้ช่วยอะไร
+      // และไม่ใช่ความผิดลูกค้าด้วย — ดึงใบปัจจุบันมาใช้แทนแล้วลองใหม่เงียบๆ
+      const stale = e instanceof ApiError && (e.status === 403 || e.status === 404);
+      if (stale && !staffMode) {
+        try {
+          const fresh = await apiGet<Cart>("/cart");
+          if (fresh.id !== cart.id) {
+            onCartChange(fresh);
+            setData(await apiPost<EvaluateOut>("/promotions/evaluate", { cart_id: fresh.id }));
+            setChecked(true);
+            setErr(null);
+            return;
+          }
+        } catch {
+          /* ดึงใบใหม่ไม่ได้ ตกไปแสดง error เดิม */
+        }
+      }
       setErr(errorMessage(e));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cart.id]);
 
+  // เช็คให้เลยตั้งแต่เปิดหน้า ไม่ต้องให้กดปุ่มก่อน — ข้อมูลที่ใช้เช็คคือของในตะกร้าซึ่งมีอยู่แล้ว
   useEffect(() => {
     load();
   }, [load, cart.updated_at]);
@@ -47,79 +90,111 @@ export default function PromoPanel({ cart, isStaff, onClose, onCartChange }: Pro
 
   const applyPromo = (code: string) => run(code, () => apiPost<Cart>(`/cart/${cart.id}/discounts`, { kind: "promotion", promo_code: code }));
   const removeDiscount = (id: string) => run(id, () => api<Cart>("DELETE", `/cart/${cart.id}/discounts/${id}`));
-  const staffPct = (pct: number, why?: string) => run("staff", () => apiPost<Cart>(`/cart/${cart.id}/discounts`, { kind: "staff_manual", percent: pct, reason: why || null }));
 
-  const quota = data?.staff_discount_quota_percent ?? 3;
-  const curPct = data?.staff_discount?.percent ? Number(data.staff_discount.percent) : 0;
   const t = data?.totals;
+
+  // ฝั่งหลังบ้านคัดคูปองที่ต้องใช้โค้ดออกให้แล้ว ลิสต์นี้จึงมีแต่โปรฯ ที่ระบบเช็คเอง
+  const autos: Offer[] = [...(data?.eligible ?? []), ...(data?.ineligible ?? [])];
+  const autoOk = autos.filter((o) => o.eligible).length;
+
+  /** หนึ่งบรรทัด = หนึ่งสิทธิ์ · ติ๊กเพื่อใช้ ติ๊กออกเพื่อยกเลิก (ของที่ยังไม่เข้าเงื่อนไขติ๊กไม่ได้) */
+  const OfferRow = ({ o }: { o: Offer }) => {
+    const key = o.applied ? o.applied_id! : o.code;
+    const toggle = () => (o.applied && o.applied_id ? removeDiscount(o.applied_id) : applyPromo(o.code));
+    return (
+      <label className={"promo-row" + (o.applied ? " on" : o.eligible ? "" : " no")}>
+        <input
+          type="checkbox"
+          className="promo-tick"
+          checked={o.applied}
+          disabled={!o.eligible || busy === key}
+          onChange={toggle}
+        />
+        <div className="grow">
+          <b>{o.code} · {o.title}</b>
+          <small>เงื่อนไข: {o.condition_text}{o.stackable ? "" : " · ใช้ร่วมกับโปรอื่นไม่ได้"}</small>
+          {o.eligible
+            ? <small className="green">{o.applied ? "ใช้กับบิลนี้แล้ว" : "เข้าเงื่อนไข ติ๊กเพื่อใช้"}</small>
+            : <small className="amber">{o.reason}</small>}
+        </div>
+        <b className={o.eligible ? "green" : "muted"}>{o.eligible ? `−${bahtWord(o.amount)}` : "—"}</b>
+      </label>
+    );
+  };
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>โปรโมชั่นที่ใช้ได้{data?.customer_name ? ` · ${data.customer_name} (${data.customer_tier || "ทั่วไป"})` : " · ยังไม่ผูกลูกค้า"}</h2>
+          <h2>{readonly ? "ส่วนลดที่ได้รับ" : staff ? `ส่วนลดของบิลนี้${data?.customer_name ? ` · ${data.customer_name}` : " · ยังไม่ผูกลูกค้า"}` : "โค้ดส่วนลด"}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="ปิด"><Icon name="close" /></button>
         </div>
-        {data && <div className="small muted" style={{ marginBottom: 10 }}>{data.eligible.length} รายการเข้าเงื่อนไข · {data.ineligible.length} รายการยังไม่เข้า</div>}
+
         {err && <div className="note err" style={{ marginBottom: 10 }}>{err}</div>}
-        {!data && !err && <div className="ph" style={{ height: 120 }}>กำลังประเมินโปรโมชั่น…</div>}
+        {!data && !err && <div className="ph" style={{ height: 120 }}>กำลังเช็คโปรโมชั่นจากสินค้าในตะกร้า…</div>}
 
         {data && (
-          <div className="promo-list">
-            {data.eligible.map((o) => (
-              <div key={o.code} className={"promo-row" + (o.applied ? " on" : "")}>
-                <Icon name={o.applied ? "check_circle" : o.discount_type === "gift" ? "card_giftcard" : "local_offer"} size={22} style={{ color: "var(--green)" }} />
-                <div className="grow">
-                  <b>{o.code} · {o.title}</b>
-                  <small>เงื่อนไข: {o.condition_text}{o.stackable ? "" : " · ใช้ร่วมกับโปรอื่นไม่ได้"}</small>
-                  <small className="green">{o.applied ? "ใช้กับบิลนี้แล้ว" : "เข้าเงื่อนไข กดใช้ได้เลย"}</small>
+          <>
+            {/* ---------- ขั้น 1 · โปรโมชั่นอัตโนมัติ (พนักงานเท่านั้น) ----------
+                ลูกค้าไม่เห็นขั้นนี้ เพราะโปรฯ หน้าร้านต้องมีพนักงานเป็นคนตรวจและกดให้
+                ฝั่งออนไลน์ลูกค้ามีทางเดียวคือกรอกโค้ด เหมือนร้านค้าออนไลน์ทั่วไป */}
+            {staff && (
+              <div className="promo-step">
+                <div className="promo-step-head">
+                  <span className="promo-step-no on">1</span>
+                  <div className="grow">
+                    <b>Promotion</b>
+                    <small className="muted">เช็คจากรหัสสินค้าทุกตัวให้แล้ว · เข้าเงื่อนไข {autoOk} จาก {autos.length} รายการ</small>
+                  </div>
+                  <button className="btn sm" disabled={!!busy} onClick={load}>เช็คใหม่</button>
                 </div>
-                <div className="col" style={{ alignItems: "flex-end" }}>
-                  <b className="green">−{bahtWord(o.amount)}</b>
-                  {o.applied && o.applied_id ? (
-                    <button className="btn green sm" disabled={busy === o.applied_id} onClick={() => removeDiscount(o.applied_id!)}>ยกเลิก</button>
-                  ) : (
-                    <button className="btn sm" disabled={busy === o.code} onClick={() => applyPromo(o.code)}>กดใช้</button>
-                  )}
-                </div>
-              </div>
-            ))}
-            {data.ineligible.map((o) => (
-              <div key={o.code} className="promo-row no">
-                <Icon name="error" size={22} style={{ color: "var(--amber)" }} />
-                <div className="grow">
-                  <b>{o.code} · {o.title}</b>
-                  <small>เงื่อนไข: {o.condition_text}</small>
-                  <small className="amber">{o.reason}</small>
-                </div>
-                <div className="col" style={{ alignItems: "flex-end" }}>
-                  <b className="muted">—</b>
-                  <button className="btn sm" disabled title={o.reason || ""}>ดูเงื่อนไข</button>
+                <div className="promo-list">
+                  {autos.length ? autos.map((o) => <OfferRow key={o.code} o={o} />)
+                    : <div className="small muted" style={{ padding: "8px 2px" }}>ไม่มีโปรโมชั่นที่ตรงกับสินค้าในตะกร้านี้</div>}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {isStaff && data && (
-          <div className="card flat" style={{ marginTop: 14 }}>
-            <div className="row between wrap">
-              <div><b>ส่วนลดพนักงาน (manual)</b> <span className="small muted">โควตา {quota}% · เกินต้องขออนุมัติผู้จัดการสาขาในแอป</span></div>
-              {data.staff_discount && <span className={"chip " + (data.staff_discount.status === "applied" ? "green" : "amber")}>{data.staff_discount.status === "applied" ? "ใช้แล้ว" : "รออนุมัติ"} {Number(data.staff_discount.percent)}% · −{bahtWord(data.staff_discount.amount)}</span>}
-            </div>
-            <div className="row wrap" style={{ marginTop: 10, gap: 10 }}>
-              <div className="disc-steps">
-                {[0, 1, 2, 3].map((v) => (
-                  <button key={v} className={curPct === v && (data.staff_discount?.status === "applied" || v === 0) ? "on" : ""} disabled={busy === "staff"} onClick={() => staffPct(v)}>{v === 0 ? "ไม่ใช้" : `${v}%`}</button>
-                ))}
+            {/* ---------- ขั้น 2 · โปรโมโค้ด ----------
+                พนักงาน: ปลดล็อกหลังเช็คขั้น 1 · ลูกค้าออนไลน์: ใช้ได้เลย ไม่มีขั้นก่อนหน้า
+                ลูกค้าที่พนักงานดูแลอยู่: ไม่เห็นช่องนี้ ส่วนลดเป็นหน้าที่ของพนักงาน */}
+            {!readonly && (
+              <div className={"promo-step" + (checked || !staff ? "" : " locked")}>
+                <div className="promo-step-head">
+                  {staff && <span className={"promo-step-no" + (checked ? " on" : "")}>2</span>}
+                  <div className="grow">
+                    <b>PromoCode</b>
+                    <small className="muted">
+                      {staff && !checked ? "เช็ค Promotion ขั้นที่ 1 ให้เสร็จก่อน" : "กรอกรหัสโปรโมโค้ดที่มี"}
+                    </small>
+                  </div>
+                </div>
+                {(checked || !staff) && (
+                  <form
+                    className="promo-code-form"
+                    onSubmit={(e) => { e.preventDefault(); const c = codeInput.trim().toUpperCase(); if (c) { applyPromo(c); setCodeInput(""); } }}
+                  >
+                    <Icon name="confirmation_number" size={18} />
+                    <input
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                      placeholder={staff ? "มีโค้ดจากลูกค้า? พิมพ์ที่นี่" : "กรอกโค้ดส่วนลด"}
+                      autoComplete="off"
+                    />
+                    <button className="btn dark sm" type="submit" disabled={!codeInput.trim() || !!busy}>ใช้โค้ด</button>
+                  </form>
+                )}
               </div>
-              <form className="row" onSubmit={(e) => { e.preventDefault(); const p = parseFloat(customPct); if (!Number.isNaN(p)) staffPct(p, reason); }}>
-                <input className="hdr-pop-input" style={{ width: 70 }} value={customPct} onChange={(e) => setCustomPct(e.target.value)} placeholder="%" inputMode="decimal" />
-                <input className="hdr-pop-input" style={{ width: 200 }} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="เหตุผล (กรณีเกินโควตา)" />
-                <button className="btn dark sm" type="submit" disabled={busy === "staff" || !customPct}>{parseFloat(customPct) > quota ? "ขออนุมัติ" : "ใส่ส่วนลด"}</button>
-              </form>
-            </div>
-          </div>
+            )}
+
+            {readonly && (
+              <div className="note small">
+                พนักงานกำลังดูแลตะกร้านี้อยู่ ส่วนลดด้านล่างเป็นสิทธิ์ที่พนักงานใส่ให้
+                {t && !t.lines.length ? " — ตอนนี้ยังไม่มีส่วนลด" : ""}
+                <div className="tiny muted" style={{ marginTop: 4 }}>อยากใส่โค้ดเอง ให้กด "ออกจากการดูแล" ที่หน้าตะกร้าก่อน</div>
+              </div>
+            )}
+          </>
         )}
 
         {t && (
@@ -127,9 +202,13 @@ export default function PromoPanel({ cart, isStaff, onClose, onCartChange }: Pro
             <h3>สรุปหลังส่วนลด</h3>
             <div className="sum-row"><span>ราคาปกติ</span><span>{bahtWord(t.standard_subtotal)}</span></div>
             {Number(t.member_savings) > 0 && <div className="sum-row"><span>ราคาสมาชิก</span><span className="green">−{bahtWord(t.member_savings)}</span></div>}
-            {t.lines.map((l) => (
+            {/* ทุกบรรทัดต้องถอดออกได้จากตรงนี้ — โค้ดที่กรอกผิดไม่มีลิสต์ให้กลับไปติ๊กออกแล้ว */}
+            {t.lines.filter((l) => Number(l.amount) > 0).map((l) => (
               <div key={l.id} className="sum-row">
-                <span>{l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}</span>
+                <span>
+                  {l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}
+                  {!readonly && <button className="link-btn small danger" style={{ marginLeft: 8 }} disabled={busy === l.id} onClick={() => removeDiscount(l.id)}>เอาออก</button>}
+                </span>
                 <span className={l.status === "applied" ? "green" : "muted"}>−{bahtWord(l.amount)}</span>
               </div>
             ))}

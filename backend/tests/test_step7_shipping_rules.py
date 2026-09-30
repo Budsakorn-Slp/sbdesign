@@ -92,8 +92,10 @@ def test_flat_399_for_ordinary_cart_under_threshold(client):
     hs = auth_headers(client, "SA-104", "staff")
     cart, q = _quote(client, hs, [("10031110", 1, "ship")])  # LGT-PND-OAK 2,490 ของธรรมดา
     assert float(q["base_fee"]) == 399 and q["ship_source"] == "flat-399"
+    # กฎ 399 เป็นของช่องทางออนไลน์ — บิลที่พนักงานถือไม่เอามาคิด ค่าส่งมาจาก Mat เท่านั้น
+    # ตราบใดที่ยังไม่เปิด Mat ยอดค่าส่งในบิลต้องเป็น 0 ไม่ใช่ 399
     t = client.get(f"/sales/carts/{cart['id']}", headers=hs).json()["totals"]
-    assert float(t["shipping_fee"]) == 399 and float(t["grand_total"]) == float(t["net_total"]) + 399
+    assert float(t["shipping_fee"]) == 0 and float(t["grand_total"]) == float(t["net_total"])
     client.delete(f"/sales/carts/{cart['id']}", headers=hs)
 
 

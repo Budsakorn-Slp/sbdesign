@@ -31,7 +31,7 @@ export default function PresosPage() {
         <div className="card" style={{ maxWidth: 520 }}>
           <b>Preso ของฉัน</b>
           <p className="muted small">ต้องเข้าสู่ระบบด้วยบัญชีพนักงานขาย</p>
-          <button className="btn dark" onClick={auth.openLogin}>เข้าสู่ระบบพนักงาน</button>
+          <Link className="btn dark" to="/staff">เข้าสู่ระบบพนักงาน</Link>
         </div>
       </main>
     );
@@ -94,7 +94,7 @@ export default function PresosPage() {
                 <tr key={p.id}>
                   <td>
                     <b className="mono">{p.preso_no}</b>{p.quotation_no && <> → <Link to={`/sales/quotations/${p.quotation_no}`} className="mono strong">{p.quotation_no}</Link></>}
-                    <br /><span className="small muted">{p.customer_name || "ยังไม่ผูกลูกค้า"}{p.customer_tier ? ` · ${p.customer_tier}` : ""}{p.note ? ` · ${p.note}` : ""}</span>
+                    <br /><span className="small muted">{p.customer_name || "ยังไม่ผูกลูกค้า"}{p.note ? ` · ${p.note}` : ""}</span>
                   </td>
                   <td>{p.item_count} ชิ้น</td>
                   <td><b>{bahtWord(p.grand_total)}</b>{p.quotation_status && <div className="small muted">{QSTATUS[p.quotation_status] || p.quotation_status}</div>}</td>

@@ -10,6 +10,7 @@ from app.models.delivery import DeliverySlot, DeliveryZone, SlotHold  # noqa: F4
 from app.models.payment import Payment, SapSyncJob  # noqa: F401
 from app.models.promo import AppliedDiscount, Promotion  # noqa: F401
 from app.models.quotation import Preso, Quotation, QuotationLine  # noqa: F401
+from app.models.relationship import CustomerSalesEvent, CustomerSalesLink  # noqa: F401
 from app.models.geo import ThaiGeo  # noqa: F401
 from app.models.shipping import ShipArea, ShipAreaPostcode, ShipProductAttr, ShipRate, ShipRule  # noqa: F401
 from app.models.user import OtpCode, User, UserSession  # noqa: F401

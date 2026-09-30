@@ -37,6 +37,12 @@ class Cart(Base, TimestampMixin):
     install_fee: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
     slot_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     delivery_quoted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # ด่านก่อนบันทึกใบ PRE — rev เดินขึ้นทุกครั้งที่ของในตะกร้าเปลี่ยน
+    # เช็คสต็อก/เช็คโปรฯ จะจำไว้ว่าเช็คตอน rev ไหน ถ้าเลขไม่ตรง rev ปัจจุบัน = ของเปลี่ยนหลังเช็ค
+    # ต้องเช็คใหม่ (ตรงกับผังงาน: แก้ตะกร้าแล้ววนกลับไป Check Stock ครั้งที่ 1 เสมอ)
+    rev: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    stock_ok_rev: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    promo_rev: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     items: Mapped[list["CartItem"]] = relationship(back_populates="cart", cascade="all, delete-orphan", order_by="CartItem.added_at")
     customer = relationship("User", foreign_keys=[customer_user_id])
@@ -50,6 +56,9 @@ class Cart(Base, TimestampMixin):
     def selected_items(self) -> list["CartItem"]:
         """เฉพาะรายการที่ลูกค้าติ๊กไว้ — ใช้กับทุกอย่างที่เป็นเงิน (ยอดรวม ส่วนลด ค่าส่ง ใบเสนอราคา)
         ของที่ไม่ติ๊กยังอยู่ในตะกร้าเหมือนเดิม แค่ไม่ถูกคิดเงินรอบนี้
+
+        หน้าขายก็มีช่องติ๊กเหมือนกัน (เพิ่มทีหลัง) — ของที่พนักงานใส่ให้ติ๊กมาให้แล้ว
+        และของที่ยกมาจากตะกร้าลูกค้าก็ถูกติ๊กให้ตอนผูกลูกค้า จะได้ไม่มีของตกหล่นจากบิลเงียบๆ
         """
         return [it for it in self.items if it.selected]
 

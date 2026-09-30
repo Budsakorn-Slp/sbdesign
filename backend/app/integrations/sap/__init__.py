@@ -1,4 +1,4 @@
-"""factory: สลับ SAP adapter ด้วย env เดียว SAP_MODE=mock|rfc|http"""
+"""factory: สลับ SAP adapter ด้วย env เดียว SAP_MODE=mock|http"""
 from functools import lru_cache
 
 from app.core.config import get_settings
@@ -12,15 +12,11 @@ def get_sap_client() -> SapClient:
         from app.integrations.sap.mock import MockSapClient
 
         return MockSapClient()
-    if mode == "rfc":
-        from app.integrations.sap.rfc import RfcSapClient
-
-        return RfcSapClient.from_settings(get_settings())
     if mode == "http":
         from app.integrations.sap.http import HttpSapClient
 
         return HttpSapClient.from_settings(get_settings())
-    raise RuntimeError(f"SAP_MODE ไม่รู้จัก: {mode} (ใช้ mock | rfc | http)")
+    raise RuntimeError(f"SAP_MODE ไม่รู้จัก: {mode} (ใช้ mock | http)")
 
 
 def reset_sap_client() -> None:

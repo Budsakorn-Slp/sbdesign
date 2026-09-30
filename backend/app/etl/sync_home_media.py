@@ -26,12 +26,12 @@ import re
 import sys
 from urllib.parse import quote
 
-from sqlalchemy import bindparam, create_engine, select, text
+from sqlalchemy import bindparam, case, create_engine, select, text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models.catalog import Category
+from app.models.catalog import Brand, Category
 from app.models.content import HomeMedia
 
 for _s in (sys.stdout, sys.stderr):
@@ -412,22 +412,108 @@ def upsert_sbweb(rows: list[dict]) -> None:
         print(f"  sb_home_media: upsert {len(rows)} แถว" + (f" · ปิดของเก่า {len(stale)}" if stale else ""))
 
 
+# คำต่อท้ายชื่อแบนเนอร์ที่ไม่ใช่ชื่อสินค้า — ติดไปด้วยแล้วผลค้นหาบานเกินจริง
+# ("Tomo Collection" ได้ 66 รายการ ทั้งที่ของรุ่น Tomo มีจริง 35 เพราะคำว่า Collection
+#  ไปแมตช์สินค้าตัวอื่นที่ไม่เกี่ยว)
+# คำห้อยท้ายชื่อแบนเนอร์ที่ไม่ใช่ชื่อสินค้า — ติดไปด้วยแล้วผลค้นหาบานเกินจริง
+_NOISE_WORDS = {"collection", "series", "brand"}
+
+
+def _clean_label(label: str) -> str:
+    """ตัดคำห้อยออกจากชื่อแบนเนอร์ — "Tomo Collection" -> "Tomo"
+
+    ค้นด้วยชื่อเต็มจะได้ของเกินจริง (Tomo Collection ได้ 66 รายการ ทั้งที่รุ่น Tomo
+    มีจริง 35 เพราะคำว่า Collection ไปแมตช์สินค้าตัวอื่นที่ไม่เกี่ยว)
+    """
+    return " ".join(w for w in label.split() if w.lower() not in _NOISE_WORDS)
+
+
+def _brand_id(db: Session, label: str) -> str | None:
+    """ชื่อบนแบนเนอร์ตรงกับแบรนด์ไหนไหม — เทียบแบบไม่สนตัวพิมพ์/ช่องว่าง/จุด
+
+    "Maison&co" บนแบนเนอร์ = "MAISON&CO." ในฐาน · "Sofa Solutions" = "SOFA SOLUTIONS"
+    """
+    key = re.sub(r"[^a-z0-9&]", "", label.lower())
+    if not key:
+        return None
+    for bid, name in db.execute(select(Brand.id, Brand.name)).all():
+        if re.sub(r"[^a-z0-9&]", "", (name or "").lower()) == key:
+            return bid
+    return None
+
+
+# ป้ายบนการ์ดหน้าแรกที่เรียกชื่อไม่เหมือนชื่อหมวดของเรา — จับคู่ตรงๆ ไว้ ไม่ปล่อยให้เดาเอง
+# ("รีไคลเนอร์" กับ "เก้าอี้พักผ่อน" คือของอย่างเดียวกัน แต่ไม่มีคำไหนซ้อนกันเลย)
+ALIASES = {
+    "รีไคลเนอร์": "เก้าอี้พักผ่อน",
+    "ห้องอาหาร": "ห้องทานอาหาร",
+}
+
+
+def _best_category(db: Session, label: str) -> str | None:
+    """หาหมวดที่ตรงกับป้ายบนการ์ดหน้าแรกที่สุด และต้องมีสินค้าจริง
+
+    เงื่อนไขสำคัญคือ "มีของ" — ของเดิมจับได้หมวดที่ชื่อตรงแต่ว่างเปล่า (รีไคลเนอร์ -> slug
+    เก่าที่ไม่มีสินค้าสักตัว) ลูกค้ากดจากหน้าแรกแล้วเจอหน้าว่าง ซึ่งแย่กว่าไม่มีการ์ดนั้นเลย
+
+    ลำดับการเลือก: ชื่อตรงเป๊ะ (ชุดเว็บก่อน) -> ชื่อที่ครอบกันได้ (ป้ายอยู่ในชื่อหมวด หรือกลับกัน)
+    เอาหมวดที่มีของเยอะสุด เพราะการ์ดหน้าแรกควรพาไปที่กว้างไว้ก่อน ไม่ใช่หมวดย่อยแคบๆ
+    """
+    rows = db.execute(text("""
+        SELECT c.id, c.name_th, c.source, COUNT(DISTINCT mc.matnr) AS n
+        FROM categories c
+        LEFT JOIN material_categories mc ON mc.category_id = c.id
+        LEFT JOIN materials m ON m.matnr = mc.matnr AND m.is_public = 1
+        GROUP BY c.id, c.name_th, c.source
+    """)).all()
+    # หมวดชุด SAP ผูกสินค้าไว้ที่ materials.category_id ไม่ใช่ตารางเชื่อม ต้องนับแยก
+    sap = dict(db.execute(text("""
+        SELECT category_id, COUNT(*) FROM materials
+        WHERE is_public = 1 AND category_id IS NOT NULL GROUP BY category_id
+    """)).all())
+
+    def count(cid: str, n: int) -> int:
+        return max(n or 0, sap.get(cid, 0))
+
+    live = [(cid, name or "", src, count(cid, n)) for cid, name, src, n in rows if count(cid, n) > 0]
+    label = ALIASES.get(label, label)
+    exact = [r for r in live if r[1] == label]
+    if exact:
+        exact.sort(key=lambda r: (0 if r[2] == "web" else 1, -r[3]))
+        return exact[0][0]
+    near = [r for r in live if r[2] == "web" and r[1] and (r[1] in label or label in r[1])]
+    if near:
+        near.sort(key=lambda r: -r[3])
+        return near[0][0]
+    return None
+
+
 def _app_href(db: Session, section: str, label: str | None, source_href: str | None) -> str:
     """แปลงลิงก์ปลายทางของ sbdesignsquare.com เป็นเส้นทางในแอปเรา
 
     หมวดใน CMS เป็น URL path ของ Magento (/furniture/bedroom-furniture/beds) ซึ่งคนละชุด
     กับ category ของเรา (มาจาก SAP) — จับคู่ด้วยชื่อไทยแทน ที่จับไม่ได้ก็ส่งเข้าค้นหา
+
+    แบนเนอร์แบรนด์/คอลเลกชันบนหน้าแรกจะพยายามส่งไปที่ตัวกรองแบรนด์ก่อน เพราะได้ของ
+    ครบและตรงกว่าการค้นด้วยข้อความ · ตัวที่ไม่ใช่แบรนด์ (เป็นชื่อรุ่น เช่น Tomo/Trixx)
+    ยังต้องใช้ค้นข้อความอยู่ แต่ตัดคำห้อยอย่าง "Collection" ทิ้งก่อนจะได้ไม่กวาดของอื่นมา
     """
     if section == "top_category" and label:
-        cid = db.scalar(select(Category.id).where(Category.name_th == label))
+        cid = _best_category(db, label)
         if cid:
             return f"/search?category={cid}"
+
+    if label:
+        name = _clean_label(label)
+        bid = _brand_id(db, name) or _brand_id(db, label)
+        if bid:
+            return f"/search?brand={quote(bid)}"
+        if name:
+            return f"/search?q={quote(name)}"
     m = re.search(r"[?&]q=([^&]+)", source_href or "")
     if m:
         return f"/search?q={m.group(1)}"
-    if not label:
-        return "/search"
-    return f"/search?q={quote(label)}"
+    return "/search"
 
 
 def import_app(db: Session, rows: list[dict]) -> None:

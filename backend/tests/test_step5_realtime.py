@@ -44,7 +44,7 @@ def test_sales_add_pushes_event_to_customer_socket(client):
 def test_socket_rejects_unauthorized(client):
     hs = auth_headers(client, "SA-105", "staff")
     cart = client.post("/sales/carts", json={}, headers=hs).json()
-    other = login(client, "089-234-4471")
+    other = login(client, "094-916-4600")
     with pytest.raises(WebSocketDisconnect) as exc:
         with client.websocket_connect(f"/ws/cart/{cart['id']}?token={other['access_token']}") as ws:
             ws.receive_json()

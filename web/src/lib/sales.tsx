@@ -8,7 +8,6 @@ export type SalesCartSummary = {
   no: string;
   label: string | null;
   customer_name: string | null;
-  customer_tier: string | null;
   sap_customer_no: string | null;
   count: number;
   subtotal: string;
@@ -20,7 +19,7 @@ export type SalesCartSummary = {
 export type CustomerHit = {
   id: string | null;
   name: string;
-  tier: string | null;
+  points: number;
   sap_customer_no: string | null;
   phone: string | null;
   email: string | null;
@@ -46,6 +45,8 @@ type SalesState = {
   addItem: (matnr: string, qty: number, supply_mode?: string | null, plant_code?: string | null, cartId?: string | null) => Promise<Cart>;
   updateItem: (itemId: string, patch: { qty?: number; supply_mode?: string; plant_code?: string | null; note?: string }) => Promise<Cart>;
   removeItem: (itemId: string) => Promise<Cart>;
+  /** ติ๊กเลือกรายการที่จะคิดเงิน — ids = null คือทั้งตะกร้า */
+  selectItems: (ids: string[] | null, selected: boolean) => Promise<Cart>;
   searchCustomers: (q: string) => Promise<CustomerHit[]>;
   searchMaterials: (q: string) => Promise<SearchOut>;
   setActive: (c: Cart | null) => void;
@@ -105,7 +106,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
       setSessions((prev) =>
         prev.map((s) =>
           s.id === c.id
-            ? { ...s, label: c.label, customer_name: c.customer?.name || null, customer_tier: c.customer?.tier || null, sap_customer_no: c.customer?.sap_customer_no || null, count: c.count, subtotal: c.subtotal, pending_count: c.pending_count, updated_at: c.updated_at, expires_at: c.expires_at }
+            ? { ...s, label: c.label, customer_name: c.customer?.name || null, sap_customer_no: c.customer?.sap_customer_no || null, count: c.count, subtotal: c.subtotal, pending_count: c.pending_count, updated_at: c.updated_at, expires_at: c.expires_at }
             : s,
         ),
       );
@@ -142,6 +143,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
       addItem: async (matnr, qty, supply_mode = null, plant_code = null, cartId = null) => applyCart(await api<Cart>("POST", `/sales/carts/${cartId || activeId}/items`, { matnr, qty, supply_mode, plant_code })),
       updateItem: async (itemId, patch) => applyCart(await api<Cart>("PATCH", `/sales/carts/${activeId}/items/${itemId}`, patch)),
       removeItem: async (itemId) => applyCart(await api<Cart>("DELETE", `/sales/carts/${activeId}/items/${itemId}`)),
+      selectItems: async (ids, selected) => applyCart(await api<Cart>("POST", `/sales/carts/${activeId}/select`, { item_ids: ids, selected })),
       searchCustomers: (q) => apiGet<CustomerHit[]>(`/customers/search?q=${encodeURIComponent(q)}`),
       searchMaterials: (q) => apiGet<SearchOut>(`/materials/search?q=${encodeURIComponent(q)}&limit=12`),
     }),

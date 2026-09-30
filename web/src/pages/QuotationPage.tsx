@@ -80,7 +80,7 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
 
           <div className="card flat" style={{ marginTop: 14 }}>
             <div className="row between wrap">
-              <div><b>{q.customer.name}</b> · CUST {q.customer.sap_customer_no || "-"} · {q.customer.tier || "ทั่วไป"}<div className="small muted">{q.customer.phone} · {q.customer.email}</div></div>
+              <div><b>{q.customer.name}</b> · CUST {q.customer.sap_customer_no || "-"} · {(q.customer.points || 0).toLocaleString()} พ้อยท์<div className="small muted">{q.customer.phone} · {q.customer.email}</div></div>
               <div className="small muted" style={{ textAlign: "right" }}>{q.ship_address || "-"} {q.ship_postcode}<br />{q.slot_date ? `นัดส่ง ${thDate(q.slot_date)} ${q.slot_period === "am" ? "รอบเช้า" : "รอบบ่าย"}` : "ไม่มีรายการจัดส่ง"}</div>
             </div>
           </div>

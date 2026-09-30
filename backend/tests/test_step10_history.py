@@ -15,7 +15,7 @@ def _seed():
         seed_catalog(db)
 
 
-def _hs(client, ident="4400205"):
+def _hs(client, ident="1100440205"):
     return {"Authorization": "Bearer " + login(client, ident)["access_token"]}
 
 
@@ -69,7 +69,7 @@ def test_order_history_mirrors_sap(client):
     before = len(orders)
     assert len(client.get("/me/orders", headers=hs).json()) == before
     # คนอื่นเปิดใบเราไม่ได้
-    other = _hs(client, "4400182")
+    other = _hs(client, "1100440182")
     assert client.get(f"/me/orders/{orders[0]['so_no']}", headers=other).status_code == 404
 
 

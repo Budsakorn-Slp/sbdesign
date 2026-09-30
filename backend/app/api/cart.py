@@ -5,8 +5,9 @@ from app.api.deps import get_current_user_optional
 from app.db.session import get_db
 from app.models.cart import Cart, CartItem
 from app.models.user import User
-from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, SelectIn, ShipToIn, UpdateItemIn
-from app.services import cart_service
+from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, PresoReadyOut, SelectIn, ShipToIn, UpdateItemIn
+from app.schemas.catalog import ProductStockOut
+from app.services import cart_service, catalog_service, product_stock_service
 
 router = APIRouter(tags=["cart"])
 
@@ -14,12 +15,14 @@ router = APIRouter(tags=["cart"])
 def person(u: User | None) -> CartPersonOut | None:
     if not u:
         return None
-    return CartPersonOut(id=u.id, name=u.name, tier=u.tier, sap_customer_no=u.sap_customer_no, staff_code=u.staff_code, phone=u.phone, branch_id=u.branch_id, email=u.email, default_address=u.default_address, default_postcode=u.default_postcode)
+    return CartPersonOut(id=u.id, name=u.name, points=u.points, sap_customer_no=u.sap_customer_no, staff_code=u.staff_code, phone=u.phone, branch_id=u.branch_id, email=u.email, default_address=u.default_address, default_postcode=u.default_postcode)
 
 
-def item_out(it: CartItem) -> CartItemOut:
+def item_out(it: CartItem, stock: dict | None = None) -> CartItemOut:
     u = it.added_by_user
     return CartItemOut(
+        stock=ProductStockOut(**stock) if stock else None,
+        group=catalog_service.group_of(it.matnr), pickup_only=catalog_service.pickup_only(it.matnr),
         id=it.id, matnr=it.matnr, sku=it.sku, name=it.name_snapshot, variant=it.variant_snapshot, spec=it.spec_snapshot, image_url=it.image_url, category_id=it.category_id,
         qty=it.qty, unit_price=it.unit_price_snapshot, price_tier=it.price_tier, line_total=it.line_total, added_by=it.added_by, added_by_name=u.name if u else None,
         added_by_code=u.staff_code if u else None, added_at=it.added_at, pending_ack=it.pending_ack, supply_mode=it.supply_mode, plant_code=it.plant_code, atp_date=it.atp_date,
@@ -42,10 +45,19 @@ def cart_out(cart: Cart, db: Session | None = None) -> CartOut:
             postcode=cart.ship_postcode, address=cart.ship_address, zone=cart.ship_zone, zone_name=zone.zone_name if zone else None, shipping_fee=cart.shipping_fee,
             install_fee=cart.install_fee, slot_id=cart.slot_id, slot_date=slot.date if slot else None, slot_period=slot.period if slot else None, quoted_at=cart.delivery_quoted_at,
         )
+    preso = None
+    if db is not None and cart.owner_sales_id:
+        from app.services import quotation_service  # หลีกเลี่ยง circular import
+
+        preso = PresoReadyOut(**quotation_service.preso_ready(db, cart))
+    # ป้ายสต็อกในตะกร้าอ่านจาก cache เดียวกับการ์ดสินค้า — ไม่ยิง SAP ตอนเปิดตะกร้า
+    # (ของจริงยืนยันอีกทีตอนเช็คทั้งบิลก่อนออกใบ) รหัสที่ยังไม่เคยเช็คจะไม่มี key = "ยังไม่รู้"
+    stock = product_stock_service.summary_for(db, [it.matnr for it in cart.items]) if db is not None else {}
     return CartOut(
         id=cart.id, no=cart.no, label=cart.label, status=cart.status, customer=person(cart.customer), owner_sales=person(cart.owner_sales),
-        is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
+        is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it, stock.get(it.matnr)) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
         pending_count=t["pending_count"], all_count=t["all_count"], item_count=t["item_count"], selected_count=t["selected_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals, delivery=delivery,
+        preso=preso,
     )
 
 
@@ -136,5 +148,13 @@ def checkout_check(ctx: CartCtx = Depends()):
     cart = ctx.current()
     if not cart.selected_items:
         raise HTTPException(status_code=400, detail="ยังไม่ได้เลือกสินค้าที่จะชำระเงิน" if cart.items else "ตะกร้าว่าง")
+    # ของตัวโชว์/ฝากขาย: ใส่ตะกร้าได้ แต่ยังจ่ายออนไลน์ไม่ได้ — เป็นของชิ้นเดียวที่อยู่หน้าร้าน
+    # ต้องไปดูของจริงแล้วรับที่สาขา · ด่านนี้อยู่ฝั่งเซิร์ฟเวอร์ ไม่ใช่แค่ปิดปุ่มในหน้าเว็บ
+    blocked = [it for it in cart.selected_items if catalog_service.pickup_only(it.matnr)]
+    if blocked:
+        raise HTTPException(status_code=409, detail={
+            "message": "มีสินค้าที่ต้องรับที่สาขา ชำระเงินออนไลน์ไม่ได้ — เอาออกจากรายการที่เลือก หรือติดต่อสาขาที่มีของ",
+            "pickup_only": [{"item_id": it.id, "matnr": it.matnr, "name": it.name_snapshot} for it in blocked],
+        })
     t = cart_service.totals(cart)
     return {"ok": True, "cart_id": cart.id, "count": t["count"], "subtotal": t["subtotal"]}

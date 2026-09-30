@@ -18,7 +18,12 @@
 .hdr-util-links { display: flex; align-items: center; gap: 22px; }
 .hdr-util-links a { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); }
 .hdr-lang { color: var(--ink-4); }
-.hdr-lang b { color: var(--ink); border-bottom: 2px solid var(--ink); padding-bottom: 1px; }
+/* ปุ่มสลับภาษา — ภาษาที่ใช้อยู่ขีดเส้นใต้ อีกภาษาเป็นสีจาง กดได้ */
+.hdr-lang { display: inline-flex; align-items: center; gap: 5px; }
+.hdr-lang i { color: var(--line-2); font-style: normal; }
+.hdr-lang button { border: none; background: none; padding: 0 1px 1px; font: inherit; color: var(--ink-4); cursor: pointer; }
+.hdr-lang button.on { color: var(--ink); font-weight: 700; border-bottom: 2px solid var(--ink); }
+.hdr-lang button:hover { color: var(--ink); }
 
 /* แถวบน: ซ้าย = โลโก้ + ที่อยู่จัดส่ง/รับที่สาขา · กลาง = ช่องค้นหา · ขวา = ไอคอน + เข้าสู่ระบบ
    ช่องค้นหามาอยู่ตรงกลางเพื่อกินที่ว่างที่เคยโล่ง จะได้ไม่ต้องมีแถวค้นหาแยกอีกแถว */
@@ -48,9 +53,14 @@
 .hdr-search-wrap { grid-area: search; position: relative; width: 100%; max-width: 620px; justify-self: center; }
 .hdr-search { display: flex; align-items: center; border: 1px solid var(--line-2); border-radius: 8px; height: 44px; overflow: hidden; width: 100%; background: #fff; }
 .hdr-search:focus-within { border-color: var(--ink); }
-.hdr-search-all { display: inline-flex; align-items: center; gap: 2px; padding: 0 14px; height: 100%; background: var(--bg-3); border-right: 1px solid var(--line-2); font-size: 13px; white-space: nowrap; }
 .hdr-search input { flex: 1; border: none; height: 100%; padding: 0 12px; font-size: 14px; min-width: 0; background: transparent; }
 .hdr-search input:focus { outline: none; }
+/* วงหมุนตอนกำลังค้น — วางที่เดียวกับปุ่มล้างคำค้น จะได้ไม่ดันช่องพิมพ์ให้ขยับ */
+.hdr-search-spin { width: 32px; height: 100%; display: inline-flex; align-items: center; justify-content: center; }
+.hdr-search-spin::before { content: ""; width: 16px; height: 16px; border: 2px solid var(--line-2); border-top-color: var(--ink); border-radius: 50%; animation: sb-spin .6s linear infinite; }
+@keyframes sb-spin { to { transform: rotate(360deg); } }
+/* เครื่องที่ตั้งค่า "ลดการเคลื่อนไหว" ไว้ ไม่ต้องหมุน แค่จางๆ พอ */
+@media (prefers-reduced-motion: reduce) { .hdr-search-spin::before { animation: none; opacity: .5; } }
 .hdr-search-clear { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 100%; border: none; background: transparent; color: var(--ink-3); cursor: pointer; }
 .hdr-search-go { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 100%; border: none; border-left: 1px solid var(--line-2); background: var(--ink); color: #fff; cursor: pointer; }
 
@@ -68,10 +78,55 @@
 .sug-item b { font-size: 13px; white-space: nowrap; }
 .sug-all { justify-content: center; border-top: 1px solid var(--line); font-weight: 600; font-size: 13px; }
 
+/* กล่องแนะนำตอนยังไม่ได้พิมพ์ — ซ้ายเป็นทางลัด (หมวด/ค้นล่าสุด/งบ) ขวาเป็นสินค้าขายดี
+   ข้อมูลทั้งสองฝั่งมาจาก content ที่หัวเว็บโหลดไว้แล้ว เปิดกล่องเลยขึ้นทันทีไม่ต้องรอ API */
+/* กว้างกว่าช่องค้นหาได้ — ช่องค้นหาบนโน้ตบุ๊กเหลือ 460px ถ้ากล่องกว้างเท่ากัน
+   สองคอลัมน์จะเหลือฝั่งละ 230px ชื่อสินค้าตัดคำจนอ่านไม่รู้เรื่อง */
+.sug-discover { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 0; padding: 6px 0 10px; min-width: min(680px, calc(100vw - 32px)); }
+.sug-discover .sug-col { min-width: 0; padding: 0 4px; }
+.sug-discover .sug-best { border-left: 1px solid var(--line); }
+.sug-discover .sug-head { padding: 12px 14px 6px; font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.sug-discover .sug-col:first-child .sug-head:first-child { padding-top: 6px; }
+.sug-cats { display: flex; flex-direction: column; gap: 6px; padding: 0 10px; }
+.sug-cat { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; text-align: left; font-size: 13.5px; color: inherit; cursor: pointer; }
+.sug-cat:hover { border-color: var(--ink); background: var(--bg-3); }
+.sug-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 10px; }
+/* ชิปคำค้นล่าสุด = ปุ่มค้นซ้ำ + ปุ่มกากบาทลบทีละคำ อยู่ในกรอบเดียวกัน */
+.sug-chip { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; background: #fff; max-width: 100%; }
+.sug-chip.on, .sug-chip:hover { border-color: var(--ink); background: var(--bg-3); }
+.sug-chip > button { border: none; background: none; font: inherit; color: inherit; cursor: pointer; padding: 6px 4px 6px 12px; font-size: 13px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sug-chip > button.x { display: inline-flex; align-items: center; padding: 6px 10px 6px 4px; color: var(--ink-3); }
+.sug-chip > button.x:hover { color: var(--ink); }
+/* ชิปงบเป็นปุ่มเดี่ยว ไม่มีปุ่มลบข้างใน ต้องใส่ระยะขอบเอง ไม่งั้นตัวหนังสือชนเส้นกรอบ */
+.sug-chip.budget { padding: 7px 14px; font-size: 13px; cursor: pointer; }
+.sug-best .sug-item { align-items: flex-start; padding: 8px 14px; }
+.sug-best .sug-thumb { width: 56px; height: 56px; }
+.sug-best .sug-name { font-size: 13.5px; }
+.sug-best .sug-title { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sug-best .sug-price { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-top: 3px; }
+.sug-price b { font-size: 14px; color: var(--ink); }
+.sug-price s { color: var(--ink-3); }
+.sug-price i { font-style: normal; color: var(--sale, #c0392b); font-weight: 600; }
+/* จอแคบ: กล่องแนะนำเรียงลงมาแถวเดียว และตัดสินค้าขายดีให้เหลือพอดูไม่ต้องเลื่อนยาว */
+@media (max-width: 767px) {
+  .sug-discover { grid-template-columns: 1fr; }
+  .sug-discover .sug-best { border-left: none; border-top: 1px solid var(--line); margin-top: 8px; padding-top: 4px; }
+}
+
 .hdr-nav-wrap { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); position: relative; }
-.hdr-nav { display: flex; align-items: center; gap: 6px; height: 50px; overflow-x: auto; scrollbar-width: none; }
+/* แถบเมนูจัดกึ่งกลางด้วย margin: auto ที่หัวและท้ายแถว ไม่ใช่ justify-content
+   เหตุผล: แถบนี้เลื่อนแนวนอนได้ ถ้าใช้ justify-content: center ตอนเมนูยาวเกินจอ
+   เนื้อหาจะถูกดันล้นออกทางซ้ายจนเมนูตัวแรก ("หน้าแรก"/"สินค้าทั้งหมด") โดนตัดหายและกดไม่ได้
+   — เจอจริงบน iPad/Safari  ·  "safe center" แก้อาการนี้ได้แต่ Safari รุ่นเก่ายังไม่รองรับ
+   margin auto ทำงานทุกเบราว์เซอร์: มีที่เหลือ = แบ่งครึ่งซ้ายขวา (กึ่งกลาง)
+   ไม่มีที่เหลือ = ยุบเป็น 0 เอง (ชิดซ้าย เลื่อนดูได้ครบทุกเมนู) */
+.hdr-nav { display: flex; align-items: center; gap: 4px; height: 50px; overflow-x: auto; scrollbar-width: none; }
+.hdr-nav > :first-child { margin-inline-start: auto; }
+.hdr-nav > :last-child { margin-inline-end: auto; }
 .hdr-nav::-webkit-scrollbar { display: none; }
-.hdr-nav-item { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; padding: 0 12px; height: 50px; font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; border-bottom: 2px solid transparent; }
+/* ระยะซ้าย-ขวาในปุ่มเมนู 12px ทำให้แถวยาวเกินจอ 8px พอดี (จอ 1280) แถวเลยเลื่อนได้
+   และ safe center จะถอยไปชิดซ้ายให้อัตโนมัติ — ลดเหลือ 10px แถวพอดีจอแล้วจัดกลางได้จริง */
+.hdr-nav-item { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; padding: 0 10px; height: 50px; font-size: 14px; font-weight: 500; color: var(--ink); white-space: nowrap; border-bottom: 2px solid transparent; }
 .hdr-nav-item.on { border-bottom-color: var(--ink); }
 .hdr-nav-item.cats { font-weight: 700; padding: 0; gap: 0; }
 /* ครึ่งซ้ายกดไปหน้าสินค้าทั้งหมด · ครึ่งขวากางเมนูหมวด */
@@ -84,8 +139,17 @@
 .mega-side li { padding: 8px 12px; border-radius: 6px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
 .mega-side li.on { background: var(--ink); color: #fff; font-weight: 600; }
 .mega-side li.on a { color: #fff; }
-.mega-title { font-weight: 700; font-size: 15px; margin: 6px 0 14px; border-bottom: 2px solid var(--ink); display: inline-block; padding-bottom: 4px; }
+/* หัวข้อในเมนูที่กางลงมา — ซ้ำกับชื่อเมนูที่กดอยู่ซึ่งขีดเส้นใต้เด่นอยู่บนแถบแล้ว
+   (กด "ห้องนั่งเล่น" แล้วเจอหัวข้อ "ห้องนั่งเล่น" อีกที) ซ่อนไว้ทุกขนาดจอ
+   ไม่ลบออกจาก JSX เพราะยังใช้เป็นที่อ้างอิงของ screen reader ได้ถ้าจะเปิดกลับ */
+.mega-title { display: none; }
 .mega-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 24px; }
+/* เมนูแบรนด์ไม่มีคอลัมน์ซ้าย (ไม่มีหมวดย่อยให้ไล่) — ใช้เต็มความกว้าง */
+.mega-in.one-col { grid-template-columns: 1fr; }
+/* ชื่อแบรนด์สั้นกว่าชื่อหมวดมาก จัดได้ 4 คอลัมน์ ไม่ต้องเลื่อนยาว */
+.brand-grid { grid-template-columns: repeat(4, 1fr); gap: 4px 20px; }
+.brand-item { display: block; padding: 7px 10px; border-radius: 6px; font-size: 13.5px; }
+.brand-item:hover { background: var(--bg-2); }
 .mega-item { display: flex; align-items: center; gap: 12px; padding: 6px 0; font-size: 14px; font-weight: 500; }
 .mega-ico { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); background: var(--bg-2); }
 .mega.sub .container { padding-top: 16px; padding-bottom: 22px; }
@@ -95,7 +159,10 @@
 
 /* ===== footer ===== */
 .ftr { background: #fff; border-top: 1px solid var(--line); margin-top: 48px; padding: 44px 0 32px; }
-.ftr-top { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr; gap: 32px; }
+/* 4 ช่อง = โปรโมท + ลิงก์ 2 คอลัมน์ + ติดตามเรา · เดิมตั้งไว้ 5 ช่องแต่มีเนื้อหาแค่ 3
+   เลยเหลือที่ว่างโล่งทางขวาครึ่งแถว */
+.ftr-top { display: grid; grid-template-columns: 1.5fr 1fr 0.9fr auto; gap: 28px 28px; }
+.ftr-follow { justify-self: end; text-align: left; min-width: 132px; }
 .ftr-promos { display: flex; flex-direction: column; gap: 24px; }
 .ftr-promo h3 { font-size: 16px; margin-bottom: 6px; }
 .ftr-promo p { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; max-width: 320px; }
@@ -103,7 +170,11 @@
 .ftr-col li { font-size: 13.5px; margin-bottom: 9px; }
 .ftr-col a { color: var(--ink-2); }
 .ftr-mid { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
-.ftr-social { width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: #fff; display: inline-flex; align-items: center; justify-content: center; }
+.ftr-social { width: 34px; height: 34px; border-radius: 50%; background: var(--ink); color: #fff; display: inline-flex; align-items: center; justify-content: center; transition: opacity .15s ease; }
+/* ต้องเจาะจงกว่า .ftr-col a ไม่งั้นสีลิงก์ในคอลัมน์ (เทาเข้ม) ทับสีขาว
+   แล้วโลโก้จะกลายเป็นเทาเข้มบนวงกลมดำ = มองไม่เห็นเลย */
+.ftr-col a.ftr-social, .ftr-social { color: #fff; }
+.ftr-social:hover { opacity: .75; }
 .ftr-sep { width: 1px; height: 24px; background: var(--line); margin: 0 6px; }
 .ftr-pay { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 4px; font-size: 11px; color: var(--ink-2); }
 .ftr-bottom { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
@@ -119,15 +190,46 @@
 @media (max-width: 1023px) {
   .hdr-util-links { gap: 14px; }
   .hdr-free { display: none; }
-  /* iPad ลงมา: ช่องค้นหาลงบรรทัดของตัวเอง เต็มความกว้าง จะได้ไม่โดนบีบจนพิมพ์ไม่เห็น */
-  .hdr-main { grid-template-columns: auto 1fr auto; grid-template-areas: "logo locs icons" "search search search"; height: auto; row-gap: 10px; padding-top: 12px; padding-bottom: 12px; gap: 14px; }
+  /* iPad/แท็บเล็ต: ช่องค้นหาลงบรรทัดของตัวเอง เต็มความกว้าง จะได้ไม่โดนบีบจนพิมพ์ไม่เห็น
+     บรรทัดบนเหลือ โลโก้ ซ้าย · ที่อยู่จัดส่ง/รับที่สาขา กลาง · ไอคอน (แจ้งเตือน คูปอง
+     รายการโปรด ตะกร้า บัญชี) ชิดขวาสุด แยกจากกันชัดๆ
+     ของเดิมสามอย่างรวมกัน 140 + 226 + 347 = 713px จากที่มี 773px เลยเบียดจนข้อความ
+     ที่อยู่ตัดเป็นสามบรรทัด อ่านไม่ออกว่าเลือกอะไรไว้ — แก้โดยตัดตัวหนังสือในกลุ่ม
+     ไอคอนออก (ปุ่ม "เข้าสู่ระบบ" กับชื่อผู้ใช้ เหลือรูปคนกดเข้าหน้าบัญชีได้เหมือนกัน)
+     กลุ่มไอคอนเหลือ ~250px ทั้งแถวจึงพอดีโดยไม่ต้องตัดบรรทัด */
+  /* ต้องเขียน .hdr นำหน้า ไม่งั้น .container ใน global.css (แรงเท่ากันแต่มาทีหลัง)
+     จะทับ padding บน/ล่างเป็น 0 — ของเดิมช่องค้นหาเลยไปติดแถบเมนูพอดี
+     column-gap/row-gap เขียนแยก เพราะถ้าใช้ gap ย่อทีหลังจะล้าง row-gap ทิ้ง */
+  .hdr-main { grid-template-columns: auto 1fr auto; grid-template-areas: "logo locs icons" "search search search"; height: auto; column-gap: 16px; row-gap: 14px; }
+  .hdr .hdr-main { padding-top: 12px; padding-bottom: 20px; }
+  .hdr-icons { justify-self: end; gap: 2px; }
+  .hdr-icons .hdr-login-btn { display: none; }
+  .hdr-user-txt { display: none; }
+  .hdr-user { margin-left: 4px; padding: 2px 8px 2px 6px; gap: 6px; }
+  /* ช่องกริดต้องยอมหดต่ำกว่า min-content ไม่งั้นแถวบนดันจนทั้งหน้าเลื่อนออกข้างได้
+     (จอ 600px เคยล้น 104px เพราะโลโก้ 140 + ที่อยู่ + ไอคอน 208 รวมแล้วเกิน) */
+  .hdr-main > * { min-width: 0; }
+  .hdr-locs { gap: 14px; }
+  .hdr-loc-sep { display: block; }
   .hdr-search-wrap { max-width: none; }
-  .hdr-locs { gap: 10px; }
   .mega-in { grid-template-columns: 1fr; }
   .mega-side { display: none; }
   .sub-list { grid-template-columns: repeat(2, 1fr); }
-  .ftr-top { grid-template-columns: 1fr 1fr; }
-  .ftr-promos { grid-column: 1 / -1; flex-direction: row; }
+  /* ท้ายเว็บบน iPad/แท็บเล็ต: สี่ก้อนเรียงแถวเดียว
+     ติดต่อเรา (+รับข่าวสารต่อท้ายในคอลัมน์เดียวกัน) · ร้านค้าออนไลน์ · เกี่ยวกับเรา · ติดตามเรา
+     ของเดิมตั้ง 2 คอลัมน์ "ติดตามเรา" เลยตกไปอยู่บรรทัดที่สามลำพัง แถมติด justify-self: end
+     จากกฎจอใหญ่ ทำให้ลอยไปกลางๆ ไม่ตรงกับอะไรเลย ส่วนครึ่งขวาของบรรทัดลิงก์ก็ว่างเปล่า
+     ระยะห่างคอลัมน์บีบเหลือ 18px — จอนี้กว้างไม่พอจะเว้น 28px แบบจอใหญ่ ชื่อลิงก์จะตัดคำ */
+  .ftr-top { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 26px 18px; }
+  .ftr-promos { grid-column: auto; flex-direction: column; gap: 20px; }
+  .ftr-promo p { max-width: none; }
+  /* ไอคอนโซเชียลพับเป็นสองแถว (3+2) คอลัมน์สุดท้ายจะได้ไม่กินที่ของคอลัมน์ลิงก์ */
+  .ftr-follow { justify-self: start; min-width: 0; max-width: 126px; }
+}
+/* iPad ขึ้นไป (768-1023) ที่อยู่จัดส่ง/สาขามีที่พอ ไม่ต้องตัดบรรทัด
+   ต่ำกว่า 768 ปล่อยให้ตัดบรรทัดได้ ไม่งั้นแถวบนดันจนหน้าเลื่อนออกข้าง */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .hdr-loc span, .hdr-loc small { white-space: nowrap; }
 }
 @media (max-width: 1023px) {
   /* แถวนี้ตั้งครั้งเดียวจบ ระหว่างเลื่อนดูสินค้าไม่ต้องเห็นก็ได้ */
@@ -155,9 +257,25 @@
   .hdr-main > * { min-width: 0; }
   .hdr-locs { flex-wrap: wrap; gap: 8px; }
   .hdr-loc span { font-size: 12.5px; }
-  .hdr-search-all { display: none; }
   .hdr-pop { width: min(320px, 90vw); }
+
 }
+/* ท้ายเว็บ: มือถือกับแท็บเล็ตเล็ก 2 คอลัมน์ — "ร้านค้าออนไลน์" กับ "เกี่ยวกับเรา" อยู่ข้างกัน
+   ถ้าเรียงลงมาทีละคอลัมน์ ท้ายเว็บจะยาวเป็นสองเท่าโดยที่ชื่อลิงก์สั้นพออยู่ครึ่งจอได้อยู่แล้ว
+
+   ตัดที่ 767px เพราะผังสี่คอลัมน์ของแท็บเล็ตต้องการอย่างน้อย ~700px
+   ที่ 600px มันดันหน้าจนเลื่อนออกข้างได้ 104px (คอลัมน์เหลือ 137/110/110/126)
+   iPad แนวตั้ง 768px ยังได้สี่คอลัมน์เหมือนเดิม */
+@media (max-width: 767px) {
+  .ftr-top { grid-template-columns: 1fr 1fr; gap: 22px 16px; }
+  /* กล่องโปรโมทกับแถวโซเชียลกินเต็มความกว้าง เพราะข้อความยาวและไอคอนเรียงเป็นแถว */
+  .ftr-promos { grid-column: 1 / -1; flex-direction: column; }
+  .ftr-follow { grid-column: 1 / -1; justify-self: start; min-width: 0; max-width: none; }
+  .ftr-col h4 { font-size: 13.5px; margin-bottom: 9px; }
+  .ftr-col li { font-size: 12.5px; margin-bottom: 8px; }
+  .ftr-mid, .ftr-bottom { flex-direction: column; align-items: flex-start; }
+}
+
 /* จอแคบมาก (iPhone SE 320px) — บีบอีกชั้นให้ไม่ต้องเลื่อนซ้ายขวา */
 @media (max-width: 389px) {
   .hdr-logo { width: 96px; height: 34px; }
@@ -165,7 +283,69 @@
   .hdr-user { padding: 2px 6px 2px 4px; gap: 4px; }
   .hdr-loc span { font-size: 12px; }
   .mega-grid { grid-template-columns: 1fr; }
-  .ftr-top { grid-template-columns: 1fr; }
-  .ftr-promos { flex-direction: column; }
-  .ftr-mid, .ftr-bottom { flex-direction: column; align-items: flex-start; }
+}
+
+/* เมนู 3 ชั้นของห้องที่ยกหมวดมาจากเว็บจริง — 3 คอลัมน์ไหลต่อกันเอง (column layout)
+   ใช้ columns แทน grid เพราะแต่ละกลุ่มมีจำนวนหมวดย่อยไม่เท่ากัน (10/6/4/2/4)
+   ถ้าใช้ grid จะเหลือช่องว่างใหญ่ใต้กลุ่มสั้น */
+/* คอลัมน์ในเมนู 3 ชั้น — จำกัดความกว้างรวมไว้ ไม่ปล่อยให้กระจายเต็มจอ
+   จอ 1280+ คอนเทนเนอร์กว้าง 1200px+ ถ้าปล่อยตามนั้น กลุ่มที่สามจะไปอยู่ริมขวาสุด
+   ตาต้องกวาดข้ามที่ว่างกลางจอเป็นระยะยาวกว่าจะถึงหัวข้อถัดไป */
+/* จำกัดความกว้างแล้วต้องจัดกึ่งกลางด้วย ไม่งั้นบล็อกกองอยู่ซ้ายแล้วเหลือที่ว่างครึ่งจอทางขวา */
+/* เดสก์ท็อป 4 คอลัมน์ — 3 คอลัมน์ทำให้กลุ่มยาวๆ (ห้องนั่งเล่น 10 หมวด) ดันคอลัมน์เดียว
+   สูงกว่าเพื่อนจนแผงดูเอียง · กว้างขึ้นเป็น 1100px ให้แต่ละคอลัมน์ยังอ่านสบาย */
+.nav-groups { columns: 4; column-gap: 28px; max-width: 1100px; margin-inline: auto; padding: 22px 0 26px; }
+.nav-group { break-inside: avoid; margin-bottom: 22px; }
+.nav-group-head { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: var(--ink); margin-bottom: 10px; }
+.nav-group-head:hover { text-decoration: underline; }
+.nav-group ul { list-style: none; margin: 0; padding: 0; }
+.nav-group li a { display: block; padding: 4px 0; font-size: 13.5px; color: var(--ink-2); }
+.nav-group li a:hover { color: var(--ink); text-decoration: underline; }
+/* ===== เมนูบนจอแคบ =====
+   จอ 414px แบ่งชื่อแบรนด์ 4 คอลัมน์เหลือช่องละ ~90px ชื่อยาวอย่าง KONCEPT FURNITURE
+   เลยตัดบรรทัดมั่วและ SOFA SOLUTIONS ล้นออกนอกจอ — ลดคอลัมน์ + ลดฟอนต์ตามความกว้าง */
+@media (max-width: 1023px) {
+  .nav-groups { columns: 2; column-gap: 28px; max-width: 100%; }
+  .brand-grid { grid-template-columns: repeat(3, 1fr); gap: 2px 14px; }
+}
+@media (max-width: 599px) {
+  /* ===== เมนูบนมือถือใช้กติกาชุดเดียวกันทั้งหมด =====
+     มีเมนู 4 แบบ: สินค้าทั้งหมด (.mega-grid) · แบรนด์ (.brand-grid)
+     ห้องที่ยกหมวดมาจากเว็บ 3 ชั้น (.nav-groups) · ห้องอื่น 2 ชั้น (.sub-list)
+     ถ้าตั้งค่าแยกกันจะเพี้ยนกันเองเวลาแก้ทีหลัง จึงคุมด้วยกฎชุดเดียว:
+     2 คอลัมน์ · ฟอนต์ 12px · ระยะชิดกว่าเดสก์ท็อป */
+  .mega-in, .nav-groups { padding: 10px 0 14px; }
+
+  .mega-grid, .brand-grid, .sub-list { grid-template-columns: repeat(2, 1fr); gap: 0 12px; }
+  .nav-groups { columns: 2; column-gap: 12px; }
+
+  /* รายการปลายทางทุกเมนูหน้าตาเหมือนกัน · สูงแถว 12*1.35 + 6*2 = 28px ยังกดโดนด้วยนิ้ว */
+  .mega-item, .brand-item, .sub-list li a, .nav-group li a {
+    font-size: 12px; line-height: 1.35; padding: 6px 0;
+  }
+  .brand-item { padding: 6px 4px; }
+  .mega-item { gap: 8px; font-weight: 500; }
+  .mega-ico { width: 30px; height: 30px; border-radius: 7px; flex: none; }
+  .mega-ico span, .mega-ico i { font-size: 18px; }
+
+  /* หัวกลุ่มของเมนู 3 ชั้น — เด่นกว่ารายการนิดเดียวพอ ไม่ต้องใหญ่จนกินที่ */
+  .nav-group { margin-bottom: 12px; }
+  .nav-group-head { font-size: 12.5px; margin-bottom: 2px; gap: 4px; }
+
+  .sub-list { max-height: 62vh; gap: 0 12px; }
+  /* แถบบนสุดมี 4 ชิ้น (SB Member Card · ค้นหาสาขา · ศูนย์ช่วยเหลือ · TH|EN) รวม ~390px
+     มือถือทุกรุ่นมีที่ไม่พอ ตกไป 2-3 บรรทัด แถบสูง 49px กินจอไปเปล่าๆ ทั้งที่เป็นแถบรอง
+     ลดฟอนต์ + ตัดไอคอนออก เหลือตัวหนังสือล้วน -> บรรทัดเดียว สูง 20px ทุกความกว้าง
+     (เคยแก้ไว้เฉพาะจอ <=389px แต่ 414px ซึ่งเป็นขนาดที่ใช้กันเยอะก็ตกบรรทัดเหมือนกัน) */
+  .hdr-util { font-size: 11px; }
+  .hdr-util-links { gap: 6px; flex-wrap: nowrap; }
+  .hdr-util-links .ms { display: none; }
+  .hdr-lang { gap: 4px; }
+  .hdr-lang button { padding: 0; }
+  .hdr-nav-item { font-size: 13.5px; padding: 0 9px; }
+}
+/* จอแคบมาก (iPhone SE 320px) ยังเอา 2 คอลัมน์ไว้ — ชื่อแบรนด์ส่วนใหญ่สั้นพอ
+   คอลัมน์เดียวต้องเลื่อนยาวเป็นสองเท่าโดยไม่ได้อะไรกลับมา · ชื่อยาวสุดยอมให้ตัดบรรทัด */
+@media (max-width: 389px) {
+  .brand-item { padding: 8px 4px; font-size: 12px; }
 }

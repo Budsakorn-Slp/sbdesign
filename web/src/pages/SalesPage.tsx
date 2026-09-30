@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import DeliveryPanel from "../components/DeliveryPanel";
+import StaffShippingCharge from "../components/StaffShippingCharge";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
+import { imageSources } from "../lib/images";
 import PromoPanel from "../components/PromoPanel";
 import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -17,8 +19,10 @@ import type { Availability, AvailabilityItem, CartItem, MaterialCard } from "../
 const AVAIL_TONE: Record<string, string> = { full: "green", split: "amber", short: "amber", none: "red", unknown: "red" };
 
 function availText(a: AvailabilityItem): string {
-  if (a.status === "unknown") return "SAP ไม่รู้จักรหัสนี้";
-  if (a.status === "none") return "ไม่มีของ — SAP ยังไม่ให้วันส่ง";
+  // สองเคสนี้คำอธิบายเท่ากับป้ายสถานะอยู่แล้ว ส่งค่าว่างกลับไปกันข้อความซ้ำสองรอบ
+  // ("SAP ไม่รู้จักรหัสนี้ · SAP ไม่รู้จักรหัสนี้")
+  if (a.status === "unknown") return "";
+  if (a.status === "none") return "SAP ยังไม่ให้วันส่ง";
   const parts: string[] = [];
   if (a.ready_qty) parts.push(`${a.ready_qty} ชิ้น${a.ready_date ? ` ส่งได้ ${thDate(a.ready_date)}` : ""}`);
   if (a.later_qty) parts.push(`อีก ${a.later_qty} ชิ้น${a.later_date ? ` รอถึง ${thDate(a.later_date)}` : ""}`);
@@ -30,7 +34,7 @@ function AvailBadge({ a }: { a: AvailabilityItem }) {
   return (
     <div className={"avail-badge " + AVAIL_TONE[a.status]}>
       <Icon name={a.status === "full" ? "check_circle" : a.status === "split" ? "schedule" : "error"} size={16} />
-      <span><b>{a.label}</b> · {availText(a)}</span>
+      <span><b>{a.label}</b>{availText(a) ? ` · ${availText(a)}` : ""}</span>
     </div>
   );
 }
@@ -47,6 +51,8 @@ export default function SalesPage() {
   const [promoOpen, setPromoOpen] = useState(false);
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [presoNo, setPresoNo] = useState<string | null>(null);
+  const [sessOpen, setSessOpen] = useState(false); // แผงตะกร้า/ลูกค้าบนจอเล็ก (จอใหญ่กางเสมอ)
+  const [sheet, setSheet] = useState(false); // แผงสรุปบนจอเล็กกางอยู่ไหม (จอใหญ่ไม่ใช้ค่านี้)
   const nav = useNavigate();
 
   // ผลเช็คของผูกกับตะกร้าใบนั้น — สลับแท็บหรือแก้ของแล้วต้องเช็คใหม่ ไม่งั้นเซลล์อ่านเลขของตะกร้าเก่า
@@ -76,16 +82,37 @@ export default function SalesPage() {
       .catch(() => setPresoNo(null));
   }, [sales.active?.id]);
 
-  const savePreso = async (): Promise<string | null> => {
+  type WithPreso = { items?: unknown[]; preso?: { steps: { key: string; ok: boolean }[] } | null } | null;
+
+  /** กดปุ่ม Save PRE SO ได้ไหม — ด่านอื่นต้องครบ ส่วน "ของไม่พอ" ปล่อยให้กดได้
+   *  แล้วไปถามยืนยันตอนกด (ลูกค้ายอมรอของ) ถ้าปิดปุ่มไปเลยจะไม่มีทางยืนยัน */
+  // Preso เป็นร่าง — บันทึกค้างไว้ได้ตลอด ขอแค่มีของในตะกร้า
+  // (ลูกค้าเดินไปดูของต่อกลางคัน พนักงานต้องเก็บงานที่ทำมาไว้ได้ ไม่ใช่เสียทั้งใบ)
+  const canSavePreso = (c: WithPreso) => Boolean(c?.items?.length);
+  // ส่วนใบเสนอราคาต้องครบทุกด่าน เพราะเอกสารออกไปถึงมือลูกค้าและส่งเข้า SAP จริง
+  const allStepsDone = (c: WithPreso) => Boolean(c?.preso?.steps.every((st) => st.ok || st.key === "stock"));
+
+  /** บันทึกใบ PRE แล้ว และใบยังตรงกับตะกร้าปัจจุบัน → ถึงคิวออกใบเสนอราคา */
+  const readyForQuotation = (c: WithPreso) => Boolean(presoNo && allStepsDone(c));
+
+  const savePreso = async (force = false): Promise<string | null> => {
     if (!sales.active) return null;
     setBusy("preso");
     setMsg(null);
     try {
-      const p = await apiPost<{ preso_no: string }>("/presos", { cart_id: sales.active.id });
+      const p = await apiPost<{ preso_no: string }>("/presos", { cart_id: sales.active.id, force });
       setPresoNo(p.preso_no);
       setLive(`บันทึก Preso ${p.preso_no} แล้ว — ดึงกลับมาทำต่อได้ที่ "Preso ของฉัน"`);
       return p.preso_no;
     } catch (e) {
+      // ติดด่านเดียวที่ข้ามได้คือ "ของไม่พอ" — ถ้าลูกค้ายอมรอของ เซลล์ยืนยันแล้วบันทึกต่อได้
+      // (ระบบบันทึกไว้ว่าใครเป็นคนข้าม) ด่านอื่นข้ามไม่ได้ บอกให้ไปทำให้ครบก่อน
+      const stuck = sales.active?.preso?.steps.find((st) => !st.ok);
+      if (!force && stuck?.key === "stock" && confirm(`${errorMessage(e)}
+
+บันทึกใบ PRE ทั้งที่ของไม่พอ? (ลูกค้ายอมรอของ)`)) {
+        return savePreso(true);
+      }
       setMsg(errorMessage(e));
       return null;
     } finally {
@@ -133,13 +160,23 @@ export default function SalesPage() {
         <div className="card" style={{ maxWidth: 560 }}>
           <b>โหมดพนักงานขาย</b>
           <p className="muted small">ต้องเข้าสู่ระบบด้วยบัญชีพนักงานขาย (เช่น SA-104) เพื่อใช้หน้านี้</p>
-          <button className="btn dark" onClick={auth.openLogin}>เข้าสู่ระบบพนักงาน</button>
+          <Link className="btn dark" to="/staff">เข้าสู่ระบบพนักงาน</Link>
         </div>
       </main>
     );
   }
 
   const cart = sales.active;
+  // บรรทัดค่าขนส่งในตะกร้า (Mat A534/A761 = ตามยอดบิล · A776 = ค่าส่งเพิ่มเติมจากปลายทาง)
+  // ยอดพวกนี้ไม่ถูกนับเป็น "สินค้า" อยู่แล้ว ฝั่งหลังบ้านโยนไปรวมที่ค่าขนส่งให้
+  const SHIP_MATNRS = ["A534", "A761", "A533"];
+  const shipLines = (cart?.items || []).filter((it) => SHIP_MATNRS.includes(it.matnr) && it.selected);
+  // บรรทัดค่าขนส่งโชว์ในลิสต์ด้วย — พนักงานต้องเห็นว่า Mat ตัวไหนถูกเปิดเข้าบิลไปแล้ว
+  // (เลข MATNR คือสิ่งที่ใช้คุยกับคลัง/SAP) แต่ไม่นับรวมใน "สินค้า (N)"
+  // เพราะมันเป็นค่าบริการ ไม่ใช่ของที่ลูกค้าเลือก — ยอดก็ไปอยู่บรรทัดค่าขนส่งของกล่องสรุป
+  const goods = (cart?.items || []).filter((it) => !SHIP_MATNRS.includes(it.matnr));
+  const rows = cart?.items || [];
+
   const plantName = (code: string | null) => plants.find((p) => p.plant_code === code)?.name || code || "";
   const run = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -158,51 +195,69 @@ export default function SalesPage() {
       <Link to="/search" className="row small muted" style={{ marginBottom: 10 }}><Icon name="arrow_back" size={18} /> กลับไปช้อปต่อ</Link>
       <h1 className="cart-title">ตะกร้าที่กำลังดูแล</h1>
 
-      {/* session bar */}
-      <div className="sess-bar">
-        <div className="row between wrap">
-          <div className="row"><Icon name="support_agent" size={22} /> <b>โหมดพนักงานขาย · {auth.user?.name}</b> {cart && <span className="chip light">SESSION {cart.no}</span>}</div>
-          <div className="row">
-            <Link to="/sales/presos" className="btn sm" style={{ background: "#fff" }}><Icon name="folder_open" size={18} /> Preso ของฉัน</Link>
-            <button className="btn sm" style={{ background: "#fff" }} onClick={() => run("open", () => sales.openCart())} disabled={busy === "open"}><Icon name="add" size={18} /> เปิดตะกร้าใหม่</button>
-          </div>
+      {/* แถบโหมดพนักงานขาย — จอเล็กพับส่วนตะกร้า/ลูกค้าไว้ใต้หัวแถบ กดที่หัวแถบเพื่อกาง
+          (เดิมกางทั้งหมดตลอด กินพื้นที่ครึ่งจอก่อนจะเห็นสินค้าสักชิ้น) · จอใหญ่กางอยู่เสมอ */}
+      <div className={"sess-bar" + (sessOpen ? " open" : "")}>
+        <button className="sess-head" onClick={() => setSessOpen((v) => !v)} aria-expanded={sessOpen} aria-controls="sess-panel">
+          <span className="sess-avatar"><Icon name="support_agent" size={20} /></span>
+          <span className="sess-who"><small>โหมดพนักงานขาย</small><b>{auth.user?.name}</b></span>
+          {cart && <span className="chip light sess-chip">SESSION<i>{cart.no}</i></span>}
+          <Icon name="chevron_right" size={20} className="sess-caret" />
+        </button>
+        <div className="sess-acts">
+          <Link to="/sales/presos" className="btn sm sess-act"><Icon name="folder_open" size={18} /> Preso ของฉัน</Link>
+          <button className="btn sm sess-act" onClick={() => run("open", () => sales.openCart())} disabled={busy === "open"}><Icon name="add" size={18} /> เปิดตะกร้าใหม่</button>
+          {/* จอเล็ก: ปุ่มเพิ่มสินค้าต้องอยู่นอกแผงที่พับเก็บ — งานหลักของหน้านี้คือหยิบของใส่ตะกร้า
+              ถ้าซ่อนไว้หลังลูกศรกางแผง เซลล์ที่ยืนอยู่กับลูกค้าจะหาไม่เจอ
+              (จอใหญ่ CSS ซ่อนปุ่มนี้ เพราะแถวลูกค้ากางอยู่แล้วและมีปุ่มเดิมอยู่ในนั้น) */}
+          {cart && (
+            <button className="btn sm sess-act sess-add-m" onClick={() => setSearchOpen(true)} aria-label="เพิ่มสินค้าให้ลูกค้า" title="เพิ่มสินค้าให้ลูกค้า">
+              <Icon name="add_shopping_cart" size={18} />
+            </button>
+          )}
         </div>
+
+        <div className="sess-panel" id="sess-panel">
         <div className="sess-tabs">
           {sales.sessions.map((s) => (
             <div key={s.id} className={"sess-tab" + (s.id === sales.activeId ? " on" : "")} onClick={() => sales.setActiveId(s.id)} role="button" tabIndex={0}>
               <Icon name="shopping_basket" size={18} />
               <span className="grow">
                 <b>{s.customer_name || `ตะกร้าใหม่ ${s.no}`}</b>
-                <small>{s.count > 0 ? `${s.count} ชิ้น · ${bahtWord(s.subtotal)}` : "ยังไม่มีสินค้า"}{s.customer_tier ? ` · ${s.customer_tier}` : ""}</small>
+                <small>{s.count > 0 ? `${s.count} ชิ้น · ${bahtWord(s.subtotal)}` : "ยังไม่มีสินค้า"}</small>
               </span>
               <button className="sess-close" aria-label="ปิดตะกร้า" onClick={(e) => { e.stopPropagation(); if (confirm(`ปิดตะกร้า ${s.customer_name || s.no}? สิทธิ์ของคุณจะหมดทันที`)) run("close", () => sales.closeCart(s.id)); }}><Icon name="close" size={16} /></button>
             </div>
           ))}
-          {sales.sessions.length === 0 && !sales.loading && <span className="small" style={{ opacity: .8 }}>ยังไม่มีตะกร้า — กด "เปิดตะกร้าใหม่"</span>}
+          {sales.sessions.length === 0 && !sales.loading && <span className="small sess-lbl">ยังไม่มีตะกร้า — กด "เปิดตะกร้าใหม่"</span>}
         </div>
         {cart && (
-          <div className="sess-cust">
-            <span className="small" style={{ opacity: .8 }}>ตะกร้าของลูกค้า:</span>
+          <div className="sess-cust" id="sales-customer">
+            <span className="small sess-lbl">ตะกร้าของลูกค้า:</span>
             {cart.customer ? (
               <>
-                <span className="cust-pill"><Icon name="how_to_reg" size={18} /> <b>{cart.customer.name}</b> · CUST {cart.customer.sap_customer_no || "-"} · {cart.customer.tier || "ทั่วไป"}</span>
-                <button className="link-btn small" style={{ color: "#fff" }} onClick={() => run("detach", () => sales.detach())} disabled={busy === "detach"}>ตัดการเชื่อมต่อ</button>
+                <span className="cust-pill"><Icon name="how_to_reg" size={18} /> <b>{cart.customer.name}</b> · CUST {cart.customer.sap_customer_no || "-"} · {(cart.customer.points || 0).toLocaleString()} พ้อยท์</span>
+                <button className="link-btn small sess-detach" onClick={() => run("detach", () => sales.detach())} disabled={busy === "detach"}>ตัดการเชื่อมต่อ</button>
               </>
             ) : (
               <>
                 <CustomerSearch onPick={(hit) => run("attach", () => sales.attach(hit.sap_customer_no || hit.email || hit.phone || ""))} search={sales.searchCustomers} />
-                <span className="small" style={{ opacity: .8 }}>ลูกค้าใหม่ยังไม่มีในระบบก็ทำต่อได้ — ใส่สินค้าไปก่อน ค่อยผูกลูกค้าตอนจะออกใบเสนอราคา</span>
+                <span className="sess-newcust">
+                  <span className="sess-ic"><Icon name="person_add" size={22} /></span>
+                  <span><b>ลูกค้าใหม่ยังไม่มีในระบบ</b><small>ใส่สินค้าไปก่อนได้ ค่อยผูกลูกค้าตอนจะออกใบเสนอราคา</small></span>
+                </span>
               </>
             )}
-            <button className="btn primary sm" style={{ marginLeft: "auto" }} onClick={() => setSearchOpen(true)}><Icon name="add_shopping_cart" size={18} /> เพิ่มสินค้าให้ลูกค้า</button>
+            <button className="btn primary sess-add" onClick={() => setSearchOpen(true)}><Icon name="add_shopping_cart" size={18} /> เพิ่มสินค้าให้ลูกค้า</button>
           </div>
         )}
+        </div>
       </div>
 
       {msg && <div className="note err" style={{ margin: "12px 0" }}>{msg}</div>}
 
       {cart ? (
-        <div className="cart-grid">
+        <div className="cart-grid has-sheet">
           <div className="cart-main">
             {cart.items.length === 0 ? (
               <div className="cart-empty">
@@ -212,15 +267,28 @@ export default function SalesPage() {
               </div>
             ) : (
               <>
-                <p className="cart-intro">สินค้า {cart.count} ชิ้น · ยอดชั่วคราว {bahtWord(cart.subtotal)}{cart.customer ? ` · ราคาสมาชิก ${cart.customer.tier || "ทั่วไป"}` : " · ยังไม่ผูกลูกค้า (ราคาปกติ)"}</p>
-                {deliveryOpen && (
-                  <div style={{ marginBottom: 14 }}>
-                    <DeliveryPanel key={cart.id} cart={cart} defaultPostcode={cart.customer?.default_postcode} defaultAddress={cart.customer?.default_address} onChanged={sales.reloadActive} />
-                  </div>
-                )}
+                <p className="cart-intro">สินค้า {cart.count} ชิ้น · ยอดชั่วคราว {bahtWord(cart.subtotal)}{cart.customer ? "" : " · ยังไม่ผูกลูกค้า"}</p>
+                {/* ค่าขนส่งแบบ "เปิด Mat" ของฝั่งขาย — อยู่นอกบล็อกคิวจัดส่ง เพราะใช้ได้แม้ยังไม่กรอกที่อยู่
+                    (เทียร์คิดจากยอดบิลอย่างเดียว ไม่ได้ผูกกับปลายทาง) */}
+                <StaffShippingCharge key={cart.id} cartId={cart.id} rev={cart.updated_at} onChanged={sales.reloadActive} />
+                {/* แถบติ๊กเลือก — ยอดบิลคิดจากรายการที่ติ๊กเท่านั้น ถ้าไม่มีช่องนี้ ของที่ลูกค้า
+                    เคยไม่ติ๊กไว้บนเว็บจะหายจากยอดโดยพนักงานมองไม่เห็นและกดแก้ไม่ได้ */}
+                <div className="cart-bulk">
+                  <label className="row">
+                    <input
+                      type="checkbox"
+                      className="cart-pick"
+                      checked={goods.length > 0 && goods.every((it) => it.selected)}
+                      onChange={(e) => run("all", () => sales.selectItems(null, e.target.checked))}
+                    />
+                    เลือกทั้งหมด
+                  </label>
+                  <span className="small muted">คิดเงิน {goods.filter((it) => it.selected).length} จาก {goods.length} รายการ</span>
+                </div>
                 <div className="cart-items">
-                  {cart.items.map((it) => (
+                  {rows.map((it) => (
                     <SalesRow key={it.id} it={it} busy={busy === it.id} plantName={plantName(it.plant_code)}
+                      onPick={() => run(it.id, () => sales.selectItems([it.id], !it.selected))}
                       avail={avail?.items.find((a) => a.item_id === it.id) || null} availStale={availStale}
                       onInc={() => run(it.id, () => sales.updateItem(it.id, { qty: it.qty + 1 }))}
                       onDec={() => it.qty > 1 && run(it.id, () => sales.updateItem(it.id, { qty: it.qty - 1 }))}
@@ -231,23 +299,53 @@ export default function SalesPage() {
               </>
             )}
           </div>
-          <aside className="cart-side">
-            <div className="summary">
+          {/* จอเล็ก: สรุปคำสั่งซื้อกลายเป็นแผงลอยจากขอบล่าง — เดิมต้องเลื่อนผ่านสินค้าทั้งตะกร้า
+              ลงไปสุดหน้าถึงจะกดเช็คสต็อก/เช็คโปร/ออกใบเสนอราคาได้ ซึ่งเป็นงานที่เซลล์กดบ่อยสุด
+              ยอดรวมกับปุ่มใบเสนอราคาจึงติดอยู่กับขอบจอตลอด ที่เหลือกดแถบเพื่อกางดู
+              (บนจอใหญ่ CSS ซ่อนแถบนี้ แผงยังอยู่ข้างขวาเหมือนเดิม) */}
+          <aside className={"cart-side sheet" + (sheet ? " on" : "")}>
+            <div className="sum-bar">
+              <button className="sum-bar-open" onClick={() => setSheet((v) => !v)} aria-expanded={sheet} aria-controls="sales-summary">
+                <span>
+                  <small>{sheet ? "แตะเพื่อย่อสรุป" : `ยอดรวมทั้งบิล · ${cart.count} ชิ้น`}</small>
+                  <b>{bahtWord(cart.totals?.grand_total ?? cart.subtotal)}</b>
+                </span>
+                <Icon name={sheet ? "expand_more" : "expand_less"} size={20} />
+              </button>
+              {/* แถบลอยจอเล็ก: ก่อนบันทึกใบ PRE ปุ่มหลักคือ Save PRE SO · บันทึกแล้วค่อยกลายเป็นใบเสนอราคา */}
+              {readyForQuotation(cart) ? (
+                <button className="btn primary sum-bar-cta" disabled={busy !== null || cart.items.length === 0} onClick={() => makeQuotation()}>ใบเสนอราคา</button>
+              ) : (
+                <button className="btn primary sum-bar-cta" disabled={busy !== null || cart.items.length === 0 || !canSavePreso(cart)}
+                        title={canSavePreso(cart) ? "" : cart.preso?.message} onClick={() => savePreso()}>Save PRE SO</button>
+              )}
+            </div>
+            <div className="summary" id="sales-summary">
               <h3>สรุปคำสั่งซื้อ</h3>
               <div className="sum-row"><span>สินค้า ({cart.count})</span><b>{bahtWord(cart.subtotal)}</b></div>
               {cart.totals && Number(cart.totals.member_savings) > 0 && <div className="sum-row"><span>ราคาสมาชิก (รวมแล้ว)</span><span className="green">−{bahtWord(cart.totals.member_savings)}</span></div>}
               {cart.totals && cart.totals.lines.length === 0 && (
                 <div className="sum-row"><span>ส่วนลด</span><button className="link-btn small" onClick={() => setPromoOpen(true)}>รอเช็คโปร</button></div>
               )}
-              {cart.totals?.lines.map((l) => (
+              {/* ส่วนลดที่เหลือ 0 (หลุดเงื่อนไขแล้ว) ไม่ต้องโชว์ "−0 บาท" — เหตุผลอยู่ในกล่องเตือนข้างล่างแล้ว */}
+              {cart.totals?.lines.filter((l) => Number(l.amount) > 0).map((l) => (
                 <div key={l.id} className="sum-row"><span>{l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}</span><span className={l.status === "applied" ? "green" : "muted"}>−{bahtWord(l.amount)}</span></div>
               ))}
               {cart.totals?.warnings.map((w) => (
                 <div key={w} className="note warn small">{w}</div>
               ))}
+              {/* ค่าขนส่งแยกเป็นบรรทัดตาม Mat ที่เปิดไว้ (เทียร์ / ค่าส่งเพิ่มเติม)
+                  ลูกค้าจะได้เห็นว่าเงินก้อนไหนมาจากอะไร ส่วนยอดรวมไปบวกกันที่บรรทัด "ค่าขนส่ง" */}
+              {shipLines.map((it) => (
+                <div key={it.id} className="sum-row small muted">
+                  <span>· {it.name}</span><span>{bahtWord(it.line_total)}</span>
+                </div>
+              ))}
               {/* ใช้กฎค่าส่งชุดเดียวกับหน้าลูกค้า — ถ้าไม่เข้ากฎข้อไหนเลย ต้องขึ้น "รอประเมิน" เหมือนกัน ห้ามโชว์ 0 บาทเป็นค่าส่งจริง */}
-              <div className="sum-row"><span>ค่าขนส่ง{cart.totals && Number(cart.totals.install_fee) > 0 ? " + ติดตั้ง" : ""}</span>
-                {!cart.delivery?.quoted_at || !cart.totals ? (
+              <div className="sum-row"><span>{shipLines.length > 1 ? "รวมค่าขนส่ง" : "ค่าขนส่ง"}{cart.totals && Number(cart.totals.install_fee) > 0 ? " + ติดตั้ง" : ""}</span>
+                {/* พนักงานเปิด Mat ค่าขนส่งไว้ = มีตัวเลขแล้วแม้ยังไม่กรอกที่อยู่ (เทียร์คิดจากยอดบิล
+                    ไม่ได้คิดจากปลายทาง) จึงต้องโชว์เลขจริง ไม่ใช่ปุ่ม "รอคำนวณ" */}
+                {!cart.totals || (!cart.delivery?.quoted_at && Number(cart.totals.shipping_fee) <= 0) ? (
                   <button className="link-btn small" onClick={() => setDeliveryOpen(true)}>รอคำนวณ</button>
                 ) : shipNeedsReview(cart.totals.warnings) ? (
                   <span className="muted">รอเจ้าหน้าที่ประเมิน</span>
@@ -255,8 +353,42 @@ export default function SalesPage() {
                   <b>{bahtWord(Number(cart.totals.shipping_fee) + Number(cart.totals.install_fee) - Number(cart.totals.shipping_discount))}</b>
                 )}
               </div>
-              {cart.delivery?.slot_date && <div className="sum-row small muted"><span>คิวจัดส่ง</span><span>{thDate(cart.delivery.slot_date)} {cart.delivery.slot_period === "am" ? "เช้า" : "บ่าย"} · เขต {cart.delivery.zone}</span></div>}
+              {/* โชว์แค่วัน — รอบเช้า/บ่ายทีมคิวจัดส่งเป็นคนซอยเอง พนักงานหน้าร้านไม่ได้เลือก
+                  (เบื้องหลังยังจองเป็นรอบอยู่ ใบเสนอราคายังพิมพ์รอบออกไปตามเดิม) */}
+              {cart.delivery?.slot_date && <div className="sum-row small muted"><span>คิวจัดส่ง</span><span>{thDate(cart.delivery.slot_date)} · เขต {cart.delivery.zone}</span></div>}
               <div className="sum-total"><span>ยอดรวมทั้งบิล (รวม VAT){shipNeedsReview(cart.totals?.warnings) && <small>ยังไม่รวมค่าจัดส่ง</small>}</span><b>{bahtWord(cart.totals?.grand_total ?? cart.subtotal)}</b></div>
+              {/* เช็คลิสต์ตามผังงานหน้าร้าน — ห้าด่านก่อน "ออกใบเสนอราคา"
+                  (ใบ PRE เป็นร่าง บันทึกค้างไว้ได้ตลอดแม้ยังไม่ครบ)
+                  ด่านที่ยังไม่ถึงคิวจะจาง กดไปทำได้เลยทีละข้อ ไม่ต้องจำลำดับเอง */}
+              {cart.preso && (
+                <div className={"preso-steps" + (cart.preso.ready ? " ready" : "")}>
+                  <div className="preso-head">
+                    <b>{cart.preso.ready ? "พร้อมออกใบเสนอราคา" : "ก่อนออกใบเสนอราคา"}</b>
+                    <span>{cart.preso.steps.filter((st) => st.ok).length}/{cart.preso.steps.length}</span>
+                  </div>
+                  {cart.preso.steps.map((st, i) => (
+                    <button
+                      key={st.key}
+                      className={"preso-step" + (st.ok ? " ok" : "") + (st.blocked ? " later" : "")}
+                      onClick={() => {
+                        if (st.key === "stock") return void checkStock();
+                        if (st.key === "promo") return setPromoOpen(true);
+                        if (st.key === "delivery") return setDeliveryOpen(true);
+                        // ด่าน "ชื่อ เบอร์ ที่อยู่" ขาดได้สองแบบ พาไปคนละที่:
+                        //   ยังไม่ผูกลูกค้า -> ไปช่องค้นหาลูกค้า (ชื่อ/เบอร์มาจากทะเบียนลูกค้า)
+                        //   ผูกแล้วแต่ขาดที่อยู่ -> ไปบล็อกคิวจัดส่งซึ่งเป็นที่กรอกปลายทาง
+                        if (st.key === "profile" && cart.customer) return setDeliveryOpen(true);
+                        // ด่านลูกค้า: ช่องค้นหา/ผูกลูกค้าอยู่หัวหน้า เลื่อนไปให้เลย
+                        document.getElementById("sales-customer")?.scrollIntoView({ block: "center" });
+                        document.querySelector<HTMLInputElement>("#sales-customer input")?.focus();
+                      }}
+                    >
+                      <span className="preso-num">{st.ok ? <Icon name="check" size={14} /> : i + 1}</span>
+                      <span className="preso-txt"><b>{st.title}</b><small>{st.note}</small></span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="col" style={{ marginTop: 12 }}>
                 {/* เช็คทั้งตะกร้าในการยิงครั้งเดียว — SAP จำลองทั้งบิล บรรทัดแรกกินของก่อน ยิงทีละชิ้นจะเห็นของตัวเดียวกันซ้ำแล้วขายเกิน */}
                 <button className="btn block" onClick={checkStock} disabled={busy === "stock" || cart.items.length === 0}>
@@ -273,14 +405,29 @@ export default function SalesPage() {
                   </div>
                 )}
                 <button className="btn block" onClick={() => setPromoOpen(true)} disabled={cart.items.length === 0}><Icon name="sell" size={18} /> {cart.totals && cart.totals.lines.length > 0 ? "แก้ไขโปรโมชั่น / ส่วนลด" : "เช็คโปรโมชั่น"}</button>
-                <button className="btn block" onClick={() => setDeliveryOpen((v) => !v)} disabled={cart.items.length === 0}><Icon name="local_shipping" size={18} /> {cart.delivery?.quoted_at ? "แก้ไขค่าส่ง / คิวจัดส่ง" : "คิดค่าส่ง + คิวจัดส่ง"}</button>
-                <button className="btn block" disabled={busy === "preso" || cart.items.length === 0} onClick={() => savePreso()}><Icon name="save" size={18} /> {presoNo ? `บันทึกแล้ว · ${presoNo}` : "Save Preso"}</button>
-                <button className="btn primary block" disabled={!cart.customer || busy !== null || cart.items.length === 0} title={cart.customer ? "" : "ต้องผูกลูกค้าก่อน"} onClick={() => makeQuotation()}>สร้างใบเสนอราคา</button>
+                <button className="btn block" onClick={() => setDeliveryOpen((v) => !v)} disabled={cart.items.length === 0}><Icon name="local_shipping" size={18} /> {cart.delivery?.quoted_at ? "แก้ไขคิวจัดส่ง" : "คิวจัดส่ง"}</button>
+                {/* ปุ่มสองตัวนี้เปิดเมื่อครบทุกด่าน — ปล่อยให้กดแล้วค่อยเด้ง error คือทำให้เซลล์เสียเวลาเปล่า */}
+                <button className="btn block" disabled={busy === "preso" || cart.items.length === 0 || !canSavePreso(cart)}
+                        title={canSavePreso(cart) ? "" : cart.preso?.message} onClick={() => savePreso()}>
+                  <Icon name="save" size={18} /> {presoNo ? `บันทึกแล้ว · ${presoNo}` : "Save PRE SO"}
+                </button>
+                {/* ขั้นสุดท้าย — โผล่ต่อเมื่อบันทึกใบ PRE แล้ว ก่อนหน้านั้นยังไม่มีใบให้ออกใบเสนอราคาจาก */}
+                {/* แก้ตะกร้าหลังบันทึก = ใบ PRE ที่เซฟไว้เก่าแล้ว ต้องเช็คใหม่แล้วเซฟทับก่อนถึงออกใบได้ */}
+                {readyForQuotation(cart) && (
+                  <button className="btn primary block" disabled={busy !== null || cart.items.length === 0} onClick={() => makeQuotation()}>
+                    <Icon name="description" size={18} /> Create Quotation · สร้างใบเสนอราคา
+                  </button>
+                )}
               </div>
-              <p className="tiny muted" style={{ marginTop: 10 }}>{cart.customer ? "ใบเสนอราคาจะยืนราคา 7 วัน แล้วส่งต่อให้ระบบหลังบ้าน convert เป็น SO ใน SAP" : "ต้องค้นหาและผูกลูกค้าก่อนจึงจะออกใบเสนอราคาได้"}</p>
+              <p className="tiny muted" style={{ marginTop: 10 }}>
+                {presoNo ? "ใบเสนอราคาจะยืนราคา 7 วัน แล้วส่งต่อให้ระบบหลังบ้าน convert เป็น SO ใน SAP"
+                  : cart.preso?.ready ? "ครบทุกด่านแล้ว — บันทึกใบ PRE ได้เลย แล้วปุ่มออกใบเสนอราคาจะขึ้นให้"
+                  : "บันทึกใบ PRE เก็บไว้ก่อนได้เลย · ทำเช็คลิสต์ให้ครบเมื่อไร ปุ่มออกใบเสนอราคาถึงจะขึ้น"}
+              </p>
               {cart.expires_at && <p className="tiny muted">ตะกร้านี้หมดอายุอัตโนมัติ {thDate(cart.expires_at)} {thTime(cart.expires_at)} (ต่ออายุทุกครั้งที่ใช้งาน)</p>}
             </div>
           </aside>
+          {sheet && <div className="scrim" onClick={() => setSheet(false)} />}
         </div>
       ) : (
         /* ลูกค้าใหม่ที่ยังไม่มีบัญชี/ยังไม่มีตะกร้า — เซลล์เปิดตะกร้าของตัวเองแล้วเริ่มจัดของได้เลย ค่อยผูกลูกค้าทีหลัง */
@@ -300,34 +447,59 @@ export default function SalesPage() {
 
       {searchOpen && <MaterialSearchModal onClose={() => setSearchOpen(false)} target={cart?.customer?.name || `ตะกร้า ${cart?.no || ""}`} search={sales.searchMaterials}
         onAdd={(m, mode, plant) => run("add", async () => { await sales.addItem(m.matnr, 1, mode, plant); setSearchOpen(false); })} />}
-      {promoOpen && cart && <PromoPanel cart={cart} isStaff onClose={() => setPromoOpen(false)} onCartChange={(c) => sales.setActive(c)} />}
+      {promoOpen && cart && <PromoPanel mode="staff" cart={cart} isStaff onClose={() => setPromoOpen(false)} onCartChange={(c) => sales.setActive(c)} />}
+      {/* คิวจัดส่งเปิดเป็นหน้าต่างซ้อน ไม่ใช่แทรกกลางหน้า
+          ของเดิมบล็อกนี้โผล่เหนือรายการสินค้า หน้าจอเลยกระโดดและต้องเลื่อนขึ้นไปหาเอง
+          ทำเป็นหน้าต่างแล้วตำแหน่งที่พนักงานกำลังดูอยู่ไม่ขยับ และเดินทีละขั้นในหน้าต่างเดียวจบ */}
+      {deliveryOpen && cart && (
+        <div className="modal-backdrop" onClick={() => setDeliveryOpen(false)}>
+          <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>คิวจัดส่ง · {cart.customer?.name || `ตะกร้า ${cart.no}`}</h2>
+              <button className="icon-btn" onClick={() => setDeliveryOpen(false)} aria-label="ปิด"><Icon name="close" /></button>
+            </div>
+            <DeliveryPanel key={cart.id} cart={cart} defaultPostcode={cart.customer?.default_postcode} defaultAddress={cart.customer?.default_address} onChanged={sales.reloadActive} />
+            <button className="btn dark block" style={{ marginTop: 12 }} onClick={() => setDeliveryOpen(false)}>เสร็จแล้ว</button>
+          </div>
+        </div>
+      )}
       {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
     </main>
   );
 }
 
-function SalesRow({ it, busy, plantName, avail, availStale, onInc, onDec, onRemove, onNote }: { it: CartItem; busy: boolean; plantName: string; avail: AvailabilityItem | null; availStale: boolean; onInc: () => void; onDec: () => void; onRemove: () => void; onNote: (n: string) => void }) {
+function SalesRow({ it, busy, plantName, avail, availStale, onPick, onInc, onDec, onRemove, onNote }: { it: CartItem; busy: boolean; plantName: string; avail: AvailabilityItem | null; availStale: boolean; onPick: () => void; onInc: () => void; onDec: () => void; onRemove: () => void; onNote: (n: string) => void }) {
   const [note, setNote] = useState(it.note || "");
+  const [noteOpen, setNoteOpen] = useState(!!it.note);
   return (
-    <div className="cart-row sales-row">
-      <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={it.image_url} label="1:1" /></Link>
+    <div className={"cart-row sales-row" + (it.selected ? " picked" : " unpicked")}>
+      <input type="checkbox" className="cart-pick" checked={it.selected} disabled={busy} onChange={onPick} aria-label="คิดเงินรายการนี้" />
+      <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={imageSources(it.matnr, it.image_url)} label="1:1" /></Link>
       <div className="cart-info">
-        <div className="row wrap" style={{ gap: 6, marginBottom: 4 }}>
-          <span className={"chip " + (it.added_by === "sales" ? "green" : "light")}>{it.added_by === "sales" ? "เซลล์เพิ่ม" : "จากตะกร้าลูกค้า"}</span>
-          {it.pending_ack && <span className="chip amber">รอลูกค้ายืนยัน</span>}
-          <span className="pill"><Icon name={it.supply_mode === "takeaway" ? "shopping_bag" : it.supply_mode === "install" ? "handyman" : "local_shipping"} size={14} /> {SUPPLY_LABEL[it.supply_mode]}{it.plant_code ? ` · ${plantName}` : ""}{it.atp_date ? ` · ATP ${thDate(it.atp_date)}` : ""}</span>
-        </div>
+        {/* ป้ายเฉพาะเคสที่ผิดปกติ — "เซลล์เพิ่ม" คือค่าปกติของหน้านี้ ติดไว้ทุกใบก็ไม่ได้บอกอะไร
+            มีแต่กินความสูงการ์ด (จอเล็กเลื่อนดูของ 7-8 ชิ้นแล้วเมื่อย) */}
+        {it.added_by !== "sales" && (
+          <div className="row wrap" style={{ gap: 6, marginBottom: 4 }}>
+            <span className="chip light">จากตะกร้าลูกค้า</span>
+          </div>
+        )}
         <Link to={`/p/${it.matnr}`} className="cart-name">{it.name}</Link>
-        <div className="small muted">{it.variant}{it.spec ? ` · ${it.spec}` : ""}</div>
-        {/* ส่วนใหญ่ SKU = MATNR ตัวเดียวกัน โชว์ซ้ำสองรอบไม่มีประโยชน์ */}
-        <div className="mono tiny muted">MATNR {it.matnr}{it.sku && it.sku !== it.matnr ? ` · ${it.sku}` : ""}</div>
-        <div className="small muted" style={{ marginTop: 4 }}>{bahtWord(it.unit_price)} / ชิ้น · {it.price_tier}</div>
+        {/* รุ่น/ขนาด + วิธีรับของ อยู่บรรทัดเดียวกัน — ของเดิมแยกเป็นป้ายอีกแถวหนึ่งต่างหาก */}
+        <div className="small muted cart-meta">
+          {[it.variant, it.spec, SUPPLY_LABEL[it.supply_mode] + (it.plant_code ? ` · ${plantName}` : "")].filter(Boolean).join(" · ")}
+          {it.atp_date ? ` · ATP ${thDate(it.atp_date)}` : ""}
+        </div>
+        {/* MATNR คือสิ่งที่เซลล์กวาดตาหาก่อนอย่างอื่นเสมอ (ใช้คุยกับคลัง/SAP) — ทำเป็นป้ายให้เห็นชัด */}
+        <div className="mat-code">MATNR <b>{it.matnr}</b>{it.sku && it.sku !== it.matnr ? ` · ${it.sku}` : ""}</div>
+        <div className="small muted cart-unit">{bahtWord(it.unit_price)} / ชิ้น</div>
         {/* ผลเช็คของมาจากการยิงทั้งตะกร้าครั้งเดียว (ปุ่มในสรุปคำสั่งซื้อ) — บรรทัดนี้แค่แสดงผลของตัวเอง */}
         {avail && <div className={availStale ? "avail-stale" : undefined}><AvailBadge a={avail} /></div>}
-        <form className="row" style={{ marginTop: 8 }} onSubmit={(e) => { e.preventDefault(); onNote(note); }}>
+        <form className={"row cart-note" + (noteOpen ? " on" : "")} onSubmit={(e) => { e.preventDefault(); onNote(note); }}>
           <input className="hdr-pop-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ เช่น รอลูกค้าวัดห้อง" />
           <button className="btn sm" type="submit" disabled={busy || note === (it.note || "")}>บันทึก</button>
         </form>
+        {/* จอเล็กพับช่องหมายเหตุไว้ก่อน — ส่วนใหญ่ไม่ได้ใส่ ให้กดเปิดเมื่อจะใช้ (จอใหญ่โชว์ตลอด) */}
+        <button type="button" className="link-btn small cart-note-add" onClick={() => setNoteOpen(true)}>+ เพิ่มหมายเหตุ</button>
       </div>
       {/* ริมขวา: ถังขยะอยู่บนสุด · ยอดของบรรทัดนี้ · ปุ่มจำนวนอยู่ฝั่งเดียวกับราคา */}
       <div className="sales-side">
@@ -361,8 +533,8 @@ function CustomerSearch({ onPick, search }: { onPick: (hit: CustomerHit) => void
       <form className="row" onSubmit={submit}>
         <Icon name="person_search" size={20} />
         <input className="hdr-pop-input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ค้นหาลูกค้า (เลขสมาชิก / เบอร์ / อีเมล)" />
-        <button className="btn sm" style={{ background: "#fff" }} type="submit" disabled={q.trim().length < 2}>ค้นหา</button>
-        <button className="btn sm" style={{ background: "#fff" }} type="button" onClick={() => setQ("089-234-4471")} title="สแกน QR (จำลอง)"><Icon name="qr_code_scanner" size={18} /></button>
+        <button className="btn sm sess-act" type="submit" disabled={q.trim().length < 2}>ค้นหา</button>
+        <button className="btn sm sess-act" type="button" onClick={() => setQ("094-916-4600")} title="สแกน QR (จำลอง)"><Icon name="qr_code_scanner" size={18} /></button>
       </form>
       {err && <div className="note err small" style={{ marginTop: 6 }}>{err}</div>}
       {hits && (
@@ -372,7 +544,7 @@ function CustomerSearch({ onPick, search }: { onPick: (hit: CustomerHit) => void
             <div key={(h.sap_customer_no || "") + (h.email || "")} className="cust-hit">
               <span className="avatar">{h.name.slice(0, 2)}</span>
               <span className="grow">
-                <b>{h.name}</b> · {h.tier || "ทั่วไป"}
+                <b>{h.name}</b> · {(h.points || 0).toLocaleString()} พ้อยท์
                 <small>CUST {h.sap_customer_no || "-"} · {h.phone || "-"} · {h.email || "-"}{h.source === "sap" ? " · จาก SAP" : ""}</small>
                 {h.online_cart_count > 0 && <small className="green strong">มีตะกร้าออนไลน์ {h.online_cart_count} ชิ้น → จะรวมเข้าตะกร้านี้</small>}
               </span>
@@ -419,14 +591,13 @@ function MaterialSearchModal({ onClose, target, search, onAdd }: { onClose: () =
         <div className="mat-results">
           {items.map((m) => (
               <div key={m.matnr} className="mat-hit">
-                <Placeholder src={m.image_url} label="1:1" className="mat-img" />
+                <Placeholder src={imageSources(m.matnr, m.image_url)} label="1:1" className="mat-img" />
                 <div className="grow">
                   <b>{m.name_th}</b>
                   <div className="small muted">{m.variant}{m.spec ? ` · ${m.spec}` : ""}</div>
                   <div className="mono tiny muted">MATNR {m.matnr}{m.sku && m.sku !== m.matnr ? ` · ${m.sku}` : ""}</div>
                   <div className="row wrap" style={{ gap: 8, marginTop: 4 }}>
                     <b>{baht(m.standard_price)}</b>
-                    {m.member_price && <span className="small green">สมาชิก {baht(m.member_price)}</span>}
                   </div>
                 </div>
                 <div className="col">

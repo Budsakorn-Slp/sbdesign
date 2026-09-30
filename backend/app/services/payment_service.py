@@ -7,7 +7,7 @@ import hashlib
 import hmac
 import json
 import logging
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from fastapi import HTTPException
@@ -17,6 +17,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.integrations.sap import SapError, get_sap_client
 from app.models.common import utcnow
+from app.core.config import get_settings
+from app.integrations.sap.sales_order import SalesOrderDTO, SoAmounts, SoLine
 from app.models.payment import Payment, SapSyncJob
 from app.models.quotation import Quotation
 from app.models.user import User
@@ -78,13 +80,6 @@ def create_intent(db: Session, q: Quotation, actor: User | None, method: str, ki
     db.commit()
     db.refresh(p)
     return p
-
-
-def expire_stale(db: Session) -> None:
-    now = utcnow()
-    for p in db.scalars(select(Payment).where(Payment.status == "pending", Payment.expires_at < now)).all():
-        p.status = "expired"
-    db.commit()
 
 
 def get_payment(db: Session, payment_no: str) -> Payment:
@@ -151,7 +146,10 @@ def push_to_sap(db: Session, q: Quotation) -> Quotation:
     job = _job_for(db, q)
     job.attempts = (job.attempts or 0) + 1
     try:
-        res = get_sap_client().create_sales_order(q.quotation_no)
+        client = get_sap_client()
+        doc = build_sales_order(db, q)
+        # adapter ที่รองรับ payload เต็มใช้ตัวใหม่ · mock เก่าที่ยังไม่มี method นี้ถอยไปตัวเดิม
+        res = client.create_sales_order_doc(doc) if hasattr(client, "create_sales_order_doc") else client.create_sales_order(q.quotation_no)
         if not res.ok or not res.sap_so_no:
             raise SapError(res.message or "SAP ปฏิเสธการสร้าง Sales Order")
         q.sap_so_no = res.sap_so_no
@@ -214,3 +212,65 @@ def paid_summary(db: Session, q: Quotation) -> dict:
 
 def count_paid(db: Session) -> int:
     return int(db.scalar(select(func.count()).select_from(Payment).where(Payment.status == "paid")) or 0)
+
+
+# ---------- ประกอบ payload ส่ง SAP ----------
+def build_sales_order(db: Session, q: Quotation) -> SalesOrderDTO:
+    """แปลง Quotation ที่จ่ายเงินแล้ว → payload สร้าง Sales Order
+
+    อ่านจากเอกสารที่บันทึกไว้อย่างเดียว ไม่ดึงสดจากตะกร้าหรือ SAP ใหม่ — ราคา/ส่วนลด/ค่าส่ง
+    ต้องเป็นชุดเดียวกับที่ลูกค้าเห็นตอนกดจ่าย ไม่งั้นยอดใน SAP กับใบเสร็จจะไม่ตรงกัน
+    เวลาโปรโมชันหมดอายุระหว่างทาง
+    """
+    s = get_settings()
+    snap = q.customer_snapshot or {}
+    pay = db.scalar(
+        select(Payment).where(Payment.quotation_id == q.id, Payment.status == "paid").order_by(Payment.created_at.desc())
+    )
+    return SalesOrderDTO(
+        quotation_no=q.quotation_no,
+        # ลูกค้าที่ยังไม่ผูกเลขสมาชิกใช้เลข walk-in — SAP บังคับต้องมี CUSTOMER เสมอ
+        customer_no=(snap.get("sap_customer_no") or s.sap_walkin_customer),
+        order_type=s.sap_order_type,
+        sales_org=s.sap_sales_org,
+        distr_chan=s.sap_distr_chan,
+        division=s.sap_division,
+        req_date=q.slot_date or (date.today() + timedelta(days=s.sap_avail_lead_days)),
+        channel=q.channel,
+        customer_name=snap.get("name") or "",
+        customer_phone=snap.get("phone"),
+        customer_email=snap.get("email"),
+        ship_address=q.ship_address,
+        ship_postcode=q.ship_postcode,
+        ship_zone=q.ship_zone,
+        slot_date=q.slot_date,
+        slot_period=q.slot_period,
+        amounts=SoAmounts(
+            subtotal=q.subtotal,
+            discount_total=q.discount_total,
+            shipping_fee=q.shipping_fee,
+            install_fee=q.install_fee,
+            shipping_discount=q.shipping_discount,
+            vat=q.vat,
+            grand_total=q.grand_total,
+            deposit_amount=q.deposit_amount,
+        ),
+        items=[
+            SoLine(
+                line_no=(i + 1) * 10,  # POSNR 10, 20, 30... ตามธรรมเนียม SAP
+                matnr=ln.matnr,
+                name=ln.name,
+                qty=ln.qty,
+                unit_price=ln.unit_price,
+                line_discount=ln.line_discount,
+                line_total=ln.line_total,
+                supply_mode=ln.supply_mode,
+                plant_code=ln.plant_code,
+                atp_date=ln.atp_date,
+                requires_install=ln.requires_install,
+            )
+            for i, ln in enumerate(q.lines)
+        ],
+        payment_no=pay.payment_no if pay else None,
+        paid_at=q.paid_at.isoformat() if q.paid_at else None,
+    )

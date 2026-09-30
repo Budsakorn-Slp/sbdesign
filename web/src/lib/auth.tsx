@@ -8,12 +8,15 @@ type AuthState = {
   role: Role;
   ready: boolean;
   loginOpen: boolean;
+  /** เปิดกล่องเข้าสู่ระบบทับหน้าที่กำลังทำอยู่ (หน้า /login ยังใช้ได้สำหรับลิงก์ตรง) */
   openLogin: () => void;
   closeLogin: () => void;
   login: (identifier: string, password: string, accountType: "customer" | "staff") => Promise<User>;
   register: (phone: string, password: string, name: string, email?: string) => Promise<User>;
   otpRequest: (phone: string) => Promise<{ debug_code?: string }>;
   otpVerify: (phone: string, code: string, name?: string) => Promise<User>;
+  /** รับ token ที่ได้จาก endpoint อื่น (เช่น ตั้งรหัสผ่านใหม่) มาเข้าสู่ระบบเลย */
+  adopt: (t: TokenPair) => User;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
 };
@@ -46,7 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     resetWishlist(); // สลับผู้ใช้ ต้องล้างหัวใจของคนก่อน แล้วให้โหลดใหม่ตามบัญชีนี้
     saveAuth({ access_token: t.access_token, refresh_token: t.refresh_token });
     setUser(t.user);
-    setLoginOpen(false);
     window.dispatchEvent(new CustomEvent("sb:auth-changed"));
     return t.user;
   }, []);
@@ -64,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register: async (phone, password, name, email) =>
         accept(await apiPost<TokenPair>("/auth/register", { phone, password, name, email: email || null })),
       otpRequest: (phone) => apiPost<{ debug_code?: string }>("/auth/otp/request", { phone }),
+      adopt: accept,
       otpVerify: async (phone, code, name) => accept(await apiPost<TokenPair>("/auth/otp/verify", { phone, code, name: name || null })),
       logout: async () => {
         const a = loadAuth();
@@ -93,13 +96,16 @@ export function useAuth(): AuthState {
   return ctx;
 }
 
+// ต้องตรงกับ DEFAULT_PASSWORD ใน backend/app/seed.py — ปุ่มกรอกอัตโนมัติกับข้อความใต้ปุ่มอ่านจากตัวนี้ตัวเดียว
+export const DEMO_PASSWORD = "1122";
+
 export const DEMO_ACCOUNTS = [
-  { type: "customer" as const, title: "ลูกค้า — ณภัทร (Gold)", id: "089-234-4471", sub: "089-234-4471 · รหัส 1234" },
-  { type: "customer" as const, title: "ลูกค้า — วีระ (Silver)", id: "081-222-3333", sub: "081-222-3333 · รหัส 1234" },
-  { type: "staff" as const, title: "พนักงานขาย — สมชาย ก.", id: "SA-104", sub: "SA-104 · รหัส 1234" },
-  { type: "staff" as const, title: "ผู้จัดการสาขา — มานะ", id: "MG-001", sub: "MG-001 · รหัส 1234" },
-  { type: "staff" as const, title: "แอดมินระบบ", id: "ADM-001", sub: "ADM-001 · รหัส 1234" },
-];
+  { type: "customer" as const, title: "ลูกค้า — ณภัทร", id: "094-916-4600" },
+  { type: "customer" as const, title: "ลูกค้า — วีระ", id: "081-222-3333" },
+  { type: "staff" as const, title: "พนักงานขาย — สมชาย ก.", id: "SA-104" },
+  { type: "staff" as const, title: "ผู้จัดการสาขา — มานะ", id: "MG-001" },
+  { type: "staff" as const, title: "แอดมินระบบ", id: "ADM-001" },
+].map((a) => ({ ...a, sub: `${a.id} · รหัส ${DEMO_PASSWORD}` }));
 
 export const ROLE_PERMS: Record<Role, { ok: boolean; label: string }[]> = {
   guest: [

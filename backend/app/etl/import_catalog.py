@@ -24,7 +24,14 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.models.catalog import Brand, Category, Material, MaterialPrice
+from app.etl.html_clean import clean
 from app.services.catalog_service import is_web_visible
+
+# ราคาต่ำกว่านี้ถือว่าเป็น "ราคาหลอก" ไม่ใช่ราคาขายจริง
+# ต้นทาง sb_products มีของที่ตั้ง PRICE = NETPRICE = 1.00 ไว้ (เช่น 19196621 บอดี้+หน้าบาน
+# ชุดครัว Kitchen Solutions ซึ่งเป็นงานสั่งทำ ต้องวัดหน้างานแล้วเสนอราคา) ถ้าปล่อยผ่าน
+# หน้าเว็บจะขึ้น "฿1" ให้ลูกค้ากดซื้อได้ทันที — ซ่อนจากหน้าร้านไปก่อน แต่ยังเก็บไว้ในฐาน
+# ให้เซลล์ค้นเจอและออกใบเสนอราคาเองได้ ของถูกสุดที่เป็นราคาจริงตอนนี้คือ 11 บาท
 
 for _s in (sys.stdout, sys.stderr):
     if getattr(_s, "encoding", "") and _s.encoding.lower() not in ("utf-8", "utf8"):
@@ -104,18 +111,18 @@ def upsert_taxonomy(db: Session, rows: list[dict]) -> tuple[int, int]:
 # ต้องทำตรงนี้ ไม่ใช่แก้ในฐาน เพราะ upsert_taxonomy เซ็ต parent_id ของ c3-* เป็น None ใหม่ทุกรอบ
 # id ของกลุ่มใช้ตัวเดิมจาก seed (bedroom/living/...) ลิงก์เก่าที่ชี้มาเลยยังใช้ได้ และกลายเป็นมีสินค้าจริง
 GROUPS: dict[str, dict] = {
-    "bedroom": {"name": "ห้องนอน", "room": "bedroom", "icon": "bed", "sort": 1,
+    "bedroom": {"name": "ห้องนอน", "name_en": "Bedroom", "room": "bedroom", "icon": "bed", "sort": 1,
                 "members": ["c3-02", "c3-13", "c3-20", "c3-19", "c3-27", "c3-28", "c3-09", "c3-B8", "c3-A6", "mattress"]},
-    "living": {"name": "ห้องนั่งเล่น", "room": "living", "icon": "weekend", "sort": 2,
+    "living": {"name": "ห้องนั่งเล่น", "name_en": "Living Room", "room": "living", "icon": "weekend", "sort": 2,
                "members": ["c3-12", "c3-35", "c3-36", "c3-37", "c3-38", "c3-64", "c3-31", "c3-32", "c3-33", "c3-34",
                            "c3-66", "c3-62", "c3-03", "c3-06", "c3-08", "c3-18", "c3-57", "sofa", "storage", "small-spaces"]},
-    "dining": {"name": "ห้องทานอาหาร / ห้องครัว", "room": "dining", "icon": "restaurant", "sort": 3,
+    "dining": {"name": "ห้องทานอาหาร / ห้องครัว", "name_en": "Dining & Kitchen", "room": "dining", "icon": "restaurant", "sort": 3,
                "members": ["c3-05", "c3-04", "c3-10", "c3-22", "c3-43", "c3-49", "kitchen"]},
-    "office": {"name": "ห้องทำงาน / ห้องเกมมิ่ง", "room": "office", "icon": "desk", "sort": 4,
+    "office": {"name": "ห้องทำงาน / ห้องเกมมิ่ง", "name_en": "Home Office & Gaming", "room": "office", "icon": "desk", "sort": 4,
                "members": ["c3-14", "c3-44", "c3-45", "office-furniture"]},
-    "special": {"name": "สินค้าพิเศษ", "room": None, "icon": "star", "sort": 5,
+    "special": {"name": "สินค้าพิเศษ", "name_en": "Special Items", "room": None, "icon": "star", "sort": 5,
                 "members": ["c3-21", "c3-01", "c3-C2", "c3-40", "c3-B3", "c3-15", "c3-A9", "outdoor", "kids"]},
-    "decor": {"name": "ของตกแต่ง", "room": None, "icon": "chair", "sort": 6,
+    "decor": {"name": "ของตกแต่ง", "name_en": "Home Decor", "room": None, "icon": "chair", "sort": 6,
               "members": ["c3-07", "c3-48", "c3-51", "c3-55", "c3-46", "c3-23", "c3-B1", "c3-B6", "c3-47", "c3-50",
                           "c3-B2", "lighting", "wall-decor", "rugs-curtains"]},
 }
@@ -132,6 +139,7 @@ def apply_groups(db: Session) -> int:
             db.add(row)
             have[gid] = row
         row.name_th, row.room, row.icon, row.sort, row.parent_id = g["name"], g["room"], g["icon"], g["sort"], None
+        row.name_en = g.get("name_en") or row.name_en
         db.flush()
         for cid in g["members"]:
             child = have.get(cid)
@@ -140,6 +148,34 @@ def apply_groups(db: Session) -> int:
                 moved += 1
     db.flush()
     return moved
+
+
+MIN_REAL_PRICE = 10  # บาท
+
+
+def _fake_price(net) -> bool:
+    """ราคานี้เชื่อไม่ได้ใช่ไหม (ไม่มีราคา หรือถูกจนเป็นไปไม่ได้)"""
+    try:
+        return net is None or float(net) <= MIN_REAL_PRICE
+    except (TypeError, ValueError):
+        return True
+
+
+def _trim(v, n: int) -> str | None:
+    t = str(v).strip() if v is not None else ""
+    return t[:n] or None
+
+
+def _desc_html(raw) -> str | None:
+    """คำบรรยายเต็มจากฐานเว็บ — บางตัวเป็น HTML บางตัวเป็นข้อความเปล่า
+
+    ล้างด้วยตัวเดียวกับหน้า CMS (ตัด script/style/inline style ทิ้ง เหลือแต่แท็กเนื้อหา)
+    ข้อความเปล่าผ่านตัวล้างแล้วก็ยังเป็นข้อความเปล่า ไม่ต้องแยกทางเดิน
+    """
+    txt = (raw or "").strip()
+    if not txt:
+        return None
+    return clean(txt) or None
 
 
 def upsert_materials(db: Session, rows: list[dict]) -> int:
@@ -167,13 +203,19 @@ def upsert_materials(db: Session, rows: list[dict]) -> int:
                 variant=(r.get("mvgr2t") or None),
                 spec=(r.get("size_text") or None),
                 color=(r.get("color_th") or r.get("color_en") or None),
+                # แกนตัวเลือกบนหน้าสินค้า — SAP แยกไว้ให้แล้ว ไม่ต้องแกะจากชื่อ
+                size_label=_trim(r.get("mvgr5t"), 80),
+                color_code=_trim(r.get("mvgr6t"), 60),
                 style=(r.get("style_th") or r.get("style_en") or None),
-                description=(r.get("long_desc") or r.get("short_desc") or None),
+                # SHORT_DESC -> กล่อง "ข้อมูลสินค้า" · LONG_DESC -> บล็อกยาวใต้หน้าสินค้า
+                # ของเดิมยัดรวมช่องเดียวโดยเอา long มาก่อน ทำให้กล่องสั้นกลายเป็นข้อความยาวเต็มไปหมด
+                description=(r.get("short_desc") or None),
+                description_long=_desc_html(r.get("long_desc")),
                 category_id=cat_id,
                 brand_id=_brand_id(bc) if bc else None,
                 image_url=r.get("image_url") or None,
                 # เว็บโชว์เฉพาะกลุ่มที่ตั้งไว้ (ตอนนี้ MATNR ขึ้นต้น 19) ที่เหลือซ่อนแต่เซลล์ยังค้นเจอ
-                is_public=bool(r.get("is_public")) and is_web_visible(r["matnr"]),
+                is_public=bool(r.get("is_public")) and is_web_visible(r["matnr"]) and not _fake_price(r.get("netprice")),
                 # ชั้น MAABC มาจาก sb_products v3 — ถ้ายังเป็นตาราง v2 อยู่ ช่องนี้ไม่มี ได้ None/False
                 abc_class=(r.get("maabc") or None),
                 is_bestseller=bool(r.get("is_bestseller")),

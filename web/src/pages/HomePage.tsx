@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import FeedStrip from "../components/FeedStrip";
 import Icon from "../components/Icon";
-import Placeholder from "../components/Placeholder";
 import ProductCard from "../components/ProductCard";
 import ProductRow from "../components/ProductRow";
 import { useContent } from "../lib/content";
@@ -54,7 +53,7 @@ function useScroller(autoMs?: number) {
       dir > 0
         ? el.scrollLeft >= max - 2 ? 0 : Math.min(el.scrollLeft + d, max)
         : el.scrollLeft <= 2 ? max : Math.max(el.scrollLeft - d, 0);
-    el.scrollTo({ left: to, behavior: "smooth" });
+    el.scrollLeft = to;  // เลี่ยง behavior:"smooth" ที่บางเบราว์เซอร์ไม่ขยับ (ดู ProductRow)
   };
 
   useEffect(() => {
@@ -119,7 +118,6 @@ export default function HomePage() {
   const s = slides[slide];
   const inspirations = content.inspirations ?? [];
   const topCategories = content.top_categories ?? [];
-  const brandTiles = content.brand_tiles ?? [];
   const inspireTabs = content.inspire_tabs ?? [];
 
   return (
@@ -213,8 +211,10 @@ export default function HomePage() {
         <ScrollFoot onPrev={catSc.prev} onNext={catSc.next} />
       </section>
 
-      <FeedStrip title="สินค้าขายดีจริงจากยอดสั่งซื้อ" path="/best-sellers?limit=8" more="/search?tag=bestseller" />
-      <ProductStrip title="สินค้าขายดี" items={content.bestsellers} more="/search?tag=bestseller" />
+      <FeedStrip title="สินค้าขายดีจริงจากยอดสั่งซื้อ" path="/best-sellers?limit=8" more="/search?abc=Z" />
+      {/* กดดูทั้งหมด = ชั้น Z ของ MAABC ที่ฝ่ายสินค้าจัดว่าขายดี · ของเดิมชี้ไป tag=bestseller
+          ซึ่งเป็น tag จาก seed ที่ข้อมูลจริงไม่มีสักตัว กดแล้วเจอหน้าว่างมาตลอด */}
+      <ProductStrip title="สินค้าขายดี" items={content.bestsellers} more="/search?abc=Z" />
 
       {/* ROOM ROWS */}
       <section className="container sec">
@@ -226,26 +226,22 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* BRANDS — โลโก้จริงจากหน้า EXCLUSIVE BRANDS ของ Magento (เกือบร้อยแบรนด์ เลยทำเป็น 2 แถวเลื่อน) */}
+      {/* BRANDS — แบรนด์จริงจาก SAP (MVGR1T) เฉพาะที่มีสินค้าขายอยู่ตอนนี้ พร้อมจำนวน
+          เดิมใช้แบนเนอร์ที่ scrape มาจากหน้า EXCLUSIVE BRANDS ของ Magento ซึ่งเป็นคนละชุดกับ
+          แบรนด์ที่เราขายจริง (Xiaomi/Tempur/Sealy ...) กดเข้าไปแล้วไม่เจอสินค้า */}
       <section className="container sec sec-lead">
-        <SectionHead title="EXCLUSIVE BRAND" />
-        <div className={"brand-tiles" + (brandTiles.length ? " brand-scroll" : "")} ref={brandSc.ref} {...brandSc.hover}>
-          {brandTiles.length
-            ? brandTiles.map((b) => (
-                <Link key={b.id} to={b.href} className="brand-tile" title={b.label ?? undefined}>
-                  <img src={b.image} alt={b.label ?? ""} loading="lazy" />
-                </Link>
-              ))
-            : content.brands.map((b) => (
-                <Link key={b.id} to={`/search?q=${encodeURIComponent(b.name.split(" ")[0])}`} className="brand-tile">
-                  <Placeholder ratio="3 / 1" label={<>LOGO 3:1<br />{b.name}</>} />
-                </Link>
-              ))}
+        <SectionHead title="EXCLUSIVE BRAND" more="/search" />
+        <div className="brand-tiles brand-scroll" ref={brandSc.ref} {...brandSc.hover}>
+          {content.brands.map((b) => (
+            <Link key={b.id} to={`/search?brand=${encodeURIComponent(b.id)}`} className="brand-tile brand-name-tile">
+              <b>{b.name}</b>
+            </Link>
+          ))}
         </div>
-        {brandTiles.length > 0 && <ScrollFoot onPrev={brandSc.prev} onNext={brandSc.next} />}
+        {content.brands.length > 0 && <ScrollFoot onPrev={brandSc.prev} onNext={brandSc.next} />}
       </section>
 
-      <ProductStrip title="สินค้าใหม่" items={content.new_products} more="/search?tag=new" />
+      <ProductStrip title="สินค้าใหม่" items={content.new_products} more="/search?abc=N" />
       <FeedStrip title="ดูล่าสุด" path="/me/recently-viewed?limit=8" more="/account/recent" />
     </main>
   );

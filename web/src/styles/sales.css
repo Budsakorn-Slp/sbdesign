@@ -1,9 +1,37 @@
 /* ===== sales workspace ===== */
-.sess-bar { background: var(--green-dark); color: #fff; border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px; }
+/* แถบโหมดพนักงานขาย — จอใหญ่: หัวแถบกับปุ่มอยู่บรรทัดเดียวกัน แล้วแท็บ/ลูกค้าเต็มความกว้าง
+   (ใช้ grid เพราะ DOM ซ้อนหัวแถบไว้ใน element ของตัวเอง เพื่อให้จอเล็กพับได้) */
+.sess-bar { background: var(--brand-dark); color: #fff; border-radius: 14px; padding: 14px 18px; margin-bottom: 18px;
+            display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .sess-bar .btn { border-color: transparent; }
+.sess-head { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 0; border: none; background: transparent; color: inherit; font: inherit; text-align: left; }
+/* จอใหญ่อ่านเป็นบรรทัดเดียว "โหมดพนักงานขาย · สมชาย ก." — จุดคั่นมาจาก ::after ไม่ใช่ข้อความ
+   จอเล็กที่กว้างไม่พอจึงสลับเป็นสองบรรทัดได้โดยไม่ต้องแก้ข้อความใน tsx */
+.sess-who { display: flex; align-items: baseline; gap: 5px; min-width: 0; font-weight: 700; }
+.sess-who small { font-size: inherit; white-space: nowrap; }
+.sess-who small::after { content: " ·"; }
+.sess-who b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sess-avatar { display: none; }
+.sess-chip i { font-style: normal; }
+.sess-chip i::before { content: " "; }
+/* ต้องระบุสองคลาส: main.tsx โหลด App (จึงโหลด sales.css) ก่อน global.css ไฟล์ global
+   จึงชนะเมื่อ specificity เท่ากัน — .ms { display: inline-block } จะทับ .sess-caret เฉยๆ */
+.sess-head .sess-caret { display: none; }   /* จอใหญ่กางอยู่แล้ว ไม่มีอะไรให้กด */
+.sess-head { cursor: default; }
+.sess-acts { display: flex; align-items: center; gap: 10px; }
+.sess-bar .sess-act { background: #fff; color: var(--ink); }
+.sess-panel { grid-column: 1 / -1; display: contents; }   /* แท็บกับแถวลูกค้าเป็นแถวเต็มของ grid เหมือนเดิม */
+.sess-tabs, .sess-cust { grid-column: 1 / -1; }
+.sess-lbl, .sess-hint { opacity: .8; }
+.sess-detach { color: #fff; }
+.sess-newcust { font-size: 13px; opacity: .8; }
+.sess-newcust .sess-ic, .sess-newcust b { display: none; }   /* จอใหญ่เป็นข้อความบรรทัดเดียวเหมือนเดิม */
+.sess-add { margin-left: auto; }
+/* จอใหญ่ไม่ต้องมีปุ่มสำรอง — แถวลูกค้ากางอยู่แล้ว มีปุ่มเพิ่มสินค้าอยู่ในนั้น */
+.sess-add-m { display: none; }
 .sess-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
 .sess-tab { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-width: 200px; padding: 8px 10px 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.10); color: #fff; cursor: pointer; }
-.sess-tab.on { background: #fff; color: var(--green-dark); border-color: #fff; }
+.sess-tab.on { background: #fff; color: var(--brand-dark); border-color: #fff; }
 .sess-tab b { display: block; font-size: 13px; line-height: 1.2; }
 .sess-tab small { display: block; font-size: 11px; opacity: .8; }
 .sess-close { border: none; background: transparent; color: inherit; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; opacity: .7; }
@@ -17,7 +45,7 @@
 .cust-hit:hover { background: var(--bg-2); }
 .cust-hit b { font-size: 13.5px; }
 .cust-hit small { display: block; font-size: 11.5px; color: var(--ink-3); }
-.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--green-dark); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none; }
+.avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-dark); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: none; }
 .mat-results { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow: auto; }
 .mat-hit { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
 .mat-img { width: 72px; flex: none; }
@@ -45,10 +73,263 @@
 .slot.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .slot.full { opacity: .5; cursor: not-allowed; }
 .group-box { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: #fff; display: flex; gap: 10px; align-items: flex-start; }
-
+/* ===== บล็อกค่าขนส่งบนจอแคบ =====
+   ของเดิมเป็นแถวเดียว ชื่อกลุ่ม | รายการสินค้า | ค่าส่ง — พอจอแคบช่องค่าส่งโดนบีบเหลือ
+   ~60px คำว่า "รวมค่าส่ง+ติดตั้ง 399 บาท" เลยตัดเป็นสี่บรรทัดซ้อนกัน อ่านไม่ออกว่าตัวเลขคู่กับอะไร
+   จอแคบจึงเรียงลงเป็นบรรทัด: หัวข้อ · รายการ · ค่าส่งชิดขวาเต็มความกว้าง */
 @media (max-width: 599px) {
-  .sess-tab { min-width: 160px; }
-  .cust-search { min-width: 0; width: 100%; }
+  .group-box { flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+  .group-box > .grow { min-width: 0; }
+  .group-box > b { width: 100%; text-align: right; font-size: 13px; }
+  .group-box .grow > b { font-size: 13.5px; }
+  .group-box .small { font-size: 12px; }
+  /* แถวสรุปใต้กล่อง: ที่อยู่กับยอดรวมคนละบรรทัด ไม่ต้องแย่งความกว้างกัน */
+  .delivery-sum { flex-direction: column; align-items: flex-start; gap: 4px; font-size: 12px; }
+  .delivery-sum b { align-self: flex-end; }
+}
+
+/* ===== จอเล็ก: แถบโหมดพนักงานขายเป็นการ์ดหัวน้ำเงิน ตัวการ์ดสีขาว =====
+   ของเดิมยัดทุกอย่างเป็นแถวแนวนอนบนพื้นน้ำเงินทั้งก้อน พอจอแคบ ช่องค้นหาลูกค้าดันจนล้น
+   ออกนอกจอ (flex item ไม่ยอมหดต่ำกว่า min-content) และกินพื้นที่ครึ่งจอก่อนเห็นสินค้า
+   จอเล็กจึงเหลือหัวแถบบรรทัดเดียว + ปุ่มลัดสองปุ่ม ส่วนแท็บตะกร้ากับลูกค้าพับไว้ กดหัวแถบเพื่อกาง */
+@media (max-width: 767px) {
+  .sess-bar { display: block; padding: 0; background: #fff; color: var(--ink); border: 1px solid var(--line); overflow: hidden; }
+  .sess-head { width: 100%; gap: 6px; padding: 11px 12px; background: var(--brand-dark); color: #fff; cursor: pointer; border-radius: 0; }
+  .sess-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex: none; border-radius: 50%; background: rgba(255, 255, 255, .16); }
+  /* ที่ว่างบรรทัดเดียวไม่พอสำหรับ "โหมดพนักงานขาย · <ชื่อ>" (เหลือ ~150px) — แยกเป็นสองบรรทัด
+     ป้ายบนตัวเล็ก ชื่อล่างตัวหนา อ่านง่ายกว่าและไม่โดนตัดกลางชื่อคน */
+  .sess-who { flex: 1; flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.25; }
+  .sess-who small { font-size: 10.5px; font-weight: 500; opacity: .75; }
+  .sess-who small::after { content: none; }
+  .sess-who b { font-size: 14px; max-width: 100%; }
+  .sess-chip { flex: none; display: flex; flex-direction: column; align-items: center; gap: 0; line-height: 1.1; padding: 3px 8px; font-size: 8.5px; letter-spacing: .03em; }
+  .sess-chip i { font-weight: 700; font-size: 11.5px; letter-spacing: 0; }
+  .sess-chip i::before { content: none; }
+  .sess-head .sess-caret { display: block; flex: none; opacity: .8; transition: transform .2s ease; }
+  .sess-bar.open .sess-caret { transform: rotate(90deg); }
+
+  /* ปุ่มลัดสองปุ่มแบ่งครึ่งเท่าๆ กัน — เห็นตลอดไม่ต้องกางแผง เพราะเป็นทางเข้างานประจำวัน */
+  .sess-acts { padding: 12px 14px; gap: 10px; }
+  .sess-acts > * { flex: 1; justify-content: center; }
+  .sess-bar .sess-act { background: var(--brand-soft); color: var(--brand-dark); border-radius: 12px; padding: 11px 8px; font-weight: 600; }
+
+  .sess-panel { display: none; padding: 0 14px 14px; }
+  .sess-bar.open .sess-panel { display: block; }
+  .sess-tabs { padding-bottom: 10px; }
+  .sess-tab { min-width: 0; flex: 0 0 min(88%, 240px); border-color: var(--line); background: #fff; color: var(--ink); }
+  .sess-tab.on { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+  .sess-tab small { opacity: 1; color: var(--ink-3); }
+
+  /* แถวลูกค้าเรียงลงเป็นชั้น — ทุกชั้นเต็มความกว้าง จะได้ไม่มีอะไรล้นออกข้างอีก */
+  .sess-cust { flex-direction: column; align-items: stretch; gap: 10px; border-top-color: var(--line); }
+  .sess-lbl, .sess-hint { opacity: 1; color: var(--ink-3); }
+  .sess-detach { color: var(--brand); align-self: flex-start; }
+  /* min-width: 320px ของจอใหญ่คือตัวที่ดันช่องค้นหาทะลุขอบจอ — จอเล็กต้องยอมหดได้ */
+  .cust-search { width: 100%; min-width: 0; }
+  .cust-search .row { position: relative; flex-wrap: wrap; gap: 8px; }
+  /* แว่นขยายย้ายเข้าไปอยู่ในช่อง แทนที่จะกินบรรทัดของตัวเองเหนือช่องค้นหา */
+  .cust-search .row > .ms:first-child { position: absolute; left: 12px; top: 11px; color: var(--ink-3); pointer-events: none; }
+  .cust-search .hdr-pop-input { flex: 1 1 100%; min-width: 0; border-radius: 12px; padding: 11px 12px 11px 40px; }
+  .cust-search .sess-act { flex: 1 1 0; min-width: 0; justify-content: center; }
+  .cust-pill { max-width: 100%; background: var(--brand-soft); color: var(--brand-dark); }
+
+  /* "ลูกค้าใหม่ยังไม่มีในระบบ" — จอเล็กเป็นการ์ดมีไอคอน อ่านง่ายกว่าข้อความจางๆ ยาวสามบรรทัด */
+  .sess-newcust { display: flex; align-items: center; gap: 12px; opacity: 1; padding: 12px; border-radius: 12px; background: var(--brand-soft); color: var(--brand-dark); }
+  .sess-newcust .sess-ic { display: grid; place-items: center; width: 40px; height: 40px; flex: none; border-radius: 12px; background: #fff; color: var(--brand); }
+  .sess-newcust b { display: block; font-size: 13.5px; }
+  .sess-newcust small { display: block; margin-top: 2px; font-size: 11.5px; opacity: .75; line-height: 1.35; }
+
+  .sess-add { margin-left: 0; width: 100%; justify-content: center; padding: 13px; border-radius: 12px; }
+  /* ปุ่มเพิ่มสินค้าอยู่ในแถวเดียวกับ Preso/เปิดตะกร้าใหม่ — ไอคอนอย่างเดียว กว้างพอให้กดถนัด
+     ไม่เอาปุ่มสีเด่นเต็มแถว เพราะแถบนี้ควรเป็นแค่เครื่องมือ ไม่ใช่ตัวเรียกสายตาหลักของหน้า */
+  .sess-add-m { display: inline-flex; flex: 0 0 52px !important; padding: 11px 0; }
+
+}
+@media (max-width: 599px) {
   .mat-hit { flex-wrap: wrap; }
   .slot-grid { grid-template-columns: 1fr; }
 }
+
+/* ===== เช็คลิสต์ก่อนบันทึกใบ PRE (ผังงานหน้าร้าน 5 ด่าน) =====
+   เซลล์ยืนอยู่กับลูกค้า ไม่มีเวลามาไล่ว่าลืมกดอะไร — ให้เห็นทั้งห้าด่านพร้อมกัน
+   ข้อที่ยังไม่ผ่านกดแล้วพาไปทำได้เลย */
+.preso-steps { margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2); }
+.preso-steps.ready { border-color: #1f9d55; background: #f2fbf5; }
+.preso-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+.preso-head span { color: var(--ink-3); font-size: 12px; }
+.preso-step { display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; padding: 7px 6px; border: none; background: none; border-radius: 8px; cursor: pointer; color: inherit; }
+.preso-step:hover { background: #fff; }
+.preso-step.later { opacity: .55; }
+.preso-num { flex: none; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; border: 1px solid var(--line-2); display: inline-flex; align-items: center; justify-content: center; font-size: 11.5px; color: var(--ink-3); background: #fff; }
+.preso-step.ok .preso-num { background: #1f9d55; border-color: #1f9d55; color: #fff; }
+.preso-txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.preso-txt b { font-size: 13px; font-weight: 600; }
+.preso-step.ok .preso-txt b { color: var(--ink-2); }
+.preso-txt small { font-size: 11.5px; color: var(--ink-3); }
+
+/* ===== บล็อกค่าจัดส่งฝั่งลูกค้า (แบบย่อ) =====
+   หัวข้อบน ค่าล่าง คั่นด้วยเส้นประ — อ่านไล่ลงทีละบรรทัดได้บนจอแคบโดยไม่ต้องแย่งความกว้างกัน
+   ที่อยู่กับรหัสเขตไม่อยู่ในนี้แล้ว (ที่อยู่อยู่การ์ดข้างบน ส่วนรหัสเขตเป็นเรื่องภายใน) */
+.ship-brief { margin-top: 10px; }
+.ship-brief-row { padding: 10px 0; border-top: 1px dashed var(--line); }
+.ship-brief-row:first-child { border-top: none; padding-top: 2px; }
+.ship-brief-lbl { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.ship-brief-item { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.ship-brief-row.total { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ship-brief-row.total b { font-size: 16px; white-space: nowrap; }
+
+/* ค่าขนส่งแบบ "เปิด Mat" ของฝั่งขาย — พับเก็บไว้เป็นแถบเดียว เพราะส่วนใหญ่ใช้ตามกฎอยู่แล้ว
+   ที่ต้องกางคือตอนเจอเคสนอกกฎ ซึ่งเป็นส่วนน้อย · แถบปิดยังเห็นตัวเลขที่เปิดไว้ตลอด */
+.ship-charge { border: 1px solid var(--line); border-radius: 12px; background: #fff; margin-bottom: 14px; overflow: hidden; }
+.ship-charge-head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 11px 14px; background: none; border: 0; cursor: pointer; text-align: left; font: inherit; color: inherit; }
+.ship-charge-head b { font-size: 14px; white-space: nowrap; }
+.ship-charge-now { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ship-charge-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.ship-charge-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 10px; }
+.ship-charge-grid .span2 { grid-column: 1 / -1; }
+@media (max-width: 599px) {
+  .ship-charge-grid { grid-template-columns: 1fr; }
+  .ship-charge-head { flex-wrap: wrap; row-gap: 2px; }
+  .ship-charge-now { flex-basis: 100%; order: 3; }
+}
+
+/* หน้าส่วนลดแบ่ง 2 ขั้น: เช็คโปรฯ ก่อน แล้วค่อยเปิดช่องโปรโมโค้ด
+   ขั้นที่ยังไม่ถึงคิวจางลงแต่ยังเห็นอยู่ คนจะได้รู้ว่ามีอะไรรออยู่ข้างหน้า */
+.promo-step { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; background: #fff; }
+.promo-step.locked { opacity: 0.55; background: var(--bg-2, #fafafa); }
+.promo-step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.promo-step-head b { display: block; font-size: 14px; }
+.promo-step-head small { display: block; font-size: 12px; }
+/* ตัวเลขขั้นตอน — ทึบเมื่อขั้นนั้นใช้ได้แล้ว จางเมื่อยังล็อก */
+.promo-step-no { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12.5px; font-weight: 700; background: var(--line); color: var(--ink-3); }
+.promo-step-no.on { background: var(--ink); color: #fff; }
+/* ทั้งแถวคือ label ของ checkbox — กดตรงไหนก็ติ๊กได้ ไม่ต้องเล็งช่องเล็กๆ */
+.promo-row { cursor: pointer; }
+.promo-row.no { cursor: default; }
+.promo-tick { width: 18px; height: 18px; flex: none; margin-top: 2px; accent-color: var(--green); cursor: pointer; }
+.promo-tick:disabled { cursor: not-allowed; }
+.promo-code-form { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px;
+  border: 1px dashed var(--line-2); border-radius: 10px; }
+.promo-code-form input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: inherit; letter-spacing: 0.5px; }
+.promo-code-form input:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
+@media (max-width: 599px) {
+  .promo-code-form { flex-wrap: wrap; }
+  .promo-code-form input { flex-basis: 100%; order: 2; }
+}
+
+/* ปฏิทินเลือกวันจัดส่ง — เลือกแค่วัน ทีมคิวไปซอยรอบเช้า/บ่ายกันเอง
+   ตารางเดือนเดียวอ่านง่ายกว่ารายการปุ่ม 28 อัน (14 วัน x 2 รอบ) ที่ต้องเลื่อนยาว */
+.cal { border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 10px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 10px; }
+.cal-head b { font-size: 15px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow { text-align: center; font-size: 11.5px; color: var(--ink-3); padding-bottom: 2px; }
+/* วันที่ไม่มีคิว = ตัวเลขจางๆ ไม่ใช่ปุ่ม จะได้ไม่ต้องลองกดดู */
+.cal-day { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-height: 46px; border: 1px solid transparent; border-radius: 8px; background: none;
+  font: inherit; color: var(--ink-3); cursor: default; padding: 2px; }
+.cal-day.off { opacity: 0.35; }
+.cal-n { font-size: 13.5px; font-weight: 600; }
+.cal-tag { font-size: 10px; line-height: 1.2; }
+.cal-day.free { background: #edf8f2; border-color: #bfe6d3; color: var(--ink); cursor: pointer; }
+.cal-day.free:hover { border-color: var(--green); }
+.cal-day.full { background: #fdeeee; border-color: #f0c8c8; color: #a33; cursor: not-allowed; }
+.cal-day.on { background: var(--ink); border-color: var(--ink); color: #fff; cursor: pointer; }
+.cal-day:disabled { cursor: not-allowed; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 4px 2px; font-size: 11.5px; color: var(--ink-3); }
+.cal-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.cal-legend i { width: 10px; height: 10px; border-radius: 3px; border: 1px solid; }
+.cal-legend i.free { background: #edf8f2; border-color: #bfe6d3; }
+.cal-legend i.full { background: #fdeeee; border-color: #f0c8c8; }
+.cal-legend i.on { background: var(--ink); border-color: var(--ink); }
+@media (max-width: 599px) {
+  .cal-day { min-height: 42px; }
+  .cal-tag { display: none; }   /* จอแคบใช้สีบอกพอ ตัวหนังสือเล็กจนอ่านไม่ออกอยู่ดี */
+}
+
+/* ตรวจพื้นที่ปลายทาง — อยู่ในแถบค่าขนส่งเพราะผลของมันคือตัวเลขค่าส่ง ไม่ใช่ข้อมูลที่อยู่
+   (ที่อยู่จัดส่งจริงอยู่คนละบล็อก อันนี้แค่ "เช็คว่าไกลไหม" ก่อนตกลงราคากับลูกค้า) */
+.remote-check { border-top: 1px dashed var(--line-2); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.remote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.remote-hit { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 12.5px;
+  background: var(--amber-bg, #fff8e8); border: 1px solid #e8d9a8; border-radius: 8px; padding: 8px 10px; }
+.remote-hit .btn { margin-left: auto; }
+@media (max-width: 599px) {
+  .remote-grid { grid-template-columns: 1fr; }
+  .remote-hit .btn { margin-left: 0; width: 100%; }
+}
+
+/* ตรวจสอบคิวจัดส่ง — เลือกชุดรถ + ปลายทาง แล้วสรุปค่าจัดส่งทั้งก้อนก่อนจองคิว
+   แยกบรรทัดค่า Mat / ค่า fleet / ค่าพื้นที่ห่างไกล ให้พนักงานอธิบายลูกค้าได้ว่าเงินก้อนไหนมาจากอะไร */
+.qcheck { border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 12px; }
+.qcheck-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 14px; }
+/* +1 คอลัมน์ท้ายแถวสำหรับปุ่มเช็ค — ชิดล่างให้ตรงกับกล่องดรอปดาวน์ (ช่องมี label อยู่ข้างบน) */
+.qcheck-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap: 10px; align-items: end; }
+.qcheck-go { display: flex; align-items: flex-end; }
+.qcheck-sum { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.qc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.qc-row span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; }
+.qc-row.warn { color: #9a5b00; }
+.qc-row.total { border-top: 1px dashed var(--line-2); padding-top: 8px; margin-top: 2px; font-size: 15px; }
+.qc-row.total b { font-size: 17px; }
+.qcheck-sum .btn.block { width: 100%; margin-top: 4px; }
+@media (max-width: 767px) {
+  .qcheck-grid { grid-template-columns: 1fr; }
+  .qcheck-go button { width: 100%; }
+  .qc-row { align-items: flex-start; }
+}
+
+/* ===== คิวจัดส่งบนจอ iPad/tablet =====
+   หน้าต่างคิวจัดส่งมีเนื้อหายาว (ชุดรถ + ปลายทาง + สรุปค่า + ปฏิทินทั้งเดือน)
+   การ์ด 720px กลางจอ iPad เหลือขอบข้างละเกือบ 150px ทั้งที่เนื้อหาอยากได้ความกว้าง
+   และช่องเลือก 3 คอลัมน์ในกรอบแคบทำให้ชื่อจังหวัดยาวๆ ถูกตัด */
+@media (min-width: 600px) and (max-width: 1023px) {
+  /* กว้างขึ้นอีกนิดบน iPad — ต้องไต่ specificity เพราะ global.css ตั้ง .modal.wide ไว้
+     และถูกโหลดทีหลัง ถ้าเขียน .modal.wide เฉยๆ จะโดนทับ */
+  .modal-backdrop .modal.wide { max-width: 94vw; }
+  /* ชุดรถขึ้นบรรทัดของตัวเอง แล้วจังหวัด/อำเภอคู่กัน — ตรงกับลำดับที่คนกรอกจริง */
+  .qcheck-grid { grid-template-columns: 1fr 1fr auto; }
+  .qcheck-grid > :first-child { grid-column: 1 / -1; }
+  /* ช่องวันในปฏิทินกดง่ายขึ้นด้วยนิ้ว */
+  .cal-day { min-height: 54px; }
+}
+
+/* หัวหน้าต่างค้างไว้ทุกขนาดจอที่ยังเป็นการ์ดลอย (จอเล็กใช้โหมด sheet ซึ่งมีกฎของตัวเองอยู่แล้ว)
+   เนื้อหาคิวจัดส่งยาวกว่าความสูงจอบ่อย โดยเฉพาะ iPad แนวนอน (1024x768) ที่เหลือที่แค่ ~700px
+   ถ้าหัวเลื่อนหายไป ต้องเลื่อนกลับขึ้นไปสุดเพื่อกดปิด */
+@media (min-width: 600px) {
+  .modal-backdrop .modal.wide .modal-head {
+    position: sticky;
+    top: -22px;
+    z-index: 1;
+    margin: -22px -24px 10px;
+    padding: 16px 24px;
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+/* วันที่กำลังเลือก (ยังไม่กดจอง) — ต้องต่างจาก "จองแล้ว" ให้ชัด ไม่งั้นพนักงานนึกว่าจองไปแล้ว */
+.cal-day.sel { background: #fff; border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); color: var(--ink); cursor: pointer; }
+.cal-legend i.sel { background: #fff; border-color: var(--ink); }
+/* แถบยืนยันก่อนจอง — ทวนวันกับลูกค้าได้ก่อนคิวถูกกันจริง */
+.cal-confirm { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 10px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg-2, #fafafa); font-size: 13px; }
+.cal-confirm > span { flex: 1; min-width: 0; }
+.cal-result { margin-top: 8px; padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+.cal-result.ok { background: #edf8f2; border: 1px solid #bfe6d3; color: #14663f; }
+.cal-result.no { background: #fdeeee; border: 1px solid #f0c8c8; color: #a33; }
+@media (max-width: 599px) {
+  .cal-confirm > span { flex-basis: 100%; }
+  .cal-confirm .btn { flex: 1; }
+}
+
+/* แถวปุ่มเช็คค่าส่งพิเศษ — ไอคอนเล็กท้ายแถว คำอธิบายอยู่ซ้าย */
+.qcheck-act { display: flex; align-items: center; gap: 10px; }
+.qcheck-act > span { flex: 1; min-width: 0; }
+.icon-btn.dark { background: var(--ink); color: #fff; border-radius: 8px; width: 36px; height: 36px; flex: none; }
+.icon-btn.dark:hover:not(:disabled) { opacity: 0.88; }
+.icon-btn.dark:disabled { background: var(--line); color: var(--ink-3); cursor: not-allowed; }
+.icon-btn.dark.done { background: var(--green, #1a8a5a); }

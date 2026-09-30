@@ -55,7 +55,7 @@ def export_data(db: Session, user: User, actor: User | None = None) -> dict:
     data = {
         "exported_at": utcnow().isoformat(),
         "profile": {
-            "id": user.id, "name": user.name, "phone": user.phone, "email": user.email, "role": user.role, "tier": user.tier,
+            "id": user.id, "name": user.name, "phone": user.phone, "email": user.email, "role": user.role, "points": user.points,
             "sap_customer_no": user.sap_customer_no, "default_address": user.default_address, "default_postcode": user.default_postcode,
             "created_at": user.created_at.isoformat() if user.created_at else None, "anonymized_at": user.anonymized_at.isoformat() if user.anonymized_at else None,
         },
@@ -110,7 +110,7 @@ def anonymize_user(db: Session, user: User, actor: User | None = None, note: str
     # 6) โปรไฟล์ + ตัดการเข้าใช้งานทันที
     db.execute(update(UserSession).where(UserSession.user_id == user.id, UserSession.revoked_at.is_(None)).values(revoked_at=now))
     user.name, user.phone, user.email = ANON_NAME, None, None
-    user.password_hash = user.sap_customer_no = user.default_address = user.default_postcode = user.tier = None
+    user.password_hash = user.sap_customer_no = user.default_address = user.default_postcode = None
     user.consent_marketing, user.consent_marketing_at, user.anonymized_at = False, now, now
 
     db.add(DataRequest(user_id=user.id, kind="delete", status="done", requested_by_user_id=(actor or user).id, note=note, done_at=now, result=counts))

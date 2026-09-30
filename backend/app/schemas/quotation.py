@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 class PresoIn(BaseModel):
     cart_id: str
     note: str | None = None
+    # ของไม่พอแต่ลูกค้ายอมรอ — ข้ามเฉพาะด่านเช็คสต็อก (ด่านอื่นข้ามไม่ได้) บันทึกลง audit
+    force: bool = False
 
 
 class PresoSummaryOut(BaseModel):
@@ -15,7 +17,6 @@ class PresoSummaryOut(BaseModel):
     status: str
     cart_id: str
     customer_name: str | None = None
-    customer_tier: str | None = None
     sales_name: str | None = None
     item_count: int
     grand_total: Decimal

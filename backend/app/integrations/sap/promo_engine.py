@@ -37,17 +37,26 @@ def evaluate(promotions: list[dict], cart: CartDTO, customer: CustomerDTO | None
                 amount = (cat_sub * Decimal(cond["percent"]) / 100).quantize(Decimal("1"))
 
         elif kind == "free_shipping":
-            tier_ok = bool(customer and customer.tier == cond["tier"])
             if not customer:
-                reason = f"ยังไม่เข้าเงื่อนไข: ต้องผูกลูกค้าสมาชิก {cond['tier']}"
-            elif not tier_ok:
-                reason = f"ยังไม่เข้าเงื่อนไข: เฉพาะสมาชิก {cond['tier']} (ลูกค้าเป็น {customer.tier or 'ทั่วไป'})"
+                reason = "ยังไม่เข้าเงื่อนไข: ต้องผูกลูกค้าสมาชิกก่อน"
             elif cart.subtotal < cond["min_subtotal"]:
                 reason = f"ยังไม่เข้าเงื่อนไข: ยอดขาดอีก {_fmt(Decimal(cond['min_subtotal']) - cart.subtotal)}.-"
             elif zone and zone not in cond.get("zones", [zone]):
                 reason = "ยังไม่เข้าเงื่อนไข: ที่อยู่จัดส่งอยู่นอกเขต กทม."
             else:
                 amount = Decimal(cond["max_amount"])
+
+        elif kind in ("subtotal_amount", "subtotal_percent", "code_amount", "code_percent"):
+            # คิดจากยอดบิลอย่างเดียว — ใช้ได้ทั้งโปรฯ ที่ระบบเช็คเอง และคูปองที่ต้องกรอกโค้ด
+            # (ต่างกันที่ธง requires_code ไม่ใช่ที่สูตรคิดเงิน)
+            need = Decimal(cond.get("min_subtotal", 0))
+            if cart.subtotal < need:
+                reason = f"ยังไม่เข้าเงื่อนไข: ยอดขาดอีก {_fmt(need - cart.subtotal)}.-"
+            elif kind.endswith("_amount"):
+                amount = Decimal(cond["amount"])
+            else:
+                cap = Decimal(cond.get("max_amount", 10**9))
+                amount = min(cap, (cart.subtotal * Decimal(cond["percent"]) / 100).quantize(Decimal("1")))
 
         elif kind == "bundle_gift":
             root = cond["category_root"]
@@ -57,7 +66,7 @@ def evaluate(promotions: list[dict], cart: CartDTO, customer: CustomerDTO | None
             else:
                 amount = Decimal(cond["gift_value"])
 
-        offer = PromoOffer(code=p["code"], title=p["title"], condition_text=p["condition_text"], eligible=reason is None, amount=amount, reason=reason, stackable=bool(p.get("stackable", True)), discount_type=p.get("discount_type", "amount"))
+        offer = PromoOffer(code=p["code"], title=p["title"], condition_text=p["condition_text"], eligible=reason is None, amount=amount, reason=reason, stackable=bool(p.get("stackable", True)), discount_type=p.get("discount_type", "amount"), requires_code=bool(p.get("requires_code", False)), exclusive_group=p.get("exclusive_group"))
         (eligible if offer.eligible else ineligible).append(offer)
     return PromoResult(eligible=eligible, ineligible=ineligible, staff_discount_quota_percent=STAFF_QUOTA_PERCENT)
 

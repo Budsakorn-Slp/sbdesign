@@ -1,132 +1,80 @@
-import { useState, type FormEvent } from "react";
-import { errorMessage } from "../lib/api";
+import { useEffect, useState } from "react";
 import { DEMO_ACCOUNTS, useAuth } from "../lib/auth";
+import AuthShell from "./AuthShell";
+import CustomerLogin from "./CustomerLogin";
 import Icon from "./Icon";
+import MemberLink, { SHELL, type Phase } from "./MemberLink";
 
-type Tab = "customer" | "staff";
-type Mode = "password" | "otp" | "register";
-
+/** กล่องเข้าสู่ระบบของลูกค้า — เปิดทับหน้าที่กำลังทำอยู่ ไม่ต้องเปลี่ยนหน้า
+ *
+ * ลูกค้ามักถูกขอให้ล็อกอินกลางทาง (กดถูกใจ · จะชำระเงิน) พาไปอีกหน้าแล้วกลับมา ทำให้
+ * เสียจังหวะที่กำลังทำอยู่ · หน้า /login ยังอยู่สำหรับลิงก์ตรง ส่วนพนักงานแยกไป /staff
+ * เหมือนเดิม — ฟอร์มข้างในใช้คอมโพเนนต์ตัวเดียวกันทั้งสองทาง ไม่ได้เขียนซ้ำ
+ *
+ * จอเล็กกางเต็มจอ (ดู .modal.sheet) เพราะกล่องเล็กๆ กลางจอมือถือพิมพ์ลำบาก
+ * และคีย์บอร์ดเด้งขึ้นมาทับพอดี
+ */
 export default function LoginModal() {
   const auth = useAuth();
-  const [tab, setTab] = useState<Tab>("customer");
-  const [mode, setMode] = useState<Mode>("password");
-  const [id, setId] = useState("");
-  const [pass, setPass] = useState("");
-  const [name, setName] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [otpHint, setOtpHint] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [preset, setPreset] = useState("");
+  const [linking, setLinking] = useState(false);
+  const [phase, setPhase] = useState<Phase>("member");
+
+  // ปิดด้วย Esc — เป็นสิ่งที่คนคาดหวังจาก dialog และช่วยคนที่ใช้คีย์บอร์ดอย่างเดียว
+  useEffect(() => {
+    if (!auth.loginOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && auth.closeLogin();
+    document.addEventListener("keydown", onKey);
+    // กันหน้าหลังกล่องเลื่อนตามนิ้ว ตอนกล่องกางเต็มจอบนมือถือ
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [auth.loginOpen, auth.closeLogin]);
+
+  useEffect(() => {
+    if (!auth.loginOpen) setLinking(false); // ปิดแล้วเปิดใหม่ต้องเริ่มที่ขั้นกรอกเบอร์เสมอ
+  }, [auth.loginOpen]);
 
   if (!auth.loginOpen) return null;
 
-  const reset = () => {
-    setError(null);
-    setOtpHint(null);
-  };
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setBusy(true);
-    try {
-      if (tab === "customer" && mode === "otp") {
-        if (!otpHint) {
-          const r = await auth.otpRequest(id);
-          setOtpHint(r.debug_code ? `ส่ง OTP แล้ว (โหมดทดสอบ: รหัส ${r.debug_code})` : "ส่ง OTP ไปที่มือถือแล้ว");
-        } else {
-          await auth.otpVerify(id, otpCode, name || undefined);
-        }
-      } else if (tab === "customer" && mode === "register") {
-        await auth.register(id, pass, name);
-      } else {
-        if (!id.trim() || !pass.trim()) throw new Error("กรอกข้อมูลให้ครบทั้ง 2 ช่อง (บัญชีทดสอบกดปุ่มด้านล่างได้)");
-        await auth.login(id, pass, tab);
-      }
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const idLabel = tab === "staff" ? "รหัสพนักงาน" : mode === "otp" || mode === "register" ? "เบอร์โทรศัพท์" : "เบอร์โทร / อีเมล / เลขสมาชิก";
-  const idPlaceholder = tab === "staff" ? "เช่น SA-104" : "เช่น 089-234-4471";
+  const close = () => auth.closeLogin();
 
   return (
-    <div className="modal-backdrop" onClick={auth.closeLogin}>
-      <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-head">
-          <h2>{tab === "staff" ? "เข้าสู่ระบบพนักงาน" : mode === "register" ? "ลงทะเบียนลูกค้าใหม่" : "เข้าสู่ระบบลูกค้า"}</h2>
-          <button className="icon-btn" onClick={auth.closeLogin} aria-label="ปิด">
-            <Icon name="close" />
-          </button>
+    <div className="modal-backdrop" onClick={close}>
+      <div className="modal sheet" role="dialog" aria-modal="true" aria-label="เข้าสู่ระบบ" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head close-only">
+          <button className="icon-btn" onClick={close} aria-label="ปิด"><Icon name="close" /></button>
         </div>
 
-        <div className="seg">
-          {(["customer", "staff"] as Tab[]).map((t) => (
-            <button key={t} className={"seg-btn" + (tab === t ? " on" : "")} onClick={() => { setTab(t); setMode("password"); reset(); }}>
-              {t === "customer" ? "ลูกค้า" : "พนักงานขาย"}
-            </button>
-          ))}
-        </div>
+        {linking && auth.user ? (
+          <AuthShell inModal {...SHELL[phase]}>
+            <MemberLink onPhase={setPhase} onDone={close} />
+          </AuthShell>
+        ) : (
+          <AuthShell
+            inModal
+            title="ยินดีต้อนรับสู่ SB"
+            subtitle="เข้าสู่ระบบเพื่อสะสมแต้ม ดูประวัติการซื้อ และสั่งซื้อได้เร็วขึ้น"
+          >
+            <CustomerLogin
+              presetPhone={preset}
+              onDone={(u) => (u.needs_profile ? setLinking(true) : close())}
+            />
 
-        {tab === "customer" && (
-          <div className="tabs-inline">
-            {(["password", "otp", "register"] as Mode[]).map((m) => (
-              <button key={m} className={"link-btn" + (mode === m ? " on" : "")} onClick={() => { setMode(m); reset(); }}>
-                {m === "password" ? "รหัสผ่าน" : m === "otp" ? "OTP" : "ลงทะเบียน"}
-              </button>
-            ))}
-          </div>
+            <div className="auth-or">เบอร์ทดสอบ</div>
+            <div className="demo-accounts">
+              {DEMO_ACCOUNTS.filter((d) => d.type === "customer").map((d) => (
+                <button key={d.id} className="demo-row" onClick={() => setPreset(d.id)}>
+                  <Icon name="person" size={20} />
+                  <span><b>{d.title}</b><small>{d.id}</small></span>
+                </button>
+              ))}
+            </div>
+          </AuthShell>
         )}
-
-        <form onSubmit={submit} className="form">
-          <label className="field">
-            <span>{idLabel}</span>
-            <input value={id} onChange={(e) => setId(e.target.value)} placeholder={idPlaceholder} autoFocus />
-          </label>
-          {tab === "customer" && (mode === "register" || (mode === "otp" && otpHint)) && (
-            <label className="field">
-              <span>ชื่อ-นามสกุล{mode === "otp" ? " (ถ้ายังไม่เคยสมัคร)" : ""}</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น ณภัทร พงษ์ศรี" />
-            </label>
-          )}
-          {!(tab === "customer" && mode === "otp") && (
-            <label className="field">
-              <span>รหัสผ่าน</span>
-              <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••" />
-            </label>
-          )}
-          {tab === "customer" && mode === "otp" && otpHint && (
-            <label className="field">
-              <span>รหัส OTP 6 หลัก</span>
-              <input value={otpCode} onChange={(e) => setOtpCode(e.target.value)} placeholder="000000" inputMode="numeric" />
-            </label>
-          )}
-          {otpHint && <div className="note ok">{otpHint}</div>}
-          {error && <div className="note err">{error}</div>}
-          <button className="btn primary block" type="submit" disabled={busy}>
-            {busy ? "กำลังตรวจสอบ…" : tab === "customer" && mode === "otp" && !otpHint ? "ขอรหัส OTP" : mode === "register" ? "ลงทะเบียน" : "เข้าสู่ระบบ"}
-          </button>
-        </form>
-
-        <div className="demo-accounts">
-          <div className="demo-head">บัญชีทดสอบ (กดเพื่อกรอกอัตโนมัติ)</div>
-          {DEMO_ACCOUNTS.map((d) => (
-            <button
-              key={d.id}
-              className="demo-row"
-              onClick={() => { setTab(d.type); setMode("password"); setId(d.id); setPass("1234"); reset(); }}
-            >
-              <Icon name={d.type === "staff" ? "badge" : "person"} size={20} />
-              <span>
-                <b>{d.title}</b>
-                <small>{d.sub}</small>
-              </span>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

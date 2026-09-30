@@ -182,6 +182,30 @@ def shipping_summary(db: Session, cart: Cart, net_total: Decimal | None = None) 
     หลังหักส่วนลด — เก็บค่าที่ quote ไว้แล้วใช้ซ้ำจะเพี้ยนทันทีที่ลูกค้าเพิ่ม/ลดของหรือใส่โค้ด
     ยังไม่มีตาราง (dev/mock) ค่อยถอยไปใช้ค่าที่ SAP quote ไว้บนตะกร้าตามเดิม
     """
+    from app.services import staff_shipping_service  # ตรงนี้กัน circular import
+
+    # ตะกร้าที่พนักงานถือ คิดค่าขนส่งจาก "ยอดบิล" อย่างเดียว ไม่ถามปลายทาง
+    # (กฎที่ทีมขายตกลงกัน: ต่ำกว่า 15,000 = 600 · 15,000 ขึ้นไป = 100-500 ตามเทียร์)
+    #
+    # ห้ามปล่อยให้กฎ Amasty ของหน้าเว็บลูกค้ามาคิดด้วย เพราะจะได้ค่าส่งสองต่อ
+    # ที่อยู่ยังต้องกรอกอยู่ แต่เอาไว้จองคิวรถ/รู้ว่าส่งไปไหน ไม่ได้เอาไปคิดเงิน
+    # เกณฑ์คือ "เปิด Mat แล้วหรือยัง" ไม่ใช่ "ใครถือตะกร้า" — ตะกร้าที่พนักงานเปิดให้ลูกค้า
+    # แล้วลูกค้าไปจ่ายเองบนเว็บ ต้องคิดค่าส่งด้วยกฎของหน้าเว็บตามเดิม
+    charges = [it for it in staff_shipping_service.charge_lines(cart) if it.selected]
+    if charges:
+        return {"install_fee": Decimal(0), "quoted": True, "zone": cart.ship_zone, "postcode": cart.ship_postcode,
+                "shipping_fee": sum((c.line_total for c in charges), Decimal(0)),
+                "ship_source": "staff_tier", "ship_needs_review": False, "ship_warnings": [],
+                "ship_trace": [{"rule": c.matnr, "matched": True, "why": c.name_snapshot} for c in charges]}
+
+    # ตะกร้าที่พนักงานถืออยู่ยังไม่ได้เปิด Mat = ยังไม่มีค่าส่ง ไม่ใช่ให้กฎออนไลน์คิดแทน
+    # ค่าส่งหน้าร้านคิดคนละเกณฑ์ (ตามยอดบิล) ถ้าปล่อยกฎ Amasty ทำงาน บิลจะโชว์ 399
+    # ซึ่งเป็นตัวเลขของช่องทางออนไลน์ แล้วพอพนักงานเปิด Mat จริงตัวเลขก็กระโดดอีกรอบ
+    if cart.owner_sales_id:
+        return {"install_fee": Decimal(0), "quoted": False, "zone": cart.ship_zone, "postcode": cart.ship_postcode,
+                "shipping_fee": Decimal(0), "ship_source": "staff_pending", "ship_needs_review": False,
+                "ship_warnings": ["ยังไม่ได้เปิด Mat ค่าขนส่ง"], "ship_trace": []}
+
     sel = cart.selected_items
     needs_ship = any(it.supply_mode in ("ship", "install") for it in sel)
     install = Decimal(cart.install_fee or 0) if any(it.supply_mode == "install" or it.requires_install for it in sel) else Decimal(0)

@@ -17,9 +17,12 @@ class UserEvent(Base):
     id: Mapped[str] = uuid_pk()
     user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True, nullable=True)
     anon_token: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
-    event: Mapped[str] = mapped_column(String(32), index=True, nullable=False)  # view_material | search | add_to_cart | remove_from_cart | begin_checkout | purchase
+    event: Mapped[str] = mapped_column(String(32), index=True, nullable=False)  # ดู EVENTS ใน analytics_service
     matnr: Mapped[str | None] = mapped_column(String(18), nullable=True)
     query: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # หน้าที่เกิด event (page_view เก็บ path ที่เปิด · click_product เก็บหน้าที่กดมาจาก)
+    # แยกเป็นคอลัมน์ ไม่ยัดใน payload เพราะต้อง GROUP BY หา "หน้าไหนคนเข้าเยอะสุด"
+    path: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source: Mapped[str] = mapped_column(String(16), default="web", nullable=False)  # web | sales_app
     purpose: Mapped[str] = mapped_column(String(16), default="service", nullable=False)  # service = จำเป็นต่อการใช้งาน | marketing = ต้องมี consent
     payload: Mapped[dict | None] = mapped_column(JSON, nullable=True)

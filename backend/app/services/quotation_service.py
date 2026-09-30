@@ -20,7 +20,8 @@ from app.models.delivery import DeliverySlot
 from app.models.promo import AppliedDiscount
 from app.models.quotation import Preso, Quotation, QuotationLine
 from app.models.user import User
-from app.services import audit_service, cart_service, delivery_service, promo_service, stock_service
+from app.services import audit_service, cart_service, catalog_service, delivery_service, promo_service, stock_service
+from app.services import relationship_service
 
 log = logging.getLogger("sb.quotation")
 
@@ -42,7 +43,7 @@ def build_snapshot(db: Session, cart: Cart) -> dict:
     slot = delivery_service.slot_of_cart(db, cart)
     return {
         "cart_no": cart.no,
-        "customer": ({"id": cart.customer.id, "name": cart.customer.name, "tier": cart.customer.tier, "sap_customer_no": cart.customer.sap_customer_no, "phone": cart.customer.phone, "email": cart.customer.email} if cart.customer else None),
+        "customer": ({"id": cart.customer.id, "name": cart.customer.name, "points": cart.customer.points, "sap_customer_no": cart.customer.sap_customer_no, "phone": cart.customer.phone, "email": cart.customer.email} if cart.customer else None),
         "items": [
             {"matnr": it.matnr, "sku": it.sku, "name": it.name_snapshot, "variant": it.variant_snapshot, "qty": it.qty, "unit_price": str(it.unit_price_snapshot), "price_tier": it.price_tier,
              "line_total": str(it.line_total), "supply_mode": it.supply_mode, "plant_code": it.plant_code, "atp_date": it.atp_date.isoformat() if it.atp_date else None, "added_by": it.added_by,
@@ -61,9 +62,92 @@ def draft_of_cart(db: Session, cart: Cart) -> Preso | None:
     return db.scalar(select(Preso).where(Preso.cart_id == cart.id, Preso.status == "draft"))
 
 
-def save_preso(db: Session, cart: Cart, actor: User, note: str | None) -> Preso:
+# ---------- ด่านก่อนบันทึกใบ PRE ----------
+# ลำดับตามผังงานของทีมขาย: ลูกค้า → ข้อมูลลูกค้า → เช็คสต็อก → เช็คโปรฯ → เช็คสต็อกซ้ำ + คิวส่ง
+# แต่ละด่านตอบเป็น (ผ่านไหม, บอกให้ทำอะไรต่อ) เพื่อให้หน้าเซลล์เอาไปทำเป็นเช็คลิสต์ได้ตรงๆ
+PRESO_STEPS = ("customer", "profile", "stock", "promo", "delivery")
+
+STEP_TITLE = {
+    "customer": "ลูกค้า/เลขสมาชิก",
+    "profile": "ชื่อ เบอร์ ที่อยู่",
+    "stock": "เช็คสต็อก",
+    "promo": "เช็คโปรโมชั่น",
+    "delivery": "คิวจัดส่ง",
+}
+
+
+def preso_steps(db: Session, cart: Cart) -> list[dict]:
+    """สถานะแต่ละด่าน เรียงตามลำดับที่ต้องทำ — ด่านที่ยังไม่ถึงคิวจะบอกว่าต้องทำอันก่อนหน้าก่อน"""
+    cust = cart.customer
+    rev = cart.rev or 0
+    checks: dict[str, tuple[bool, str]] = {}
+
+    checks["customer"] = (
+        (True, f"เลขลูกค้า {cust.sap_customer_no}") if cust and cust.sap_customer_no
+        else (False, "ผูกลูกค้ากับตะกร้าก่อน — ลูกค้าใหม่ต้องสมัครสมาชิกให้ได้เลขลูกค้าก่อน")
+    )
+    missing = [] if not cust else [w for w, ok in (("ชื่อ", bool(cust.name)), ("เบอร์โทร", bool(cust.phone)),
+                                                   ("ที่อยู่จัดส่ง", bool(cart.ship_address or cart.ship_postcode))) if not ok]
+    checks["profile"] = (False, "ยังไม่มีลูกค้า") if not cust else (
+        (True, "ข้อมูลครบ") if not missing else (False, "ยังขาด " + " · ".join(missing))
+    )
+    checks["stock"] = (
+        (True, "ของครบตามที่เช็คไว้") if cart.stock_ok_rev == rev
+        else (False, "เช็คสต็อกใหม่ — ตะกร้าเปลี่ยนหลังเช็คครั้งล่าสุด" if cart.stock_ok_rev is not None else "กดเช็คสต็อกก่อน")
+    )
+    checks["promo"] = (
+        (True, "เช็คโปรฯ แล้ว") if cart.promo_rev == rev
+        else (False, "เช็คโปรฯ ใหม่ — ตะกร้าเปลี่ยนหลังเช็คครั้งล่าสุด" if cart.promo_rev is not None else "กดเช็คโปรโมชั่น 1 รอบก่อน (ไม่มีโปรฯ ก็ถือว่าผ่าน)")
+    )
+    slot = db.get(DeliverySlot, cart.slot_id) if cart.slot_id else None
+    checks["delivery"] = (
+        (True, f"จองคิว {slot.date.isoformat()} ({slot.period}) แล้ว") if slot
+        else (False, "เลือกวันจัดส่งจากคิวที่ว่าง")
+    )
+
+    out = []
+    blocked = False
+    for key in PRESO_STEPS:
+        ok, note = checks[key]
+        out.append({"key": key, "title": STEP_TITLE[key], "ok": ok, "note": note, "blocked": blocked and not ok})
+        if not ok:
+            blocked = True
+    return out
+
+
+def preso_ready(db: Session, cart: Cart) -> dict:
+    steps = preso_steps(db, cart)
+    todo = [s for s in steps if not s["ok"]]
+    return {"ready": not todo, "steps": steps, "next": todo[0]["key"] if todo else None,
+            "message": "พร้อมบันทึกใบ PRE" if not todo else todo[0]["note"]}
+
+
+def save_preso(db: Session, cart: Cart, actor: User, note: str | None, force_stock: bool = False) -> Preso:
     if not cart.selected_items:
         raise HTTPException(status_code=400, detail="ตะกร้าว่าง บันทึก Preso ไม่ได้")
+    # ลูกค้าสั่งเองออนไลน์: ของตัวโชว์/ฝากขายยังจ่ายออนไลน์ไม่ได้ (ดู online_checkout_blocked_groups)
+    # เซลล์ขายได้ตามปกติ เพราะยืนอยู่หน้าร้านกับของจริง — ด่านนี้จึงกันเฉพาะฝั่งลูกค้า
+    if actor.role == "customer":
+        blocked = [it for it in cart.selected_items if catalog_service.pickup_only(it.matnr)]
+        if blocked:
+            names = " · ".join(it.name_snapshot for it in blocked[:3]) + (" …" if len(blocked) > 3 else "")
+            raise HTTPException(status_code=409, detail={
+                "message": f"สินค้าต่อไปนี้ต้องรับที่สาขา ยังสั่งซื้อออนไลน์ไม่ได้: {names}",
+                "pickup_only": [{"matnr": it.matnr, "name": it.name_snapshot} for it in blocked],
+            })
+    # ด่านทั้งห้าใช้กับตะกร้าที่พนักงานถือเท่านั้น (ผังงานหน้าร้าน)
+    # ลูกค้าสั่งเองออนไลน์เดินคนละทาง — เลือกของ ใส่ที่อยู่ แล้วจ่ายเลย ไม่มีขั้นกดเช็คสต็อก/โปรฯ
+    # Preso คือ "ร่าง" — บันทึกค้างไว้ได้แม้ยังทำไม่ครบทุกด่าน
+    #
+    # หน้าร้านจริงลูกค้าเดินไปดูของต่อ/ไปกินข้าวกลางคัน พนักงานต้องเก็บใบไว้ก่อน
+    # ถ้าบังคับให้ครบห้าด่านถึงจะบันทึกได้ พนักงานจะเสียงานที่ทำมาทั้งหมดเมื่อลูกค้าเดินออก
+    #
+    # ด่านทั้งห้าไปบังคับที่ "ออกใบเสนอราคา" แทน (ดู create_quotation) ซึ่งเป็นจุดที่
+    # เอกสารออกไปถึงมือลูกค้าและส่งเข้า SAP จริง ตรงนั้นขาดอะไรไม่ได้
+    if cart.owner_sales_id:
+        lacking = [s["key"] for s in preso_steps(db, cart) if not s["ok"]]
+        if lacking:
+            audit_service.log(db, actor, "preso.save_incomplete", "cart", cart.id, {"lacking": lacking})
     preso = draft_of_cart(db, cart)
     if not preso:
         preso = Preso(preso_no=_doc_no(db, Preso, Preso.preso_no, "PRE"), cart_id=cart.id, sales_user_id=actor.id if actor.is_staff else None, customer_user_id=cart.customer_user_id)
@@ -73,7 +157,8 @@ def save_preso(db: Session, cart: Cart, actor: User, note: str | None) -> Preso:
     if note is not None:
         preso.note = note
     preso.updated_at = utcnow()
-    audit_service.log(db, actor, "preso.save", "preso", preso.preso_no, {"cart_id": cart.id, "grand_total": preso.snapshot_json["totals"]["grand_total"]})
+    audit_service.log(db, actor, "preso.save", "preso", preso.preso_no,
+                      {"cart_id": cart.id, "grand_total": preso.snapshot_json["totals"]["grand_total"], "forced_stock": bool(force_stock)})
     db.commit()
     db.refresh(preso)
     return preso
@@ -144,6 +229,15 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
         raise HTTPException(status_code=400, detail="ตะกร้าว่าง")
     if not cart.customer:
         raise HTTPException(status_code=400, detail="ต้องผูกลูกค้าก่อนออกใบเสนอราคา")
+    # ด่านทั้งห้าบังคับที่นี่ — Preso บันทึกค้างไว้ได้ แต่เอกสารที่ออกไปถึงมือลูกค้า
+    # และส่งเข้า SAP ต้องครบ ไม่งั้นได้ใบที่ราคา/ของ/คิวส่งไม่ตรงความจริง
+    if cart.owner_sales_id:
+        # ด่าน "stock" ไม่เช็คตรงนี้ — ปล่อยให้ live_stock_check ข้างล่างจัดการแทน
+        # เพราะมันยิง SAP สดและบอกได้ว่าขาดตัวไหนกี่ชิ้น (409 + shortages) ซึ่งมีประโยชน์
+        # กว่าข้อความ "ยังไม่ได้เช็คสต็อก" เฉยๆ · และ force ก็คุมจุดเดียวไม่ซ้อนกัน
+        todo = [s for s in preso_steps(db, cart) if not s["ok"] and s["key"] != "stock"]
+        if todo:
+            raise HTTPException(status_code=400, detail=f"ยังทำไม่ครบก่อนออกใบเสนอราคา — {todo[0]['note']}")
     needs_ship = any(it.supply_mode in ("ship", "install") for it in cart.selected_items)
     if needs_ship and not cart.ship_postcode:
         raise HTTPException(status_code=400, detail="มีรายการที่ต้องจัดส่ง — กรุณาคำนวณค่าขนส่งและเลือกคิวก่อน")
@@ -159,7 +253,7 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
     s = get_settings()
     q = Quotation(
         quotation_no=_doc_no(db, Quotation, Quotation.quotation_no, "QT"), preso_id=preso.id, cart_id=cart.id, customer_user_id=cart.customer.id, sales_user_id=actor.id if actor.is_staff else None,
-        channel=channel, customer_snapshot={"id": cart.customer.id, "name": cart.customer.name, "tier": cart.customer.tier, "sap_customer_no": cart.customer.sap_customer_no, "phone": cart.customer.phone, "email": cart.customer.email},
+        channel=channel, customer_snapshot={"id": cart.customer.id, "name": cart.customer.name, "points": cart.customer.points, "sap_customer_no": cart.customer.sap_customer_no, "phone": cart.customer.phone, "email": cart.customer.email},
         subtotal=t.subtotal, discount_total=t.discount_total, shipping_fee=t.shipping_fee, install_fee=t.install_fee, shipping_discount=t.shipping_discount, vat=t.vat_included, grand_total=t.grand_total,
         deposit_amount=promo_service.q1(t.grand_total * Decimal("0.2")), valid_until=date.today() + timedelta(days=s.quotation_valid_days), ship_address=cart.ship_address, ship_postcode=cart.ship_postcode,
         ship_zone=cart.ship_zone, slot_id=cart.slot_id, slot_date=slot.date if slot else None, slot_period=slot.period if slot else None, stock_warnings=shortages or None,
@@ -178,6 +272,9 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
     cart.status = "converted"
     cart.closed_at = utcnow()
     audit_service.log(db, actor, "quotation.issue", "quotation", q.quotation_no, {"preso_no": preso.preso_no, "grand_total": str(q.grand_total), "shortages": len(shortages)})
+    # ปิดการขายได้ = พนักงานคนนี้เป็นเจ้าของลูกค้ารายนี้ (น้ำหนักสูงกว่าแค่เคยคุย)
+    if actor.is_staff and cart.customer_user_id:
+        relationship_service.record_sale(db, cart.customer_user_id, actor, cart_id=cart.id, doc_no=q.quotation_no)
     db.commit()
     cart_service.emit(cart, "quotation_issued", {"quotation_no": q.quotation_no, "grand_total": str(q.grand_total)})
     return get_quotation(db, q.quotation_no)

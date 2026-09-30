@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Icon from "../components/Icon";
 import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -37,7 +38,7 @@ export default function ApprovalsPage() {
         <div className="card" style={{ maxWidth: 520 }}>
           <b>เฉพาะผู้จัดการสาขา</b>
           <p className="muted small">เข้าสู่ระบบด้วย MG-001 เพื่ออนุมัติส่วนลดเกินโควตา</p>
-          <button className="btn dark" onClick={auth.openLogin}>เข้าสู่ระบบ</button>
+          <Link className="btn dark" to="/staff">เข้าสู่ระบบพนักงาน</Link>
         </div>
       </main>
     );

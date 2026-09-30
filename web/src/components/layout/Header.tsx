@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { useContent } from "../../lib/content";
+import { localName, useLang } from "../../lib/i18n";
 import { areaLabel, getProvinces, lookupPostcode } from "../../lib/geo";
 import type { Province } from "../../lib/types";
 import Icon from "../Icon";
@@ -9,9 +10,13 @@ import SearchBox from "../SearchBox";
 
 export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCount?: number; cartHref?: string }) {
   const auth = useAuth();
+  const { lang, setLang, t } = useLang();
   const { content, plants, plant, setPlantCode, postcode, shipTo, setShipTo } = useContent();
   const [menu, setMenu] = useState<string | null>(null);
-  const [sideIdx, setSideIdx] = useState(0);
+  // -1 = โชว์หมวดทั้งหมด · เลขอื่น = โชว์หมวดย่อยของห้องนั้น (เปลี่ยนตอนชี้ค้างที่รายชื่อด้านซ้าย)
+  // ต้องเริ่มที่ -1 เพราะจอแคบซ่อนรายชื่อด้านซ้ายไว้ ชี้ค้างไม่ได้ ถ้าเริ่มที่ 0 เมนู
+  // "สินค้าทั้งหมด" บนมือถือจะค้างโชว์แค่หมวดย่อยของห้องแรกตลอด ไม่มีทางไปห้องอื่น
+  const [sideIdx, setSideIdx] = useState(-1);
   const [pop, setPop] = useState<"address" | "branch" | null>(null);
   const [pcDraft, setPcDraft] = useState(postcode);
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -71,16 +76,17 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
   }, []);
 
   const cats = content?.categories || [];
+  const brands = content?.brands || [];
   const mainNav = content?.main_nav || [];
-  const openDef = mainNav.find((n) => n.label === menu && n.items.length > 0);
+  const openDef = mainNav.find((n) => n.label === menu && (n.items.length > 0 || (n.groups?.length ?? 0) > 0));
   const roleLabel = auth.user
     ? auth.user.role === "customer"
-      ? `สมาชิก · ${(auth.user.points || 0).toLocaleString()} พ้อยท์`
+      ? `${t("สมาชิก")} · ${(auth.user.points || 0).toLocaleString()} ${t("พ้อยท์")}`
       : auth.user.role === "sales"
-        ? `พนักงานขาย · ${auth.user.staff_code}`
+        ? `${t("พนักงานขาย")} · ${auth.user.staff_code}`
         : auth.user.role === "manager"
-          ? `ผู้จัดการ · ${auth.user.staff_code}`
-          : "แอดมิน"
+          ? `${t("ผู้จัดการ")} · ${auth.user.staff_code}`
+          : t("แอดมิน")
     : "";
 
   return (
@@ -88,12 +94,17 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
       {/* util bar */}
       <div className="hdr-util">
         <div className="container hdr-util-in">
-          <span className="hdr-free">{content?.free_shipping_note || "ส่งฟรีเมื่อช้อปครบ 3,000.-"}</span>
+          <span className="hdr-free">{lang === "en" ? "Free delivery over 3,000.-" : content?.free_shipping_note || "ส่งฟรีเมื่อช้อปครบ 3,000.-"}</span>
           <nav className="hdr-util-links">
             <a href="#"><Icon name="credit_card" size={18} /> SB Member Card</a>
-            <a href="#"><Icon name="location_on" size={18} /> ค้นหาสาขา</a>
-            <a href="#"><Icon name="support_agent" size={18} /> ศูนย์ช่วยเหลือ <Icon name="expand_more" size={16} /></a>
-            <span className="hdr-lang"><b>TH</b> | EN</span>
+            <a href="#"><Icon name="location_on" size={18} /> {t("ค้นหาสาขา")}</a>
+            <a href="#"><Icon name="support_agent" size={18} /> {t("ศูนย์ช่วยเหลือ")} <Icon name="expand_more" size={16} /></a>
+            {/* สลับภาษาจริง — จำค่าไว้ใน localStorage และตั้ง <html lang> ให้เบราว์เซอร์รู้ด้วย */}
+            <span className="hdr-lang">
+              <button type="button" className={lang === "th" ? "on" : ""} onClick={() => setLang("th")}>TH</button>
+              <i>|</i>
+              <button type="button" className={lang === "en" ? "on" : ""} onClick={() => setLang("en")}>EN</button>
+            </span>
           </nav>
         </div>
       </div>
@@ -106,13 +117,13 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
 
         <div className="hdr-locs">
           <button className="hdr-loc" onClick={() => { setPop(pop === "address" ? null : "address"); setPcDraft(postcode); }}>
-            <small>ที่อยู่จัดส่ง</small>
-            <span><Icon name="location_on" size={18} /> {shipTo ? `${shipTo.name_th} ${shipTo.postcode}` : postcode ? `รหัสไปรษณีย์ ${postcode}` : "เลือกที่อยู่จัดส่ง"} <Icon name="expand_more" size={16} /></span>
+            <small>{t("ที่อยู่จัดส่ง")}</small>
+            <span><Icon name="location_on" size={18} /> {shipTo ? `${shipTo.name_th} ${shipTo.postcode}` : postcode ? `${t("รหัสไปรษณีย์")} ${postcode}` : t("เลือกที่อยู่จัดส่ง")} <Icon name="expand_more" size={16} /></span>
           </button>
           <span className="hdr-loc-sep" />
           <button className="hdr-loc" onClick={() => setPop(pop === "branch" ? null : "branch")}>
-            <small>รับที่สาขา</small>
-            <span><Icon name="storefront" size={18} /> {plant ? plant.name : "เลือกสาขา"} <Icon name="expand_more" size={16} /></span>
+            <small>{t("รับที่สาขา")}</small>
+            <span><Icon name="storefront" size={18} /> {plant ? plant.name : t("เลือกสาขา")} <Icon name="expand_more" size={16} /></span>
           </button>
           {pop === "address" && (
             <div className="hdr-pop">
@@ -125,11 +136,6 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
                 <button className="btn dark sm" type="submit" disabled={pcDraft.trim().length !== 5}>ใช้</button>
               </form>
               {pcErr && <div className="note err small" style={{ marginTop: 6 }}>{pcErr}</div>}
-              {auth.user?.default_postcode && (
-                <button className="link-btn small" style={{ marginTop: 6 }} onClick={() => { setPcDraft(auth.user!.default_postcode!); void useDraftPostcode(); }}>
-                  ใช้ที่อยู่หลัก · {auth.user.default_address} {auth.user.default_postcode}
-                </button>
-              )}
               <input className="hdr-pop-input" style={{ width: "100%", marginTop: 8 }} value={provQ} onChange={(e) => setProvQ(e.target.value)} placeholder="ค้นหาจังหวัด" />
               <div className="hdr-pop-list">
                 {provinces
@@ -158,7 +164,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
                   <Icon name="storefront" size={18} /> <span><b>{p.name}</b><small>{p.address}</small></span>
                 </button>
               ))}
-              {plant && <button className="link-btn small" onClick={() => { setPlantCode(null); setPop(null); }}>ไม่เลือกสาขา</button>}
+              {plant && <button className="link-btn small" onClick={() => { setPlantCode(null); setPop(null); }}>{t("ไม่เลือกสาขา")}</button>}
             </div>
           )}
         </div>
@@ -182,19 +188,19 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
           )}
           {auth.user ? (
             <div className="hdr-user">
-              <Link to="/account" className="hdr-user-link" title="บัญชีของฉัน">
+              <Link to="/account" className="hdr-user-link" title={t("บัญชีของฉัน")}>
                 <Icon name="account_circle" size={26} />
                 <span className="hdr-user-txt">
                   <b>{auth.user.name}</b>
                   <small>{roleLabel}</small>
                 </span>
               </Link>
-              <button className="link-btn small" onClick={() => auth.logout()}>ออก</button>
+              <button className="link-btn small" onClick={() => auth.logout()}>{t("ออก")}</button>
             </div>
           ) : (
             <>
-              <button className="icon-btn hdr-icon-login" onClick={auth.openLogin} aria-label="เข้าสู่ระบบ"><Icon name="group" /></button>
-              <button className="btn hdr-login-btn" onClick={auth.openLogin}><Icon name="login" size={18} /> เข้าสู่ระบบ</button>
+              <button className="icon-btn hdr-icon-login" onClick={auth.openLogin} aria-label={t("เข้าสู่ระบบ")}><Icon name="group" /></button>
+              <button className="btn hdr-login-btn" onClick={auth.openLogin}><Icon name="login" size={18} /> {t("เข้าสู่ระบบ")}</button>
             </>
           )}
         </div>
@@ -204,14 +210,15 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
       {/* main nav */}
       <div className="hdr-nav-wrap">
         <nav className="container hdr-nav">
-          {/* สินค้าใหม่มาก่อนสุด — เรียงตามของเข้าใหม่ ไม่มีหมวดย่อยเลยไม่มีลูกศร */}
-          <Link to="/search?sort=new" className="hdr-nav-item" onClick={() => setMenu(null)}>
-           สินค้าใหม่
+          {/* ปลายทางเดียวกับการกดโลโก้ — คนที่หลงอยู่กลางหน้าค้นหาจะได้มีทางกลับที่เห็นชัดๆ
+              ไม่ต้องเดาว่าต้องกดโลโก้ */}
+          <Link to="/" className="hdr-nav-item" onClick={() => setMenu(null)}>
+            {t("หน้าแรก")}
           </Link>
           {/* กดที่ตัวหนังสือ = ดูสินค้าทั้งหมดเลย · กดลูกศร (หรือชี้ค้าง) = เลือกเฉพาะหมวด */}
           <div className={"hdr-nav-item cats" + (menu === "__cats" ? " on" : "")} onMouseEnter={() => setMenu("__cats")}>
             <Link to="/search" className="cats-all" onClick={() => setMenu(null)}>
-              <Icon name="grid_view" size={20} /> สินค้าทั้งหมด
+              <Icon name="grid_view" size={20} /> {t("สินค้าทั้งหมด")}
             </Link>
             <button
               className="cats-toggle"
@@ -222,16 +229,32 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
               <Icon name="expand_more" size={16} />
             </button>
           </div>
+          {/* แบรนด์ — กดตัวหนังสือ = ไปหน้าสินค้าทั้งหมด · กดลูกศร = เลือกแบรนด์
+              รายชื่อมาจาก content.brands ซึ่ง backend กรองเหลือเฉพาะแบรนด์ที่มีของขายอยู่จริง
+              พร้อมจำนวน กดเข้าไปจึงไม่มีทางเจอหน้าว่าง */}
+          {brands.length > 0 && (
+            <div className={"hdr-nav-item cats" + (menu === "__brands" ? " on" : "")} onMouseEnter={() => setMenu("__brands")}>
+              <Link to="/search" className="cats-all" onClick={() => setMenu(null)}>{t("แบรนด์")}</Link>
+              <button
+                className="cats-toggle"
+                onClick={() => setMenu(menu === "__brands" ? null : "__brands")}
+                aria-label="เลือกแบรนด์"
+                aria-expanded={menu === "__brands"}
+              >
+                <Icon name="expand_more" size={16} />
+              </button>
+            </div>
+          )}
           {/* เหมือนช่อง "สินค้าทั้งหมด": กดตัวหนังสือ = เข้าหมวดกลุ่มนั้นเลย · กดลูกศร = เลือกหมวดย่อย */}
           {mainNav.map((n) => (
             <div key={n.label} className={"hdr-nav-item cats" + (menu === n.label ? " on" : "")} onMouseEnter={() => setMenu(n.label)}>
               {n.href ? (
-                <Link to={n.href} className="cats-all" onClick={() => setMenu(null)}>{n.label}</Link>
+                <Link to={n.href} className="cats-all" onClick={() => setMenu(null)}>{localName(lang, n.label, n.label_en)}</Link>
               ) : (
-                <span className="cats-all">{n.label}</span>
+                <span className="cats-all">{localName(lang, n.label, n.label_en)}</span>
               )}
-              {n.items.length > 0 && (
-                <button className="cats-toggle" onClick={() => setMenu(menu === n.label ? null : n.label)} aria-label={`หมวดย่อยของ ${n.label}`} aria-expanded={menu === n.label}>
+              {(n.items.length > 0 || (n.groups?.length ?? 0) > 0) && (
+                <button className="cats-toggle" onClick={() => setMenu(menu === n.label ? null : n.label)} aria-label={`${t("หมวดย่อยของ")} ${localName(lang, n.label, n.label_en)}`} aria-expanded={menu === n.label}>
                   <Icon name="expand_more" size={16} />
                 </button>
               )}
@@ -239,40 +262,62 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
           ))}
         </nav>
 
+        {menu === "__brands" && (
+          <div className="mega" onMouseLeave={() => setMenu(null)}>
+            <div className="container mega-in one-col">
+              <div className="mega-body">
+                <div className="mega-title">{t("แบรนด์ทั้งหมด")}</div>
+                <div className="mega-grid brand-grid">
+                  {brands.map((b) => (
+                    <Link key={b.id} to={`/search?brand=${encodeURIComponent(b.id)}`} className="mega-item brand-item" onClick={() => setMenu(null)}>
+                      {b.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {menu === "__cats" && (
           <div className="mega" onMouseLeave={() => setMenu(null)}>
             <div className="container mega-in">
               <ul className="mega-side">
                 <li className={sideIdx === -1 ? "on" : ""} onMouseEnter={() => setSideIdx(-1)}>
-                  <Link to="/search" onClick={() => setMenu(null)}>ดูสินค้าทั้งหมด</Link>
+                  <Link to="/search" onClick={() => setMenu(null)}>{t("ดูสินค้าทั้งหมด")}</Link>
+                </li>
+                {/* ของเข้าใหม่ = ชั้น N ของ MAABC ที่ฝ่ายสินค้าจัดไว้ ไม่ใช่เรียงตามวันที่สร้างรหัส
+                    (วันที่สร้างรหัสไม่ได้แปลว่าของเพิ่งเข้าร้าน) · ไม่มีหมวดย่อย ชี้ค้างแล้ว
+                    จึงคงแผงขวาเป็นหมวดทั้งหมดไว้เหมือนเดิม (sideIdx -1) */}
+                <li className="" onMouseEnter={() => setSideIdx(-1)}>
+                  <Link to="/search?abc=N" onClick={() => setMenu(null)}>{t("สินค้าใหม่")}</Link>
                 </li>
                 {cats.map((c, i) => (
                   <li key={c.id} className={sideIdx === i ? "on" : ""} onMouseEnter={() => setSideIdx(i)}>
-                    <Link to={`/search?category=${c.id}`} onClick={() => setMenu(null)}>{c.name_th}</Link>
+                    <Link to={`/search?category=${c.id}`} onClick={() => setMenu(null)}>{localName(lang, c.name_th, c.name_en)}</Link>
                   </li>
                 ))}
               </ul>
               <div className="mega-body">
                 {sideIdx >= 0 && cats[sideIdx] && cats[sideIdx].children.length > 0 ? (
                   <>
-                    <div className="mega-title">{cats[sideIdx].name_th}</div>
+                    <div className="mega-title">{localName(lang, cats[sideIdx].name_th, cats[sideIdx].name_en)}</div>
                     <div className="mega-grid">
                       {cats[sideIdx].children.map((ch) => (
                         <Link key={ch.id} to={`/search?category=${ch.id}`} className="mega-item" onClick={() => setMenu(null)}>
                           <span className="mega-ico"><Icon name={cats[sideIdx].icon || "category"} size={26} /></span>
-                          {ch.name_th}
+                          {localName(lang, ch.name_th, ch.name_en)}
                         </Link>
                       ))}
                     </div>
                   </>
                 ) : (
                   <>
-                    <div className="mega-title">หมวดหมู่ทั้งหมด</div>
+                    <div className="mega-title">{t("หมวดหมู่ทั้งหมด")}</div>
                     <div className="mega-grid">
                       {cats.map((c) => (
                         <Link key={c.id} to={`/search?category=${c.id}`} className="mega-item" onClick={() => setMenu(null)}>
                           <span className="mega-ico"><Icon name={c.icon || "category"} size={26} /></span>
-                          {c.name_th}
+                          {localName(lang, c.name_th, c.name_en)}
                         </Link>
                       ))}
                     </div>
@@ -286,14 +331,37 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
         {openDef && (
           <div className="mega sub" onMouseLeave={() => setMenu(null)}>
             <div className="container">
-              <div className="mega-title">{openDef.label}</div>
-              <ul className="sub-list">
-                {openDef.items.map((it) => (
-                  <li key={it.label}>
-                    <Link to={it.href} onClick={() => setMenu(null)}>{it.label}</Link>
-                  </li>
-                ))}
-              </ul>
+              {openDef.groups?.length ? (
+                /* เมนู 3 ชั้นแบบเว็บจริง — หัวกลุ่มกดไปหน้าหมวดกลุ่มได้ ข้างใต้เป็นหมวดย่อย
+                   จัดเป็นคอลัมน์แบบ masonry ให้กลุ่มไหลต่อกันเอง ไม่ต้องกำหนดว่ากลุ่มไหนอยู่คอลัมน์ไหน */
+                <div className="nav-groups">
+                  {openDef.groups.map((g) => (
+                    <div key={g.label} className="nav-group">
+                      <Link to={g.href} className="nav-group-head" onClick={() => setMenu(null)}>
+                        {localName(lang, g.label, g.label_en)} <Icon name="arrow_forward" size={16} />
+                      </Link>
+                      <ul>
+                        {g.items.map((it) => (
+                          <li key={it.label}>
+                            <Link to={it.href} onClick={() => setMenu(null)}>{localName(lang, it.label, it.label_en)}</Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="mega-title">{localName(lang, openDef.label, openDef.label_en)}</div>
+                  <ul className="sub-list">
+                    {openDef.items.map((it) => (
+                      <li key={it.label}>
+                        <Link to={it.href} onClick={() => setMenu(null)}>{localName(lang, it.label, it.label_en)}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           </div>
         )}

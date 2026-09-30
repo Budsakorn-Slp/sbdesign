@@ -19,9 +19,18 @@ def _cart(client, hs, items):
     return cart
 
 
+def _online_cart(client, hc, items):
+    """ตะกร้าของลูกค้าเอง — กฎค่าส่งออนไลน์ (Amasty) ใช้กับช่องทางนี้เท่านั้น
+    ตะกร้าที่พนักงานถือคิดค่าส่งจาก Mat ตามยอดบิล คนละเกณฑ์กัน จึงเทสแยกกัน"""
+    cart = None
+    for matnr, qty, mode, plant in items:
+        cart = client.post("/cart/items", json={"matnr": matnr, "qty": qty, "supply_mode": mode, "plant_code": plant}, headers=hc).json()
+    return cart
+
+
 def test_postcode_changes_fee_and_groups(client):
-    hs = auth_headers(client, "SA-104", "staff")
-    cart = _cart(client, hs, [("10023841", 1, "ship", None), ("10031002", 2, "takeaway", "BKN"), ("10046100", 1, None, None)])  # ตู้เสื้อผ้าต้องติดตั้ง
+    hs = auth_headers(client, "081-222-3333")
+    cart = _online_cart(client, hs, [("10023841", 1, "ship", None), ("10031002", 2, "takeaway", "BKN"), ("10046100", 1, None, None)])  # ตู้เสื้อผ้าต้องติดตั้ง
     a = client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110"}, headers=hs)
     assert a.status_code == 200, a.text
     a = a.json()
@@ -37,7 +46,7 @@ def test_postcode_changes_fee_and_groups(client):
     # รหัสที่ไม่รู้จัก prefix → ใช้ prefix rule; รูปแบบผิด → 422
     assert client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "abc12"}, headers=hs).status_code == 422
     # ยอดรวมทั้งบิลใน cart รวมค่าส่ง
-    t = client.get(f"/sales/carts/{cart['id']}", headers=hs).json()["totals"]
+    t = client.get("/cart", headers=hs).json()["totals"]
     assert float(t["shipping_fee"]) == 3500 and float(t["install_fee"]) == 2500
     assert float(t["grand_total"]) == float(t["net_total"]) + 3500 + 2500
 
@@ -64,15 +73,14 @@ def test_hold_slot_reduces_quota_and_full_slot_409(client):
     assert client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110"}, headers=auth_headers(client, "SA-105", "staff")).status_code == 403
 
 
-def test_gold_free_shipping_discounts_fee(client):
-    hs = auth_headers(client, "SA-104", "staff")
-    cart = _cart(client, hs, [("10025117", 1, "ship", None)])  # VERONA 45,900
-    client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "4400182"}, headers=hs)  # Gold
+def test_member_free_shipping_discounts_fee(client):
+    hs = auth_headers(client, "094-916-4600")
+    cart = _online_cart(client, hs, [("10025117", 1, "ship", None)])  # VERONA 45,900
     client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110"}, headers=hs)
     ev = client.post("/promotions/evaluate", json={"cart_id": cart["id"]}, headers=hs).json()
-    assert any(o["code"] == "GOLD-FREESHIP" for o in ev["eligible"])
-    r = client.post(f"/cart/{cart['id']}/discounts", json={"kind": "promotion", "promo_code": "GOLD-FREESHIP"}, headers=hs).json()
+    # ส่งฟรีเป็นคูปองแบบกรอกโค้ด จึงต้องไม่โผล่ในลิสต์โปรฯ อัตโนมัติ แต่ใส่ด้วยโค้ดได้
+    assert not any(o["code"] == "MEMBER-FREESHIP" for o in (*ev["eligible"], *ev["ineligible"]))
+    r = client.post(f"/cart/{cart['id']}/discounts", json={"kind": "promotion", "promo_code": "MEMBER-FREESHIP"}, headers=hs).json()
     t = r["totals"]
     assert float(t["shipping_fee"]) == 800 and float(t["shipping_discount"]) == 800
     assert float(t["grand_total"]) == float(t["net_total"]) + 800 - 800
-    client.delete(f"/sales/carts/{cart['id']}", headers=hs)

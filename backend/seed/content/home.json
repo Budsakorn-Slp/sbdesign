@@ -1,54 +1,539 @@
 {
   "hero_slides": [
-    {"id": "hero-1", "tag": "แคมเปญหลัก", "title": "ลดทันที 3% + ลดเพิ่มสูงสุด 500.-", "note": "1 ก.ย. 69 – 30 ก.ย. 69", "cta": "ช้อปเลย", "href": "/search?tag=deal", "art": "HERO SLIDE 1 · 1:1 · art 1240 × 1240"},
-    {"id": "hero-2", "tag": "Brand Fair", "title": "แบรนด์ประจำเดือน — Fina Living", "note": "ลดสูงสุด 40% ทั้งแบรนด์", "cta": "ดูสินค้า", "href": "/search?q=fina", "art": "HERO SLIDE 2 · 1:1 · art 1240 × 1240"},
-    {"id": "hero-3", "tag": "NEW ARRIVAL", "title": "คอลเลกชันใหม่ ห้องนั่งเล่นโมเดิร์น", "note": "สินค้าใหม่เดือนนี้", "cta": "ดูสินค้าใหม่", "href": "/search?tag=new", "art": "HERO SLIDE 3"},
-    {"id": "hero-4", "tag": "SERVICE", "title": "ออกแบบห้องฟรี ทุกสาขา", "note": "จองคิวออนไลน์", "cta": "จองคิว", "href": "/search?room=living", "art": "HERO SLIDE 4"},
-    {"id": "hero-5", "tag": "MEMBER", "title": "SB Member รับส่วนลดสมาชิกทุกชิ้น", "note": "สมัครฟรี", "cta": "สมัครสมาชิก", "href": "/account", "art": "HERO SLIDE 5"}
+    {
+      "id": "hero-1",
+      "tag": "แคมเปญหลัก",
+      "title": "ลดทันที 3% + ลดเพิ่มสูงสุด 500.-",
+      "note": "1 ก.ย. 69 – 30 ก.ย. 69",
+      "cta": "ช้อปเลย",
+      "href": "/search?tag=deal",
+      "art": "HERO SLIDE 1 · 1:1 · art 1240 × 1240"
+    },
+    {
+      "id": "hero-2",
+      "tag": "Brand Fair",
+      "title": "แบรนด์ประจำเดือน — Fina Living",
+      "note": "ลดสูงสุด 40% ทั้งแบรนด์",
+      "cta": "ดูสินค้า",
+      "href": "/search?q=fina",
+      "art": "HERO SLIDE 2 · 1:1 · art 1240 × 1240"
+    },
+    {
+      "id": "hero-3",
+      "tag": "NEW ARRIVAL",
+      "title": "คอลเลกชันใหม่ ห้องนั่งเล่นโมเดิร์น",
+      "note": "สินค้าใหม่เดือนนี้",
+      "cta": "ดูสินค้าใหม่",
+      "href": "/search?tag=new",
+      "art": "HERO SLIDE 3"
+    },
+    {
+      "id": "hero-4",
+      "tag": "SERVICE",
+      "title": "ออกแบบห้องฟรี ทุกสาขา",
+      "note": "จองคิวออนไลน์",
+      "cta": "จองคิว",
+      "href": "/search?room=living",
+      "art": "HERO SLIDE 4"
+    },
+    {
+      "id": "hero-5",
+      "tag": "MEMBER",
+      "title": "SB Member รับส่วนลดสมาชิกทุกชิ้น",
+      "note": "สมัครฟรี",
+      "cta": "สมัครสมาชิก",
+      "href": "/account",
+      "art": "HERO SLIDE 5"
+    }
   ],
   "promo_cards": [
-    {"tag": "NEW", "title": "ผ่อน 0% นาน 10 เดือน", "note": "ทั้งเว็บ · 1–30 ก.ย. 69", "href": "/search?tag=deal"},
-    {"tag": "MEMBER", "title": "สมัครสมาชิกรับส่วนลด 3%", "note": "เฉพาะสมาชิกใหม่", "href": "/account"},
-    {"tag": "SERVICE", "title": "ออกแบบฟรี ทุกสาขา", "note": "จองคิวออนไลน์", "href": "/search?room=living"},
-    {"tag": "DEAL", "title": "ลดเพิ่มสูงสุด 4,000.-", "note": "เมื่อช้อปตามเงื่อนไข", "href": "/search?tag=deal"}
+    {
+      "tag": "NEW",
+      "title": "ผ่อน 0% นาน 10 เดือน",
+      "note": "ทั้งเว็บ · 1–30 ก.ย. 69",
+      "href": "/search?tag=deal"
+    },
+    {
+      "tag": "MEMBER",
+      "title": "สมัครสมาชิกรับส่วนลด 3%",
+      "note": "เฉพาะสมาชิกใหม่",
+      "href": "/account"
+    },
+    {
+      "tag": "SERVICE",
+      "title": "ออกแบบฟรี ทุกสาขา",
+      "note": "จองคิวออนไลน์",
+      "href": "/search?room=living"
+    },
+    {
+      "tag": "DEAL",
+      "title": "ลดเพิ่มสูงสุด 4,000.-",
+      "note": "เมื่อช้อปตามเงื่อนไข",
+      "href": "/search?tag=deal"
+    }
   ],
   "category_tiles": [
-    {"label": "ชุดห้องนอน", "category": "bedroom-set"}, {"label": "เตียงนอน", "category": "bed"}, {"label": "โซฟา", "category": "sofa"}, {"label": "ตู้เสื้อผ้า", "category": "wardrobe"},
-    {"label": "ที่นอนและเครื่องนอน", "category": "mattress"}, {"label": "ห้องนั่งเล่น", "category": "living"}, {"label": "ห้องอาหาร", "category": "dining"}, {"label": "โฮมออฟฟิศ", "category": "office"}
+    {
+      "label": "ชุดห้องนอน",
+      "category": "bedroom-set"
+    },
+    {
+      "label": "เตียงนอน",
+      "category": "bed"
+    },
+    {
+      "label": "โซฟา",
+      "category": "sofa"
+    },
+    {
+      "label": "ตู้เสื้อผ้า",
+      "category": "wardrobe"
+    },
+    {
+      "label": "ที่นอนและเครื่องนอน",
+      "category": "mattress"
+    },
+    {
+      "label": "ห้องนั่งเล่น",
+      "category": "living"
+    },
+    {
+      "label": "ห้องอาหาร",
+      "category": "dining"
+    },
+    {
+      "label": "โฮมออฟฟิศ",
+      "category": "office"
+    }
   ],
   "new_collections": [
-    {"label": "คอลเลกชันใหม่", "href": "/search?tag=new"}, {"label": "ห้องนั่งเล่นโมเดิร์น", "href": "/search?room=living"}, {"label": "มินิมอลลิฟวิ่ง", "href": "/search?category=sofa"},
-    {"label": "ของแต่งบ้านใหม่", "href": "/search?category=lighting"}, {"label": "ชุดโต๊ะอาหารใหม่", "href": "/search?category=dining"}, {"label": "โฮมออฟฟิศซีรีส์", "href": "/search?category=office"}
+    {
+      "label": "คอลเลกชันใหม่",
+      "href": "/search?tag=new"
+    },
+    {
+      "label": "ห้องนั่งเล่นโมเดิร์น",
+      "href": "/search?room=living"
+    },
+    {
+      "label": "มินิมอลลิฟวิ่ง",
+      "href": "/search?category=sofa"
+    },
+    {
+      "label": "ของแต่งบ้านใหม่",
+      "href": "/search?category=lighting"
+    },
+    {
+      "label": "ชุดโต๊ะอาหารใหม่",
+      "href": "/search?category=dining"
+    },
+    {
+      "label": "โฮมออฟฟิศซีรีส์",
+      "href": "/search?category=office"
+    }
   ],
   "room_rows": [
-    {"label": "ห้องนอน", "room": "bedroom", "items": [{"label": "ชุดห้องนอน", "category": "bedroom-set"}, {"label": "เตียงนอน", "category": "bed"}, {"label": "ตู้เสื้อผ้า", "category": "wardrobe"}, {"label": "ห้องวอล์คอิน คลอสเซ็ท", "category": "walk-in"}, {"label": "โต๊ะเครื่องแป้ง", "category": "dresser"}, {"label": "กระจก", "category": "mirror"}]},
-    {"label": "ห้องนั่งเล่น", "room": "living", "items": [{"label": "ชั้นวางทีวี", "category": "tv-stand"}, {"label": "ชุดวางทีวีและตู้โชว์", "category": "tv-set"}, {"label": "ตู้โชว์", "category": "display-cabinet"}, {"label": "ตู้และชั้นหนังสือ", "category": "bookcase"}, {"label": "ชั้นแขวนและตู้ติดผนัง", "category": "wall-shelf"}, {"label": "โต๊ะกลาง", "category": "coffee-table"}]},
-    {"label": "ห้องทานอาหาร / ห้องครัว", "room": "dining", "items": [{"label": "ครัว", "category": "kitchen-counter"}, {"label": "ของใช้บนโต๊ะอาหาร", "category": "tableware"}, {"label": "แก้วน้ำ แก้วไวน์ เหยือกน้ำ", "category": "glassware"}, {"label": "อุปกรณ์เครื่องครัว", "category": "cookware"}, {"label": "ของใช้ในครัว", "category": "kitchen-storage"}, {"label": "เครื่องใช้ไฟฟ้าในครัวและอุปกรณ์", "category": "kitchen-appliance"}]},
-    {"label": "ห้องทำงาน / ห้องเกมมิ่ง", "room": "office", "items": [{"label": "ชุดโต๊ะทำงาน", "category": "desk-set"}, {"label": "โต๊ะทำงาน", "category": "desk"}, {"label": "โต๊ะประชุม", "category": "meeting-table"}, {"label": "ตู้เอกสารและชั้นวาง", "category": "filing"}, {"label": "เก้าอี้สำนักงาน", "category": "office-chair"}, {"label": "เก้าอี้เกมมิ่ง", "category": "gaming-chair"}]}
+    {
+      "label": "ห้องนอน",
+      "room": "bedroom",
+      "items": [
+        {
+          "label": "ชุดห้องนอน",
+          "category": "bedroom-set"
+        },
+        {
+          "label": "เตียงนอน",
+          "category": "bed"
+        },
+        {
+          "label": "ตู้เสื้อผ้า",
+          "category": "wardrobe"
+        },
+        {
+          "label": "ห้องวอล์คอิน คลอสเซ็ท",
+          "category": "walk-in"
+        },
+        {
+          "label": "โต๊ะเครื่องแป้ง",
+          "category": "dresser"
+        },
+        {
+          "label": "กระจก",
+          "category": "mirror"
+        }
+      ]
+    },
+    {
+      "label": "ห้องนั่งเล่น",
+      "room": "living",
+      "items": [
+        {
+          "label": "ชั้นวางทีวี",
+          "category": "tv-stand"
+        },
+        {
+          "label": "ชุดวางทีวีและตู้โชว์",
+          "category": "tv-set"
+        },
+        {
+          "label": "ตู้โชว์",
+          "category": "display-cabinet"
+        },
+        {
+          "label": "ตู้และชั้นหนังสือ",
+          "category": "bookcase"
+        },
+        {
+          "label": "ชั้นแขวนและตู้ติดผนัง",
+          "category": "wall-shelf"
+        },
+        {
+          "label": "โต๊ะกลาง",
+          "category": "coffee-table"
+        }
+      ]
+    },
+    {
+      "label": "ห้องทานอาหาร / ห้องครัว",
+      "room": "dining",
+      "items": [
+        {
+          "label": "ครัว",
+          "category": "kitchen-counter"
+        },
+        {
+          "label": "ของใช้บนโต๊ะอาหาร",
+          "category": "tableware"
+        },
+        {
+          "label": "แก้วน้ำ แก้วไวน์ เหยือกน้ำ",
+          "category": "glassware"
+        },
+        {
+          "label": "อุปกรณ์เครื่องครัว",
+          "category": "cookware"
+        },
+        {
+          "label": "ของใช้ในครัว",
+          "category": "kitchen-storage"
+        },
+        {
+          "label": "เครื่องใช้ไฟฟ้าในครัวและอุปกรณ์",
+          "category": "kitchen-appliance"
+        }
+      ]
+    },
+    {
+      "label": "ห้องทำงาน / ห้องเกมมิ่ง",
+      "room": "office",
+      "items": [
+        {
+          "label": "ชุดโต๊ะทำงาน",
+          "category": "desk-set"
+        },
+        {
+          "label": "โต๊ะทำงาน",
+          "category": "desk"
+        },
+        {
+          "label": "โต๊ะประชุม",
+          "category": "meeting-table"
+        },
+        {
+          "label": "ตู้เอกสารและชั้นวาง",
+          "category": "filing"
+        },
+        {
+          "label": "เก้าอี้สำนักงาน",
+          "category": "office-chair"
+        },
+        {
+          "label": "เก้าอี้เกมมิ่ง",
+          "category": "gaming-chair"
+        }
+      ]
+    }
   ],
   "rooms": [
-    {"label": "ห้องนั่งเล่น", "room": "living"}, {"label": "ห้องนอน", "room": "bedroom"}, {"label": "ห้องทำงาน", "room": "office"}
+    {
+      "label": "ห้องนั่งเล่น",
+      "room": "living"
+    },
+    {
+      "label": "ห้องนอน",
+      "room": "bedroom"
+    },
+    {
+      "label": "ห้องทำงาน",
+      "room": "office"
+    }
   ],
   "main_nav": [
-    {"label": "ช้อปตามห้อง", "items": [{"label": "ห้องนอน", "href": "/search?room=bedroom"}, {"label": "ห้องนั่งเล่น", "href": "/search?room=living"}, {"label": "ห้องทานอาหาร", "href": "/search?room=dining"}, {"label": "ห้องครัว", "href": "/search?category=kitchen"}, {"label": "โฮมออฟฟิศ", "href": "/search?room=office"}, {"label": "ห้องน้ำ", "href": "/search?q=ห้องน้ำ"}, {"label": "ห้องเด็ก", "href": "/search?category=kids"}, {"label": "พื้นที่ขนาดเล็ก", "href": "/search?category=small-spaces"}]},
-    {"label": "ช้อปตามแบรนด์", "items": [{"label": "SB Design Square", "href": "/search?q=SB"}, {"label": "SB Furniture", "href": "/search?q=SB"}, {"label": "Koncept Furniture", "href": "/search?q=koncept"}, {"label": "Fina Living", "href": "/search?q=fina"}, {"label": "Bedism", "href": "/search?q=bedism"}, {"label": "Brand Fair", "href": "/search?tag=deal"}]},
-    {"label": "ตกแต่ง–ออกแบบ", "items": [{"label": "ออกแบบห้องฟรี", "href": "#"}, {"label": "จัดบ้านครบชุด", "href": "#"}, {"label": "ปรับปรุงพื้นที่", "href": "#"}, {"label": "นัดคุยกับดีไซเนอร์", "href": "#"}, {"label": "ผลงานที่ผ่านมา", "href": "#"}]},
-    {"label": "ไอเดียแต่งบ้าน", "items": [{"label": "ไอเดียห้องนอน", "href": "/search?room=bedroom"}, {"label": "ไอเดียห้องนั่งเล่น", "href": "/search?room=living"}, {"label": "ไอเดียห้องทำงาน", "href": "/search?room=office"}, {"label": "สไตล์มินิมอล", "href": "#"}, {"label": "สไตล์โมเดิร์นลักซ์", "href": "#"}, {"label": "ทิปส์จัดบ้าน", "href": "#"}]},
-    {"label": "ช่างและติดตั้ง", "items": [{"label": "บริการติดตั้ง", "href": "#"}, {"label": "บริการซ่อมแซม", "href": "#"}, {"label": "ตรวจเช็กสภาพเฟอร์นิเจอร์", "href": "#"}, {"label": "นัดหมายช่าง", "href": "#"}, {"label": "ค่าบริการ", "href": "#"}]},
-    {"label": "โปรเด็ด", "items": [{"label": "ดีลวันนี้", "href": "/search?tag=deal"}, {"label": "ผ่อน 0%", "href": "/search?tag=deal"}, {"label": "สินค้าลดล้างสต็อก", "href": "/search?tag=deal"}, {"label": "คูปองส่วนลด", "href": "#"}, {"label": "โปรสมาชิก", "href": "/account"}]}
+    {
+      "label": "ช้อปตามห้อง",
+      "items": [
+        {
+          "label": "ห้องนอน",
+          "href": "/search?room=bedroom"
+        },
+        {
+          "label": "ห้องนั่งเล่น",
+          "href": "/search?room=living"
+        },
+        {
+          "label": "ห้องทานอาหาร",
+          "href": "/search?room=dining"
+        },
+        {
+          "label": "ห้องครัว",
+          "href": "/search?category=kitchen"
+        },
+        {
+          "label": "โฮมออฟฟิศ",
+          "href": "/search?room=office"
+        },
+        {
+          "label": "ห้องน้ำ",
+          "href": "/search?q=ห้องน้ำ"
+        },
+        {
+          "label": "ห้องเด็ก",
+          "href": "/search?category=kids"
+        },
+        {
+          "label": "พื้นที่ขนาดเล็ก",
+          "href": "/search?category=small-spaces"
+        }
+      ]
+    },
+    {
+      "label": "ช้อปตามแบรนด์",
+      "items": [
+        {
+          "label": "SB Design Square",
+          "href": "/search?q=SB"
+        },
+        {
+          "label": "SB Furniture",
+          "href": "/search?q=SB"
+        },
+        {
+          "label": "Koncept Furniture",
+          "href": "/search?q=koncept"
+        },
+        {
+          "label": "Fina Living",
+          "href": "/search?q=fina"
+        },
+        {
+          "label": "Bedism",
+          "href": "/search?q=bedism"
+        },
+        {
+          "label": "Brand Fair",
+          "href": "/search?tag=deal"
+        }
+      ]
+    },
+    {
+      "label": "ตกแต่ง–ออกแบบ",
+      "items": [
+        {
+          "label": "ออกแบบห้องฟรี",
+          "href": "#"
+        },
+        {
+          "label": "จัดบ้านครบชุด",
+          "href": "#"
+        },
+        {
+          "label": "ปรับปรุงพื้นที่",
+          "href": "#"
+        },
+        {
+          "label": "นัดคุยกับดีไซเนอร์",
+          "href": "#"
+        },
+        {
+          "label": "ผลงานที่ผ่านมา",
+          "href": "#"
+        }
+      ]
+    },
+    {
+      "label": "ไอเดียแต่งบ้าน",
+      "items": [
+        {
+          "label": "ไอเดียห้องนอน",
+          "href": "/search?room=bedroom"
+        },
+        {
+          "label": "ไอเดียห้องนั่งเล่น",
+          "href": "/search?room=living"
+        },
+        {
+          "label": "ไอเดียห้องทำงาน",
+          "href": "/search?room=office"
+        },
+        {
+          "label": "สไตล์มินิมอล",
+          "href": "#"
+        },
+        {
+          "label": "สไตล์โมเดิร์นลักซ์",
+          "href": "#"
+        },
+        {
+          "label": "ทิปส์จัดบ้าน",
+          "href": "#"
+        }
+      ]
+    },
+    {
+      "label": "ช่างและติดตั้ง",
+      "items": [
+        {
+          "label": "บริการติดตั้ง",
+          "href": "#"
+        },
+        {
+          "label": "บริการซ่อมแซม",
+          "href": "#"
+        },
+        {
+          "label": "ตรวจเช็กสภาพเฟอร์นิเจอร์",
+          "href": "#"
+        },
+        {
+          "label": "นัดหมายช่าง",
+          "href": "#"
+        },
+        {
+          "label": "ค่าบริการ",
+          "href": "#"
+        }
+      ]
+    },
+    {
+      "label": "โปรเด็ด",
+      "items": [
+        {
+          "label": "ดีลวันนี้",
+          "href": "/search?tag=deal"
+        },
+        {
+          "label": "ผ่อน 0%",
+          "href": "/search?tag=deal"
+        },
+        {
+          "label": "สินค้าลดล้างสต็อก",
+          "href": "/search?tag=deal"
+        },
+        {
+          "label": "คูปองส่วนลด",
+          "href": "#"
+        },
+        {
+          "label": "โปรสมาชิก",
+          "href": "/account"
+        }
+      ]
+    }
   ],
   "footer_promos": [
-    {"head": "SB Member", "body": "สมัครสมาชิก SB ฟรี รับสิทธิพิเศษ ส่วนลดประจำเดือน และสิทธิ์ผ่อน 0% พร้อมสะสมแต้มทุกครั้งที่ช้อป", "cta": "สมัครฟรี", "href": "/account"},
-    {"head": "SB for Business", "body": "งานโครงการ ออกแบบครบวงจร สั่งซื้อจำนวนมาก หรือใบเสนอราคาสำหรับองค์กร ทีมงาน SB for Business พร้อมดูแลทุกขั้นตอน", "cta": "ดูเพิ่มเติม", "href": "#"}
+    {
+      "head": "ติดต่อ SB Design Square",
+      "body": "เลขที่ 126/150 หมู่ 1 ต.ปากเกร็ด อ.ปากเกร็ด จ.นนทบุรี 11120 · วันทำการ จันทร์–เสาร์ 8:30–17:00 น. (เว้นวันอาทิตย์และวันหยุดนักขัตฤกษ์) · LINE @sbdesignsquare",
+      "cta": "บริการหลังการขาย ซ่อม/เคลม",
+      "href": "https://s.sbdsapp.com/SBL/page/pagenotify"
+    },
+    {
+      "head": "รับข่าวสารก่อนใคร",
+      "body": "สมัครรับจดหมายข่าวจากเราเพื่อรับโปรโมชั่น อัพเดทเทรนด์ และคอลเล็คชั่นใหม่ก่อนใคร",
+      "cta": "สมัครสมาชิก",
+      "href": "/account"
+    }
   ],
   "footer_cols": [
-    {"head": "ช้อปที่ SB", "items": ["สาขา SB Design Square", "สิทธิประโยชน์และบริการ", "โปรโมชัน", "ตัวเลือกชำระเงิน", "วิธีช้อปออนไลน์", "คู่มือการเลือกซื้อสินค้า"]},
-    {"head": "บริการก่อน และหลังการขาย", "items": ["การติดตามและค่าบริการจัดส่ง", "โปรแกรมออกแบบของ SB", "การรับประกันสินค้า", "บริการติดตั้งและซ่อมแซม", "นโยบายเปลี่ยนและคืนสินค้า", "ใบกำกับภาษีอิเล็กทรอนิกส์ (e-Tax)", "ติดต่อเรา / คำถามที่พบบ่อย"]},
-    {"head": "มาเป็นครอบครัว SB", "items": ["SB for Business", "SB Member", "SB Kids' Club"]},
-    {"head": "เกี่ยวกับ SB", "items": ["เพื่อนพนักงาน และการทำงานที่ SB", "ห้องข่าวสาร", "เกี่ยวกับ SB และความยั่งยืน"]}
+    {
+      "head": "ร้านค้าออนไลน์",
+      "items": [
+        {
+          "label": "วิธีการสั่งซื้อสินค้า",
+          "href": "/shopping-guide"
+        },
+        {
+          "label": "การรับประกันสินค้า",
+          "href": "/warranty"
+        },
+        {
+          "label": "การเปลี่ยนเคลม/ยกเลิกสินค้า",
+          "href": "/return-policy"
+        },
+        {
+          "label": "การดูแลรักษาสินค้า",
+          "href": "/care-instruction"
+        },
+        {
+          "label": "การจัดส่งสินค้า",
+          "href": "/shipping-policy"
+        },
+        {
+          "label": "เงื่อนไขโปรโมชั่น Online",
+          "href": "/online-promotion-condition"
+        },
+        {
+          "label": "ประกาศความเป็นส่วนตัว",
+          "href": "/privacy-notice"
+        },
+        {
+          "label": "นโยบายความเป็นส่วนตัว",
+          "href": "/privacy-policy"
+        }
+      ]
+    },
+    {
+      "head": "เกี่ยวกับเรา",
+      "items": [
+        {
+          "label": "SB FURNITURE GROUP",
+          "href": "/sb-furniture-group"
+        },
+        {
+          "label": "ร่วมธุรกิจกับเรา",
+          "href": "/doing-business"
+        },
+        {
+          "label": "ร่วมงานกับเรา",
+          "href": "/career"
+        },
+        {
+          "label": "Design Service",
+          "href": "/design-service"
+        },
+        {
+          "label": "Pro Service",
+          "href": "/pro-service"
+        }
+      ]
+    }
   ],
-  "payments": ["VISA", "MC", "JCB", "PromptPay", "TrueMoney", "LINE Pay", "ผ่อน 0%"],
-  "legal_links": ["นโยบายการคุ้มครองข้อมูลส่วนบุคคล", "นโยบายการใช้งานคุกกี้", "ข้อตกลงการใช้งาน", "ข้อตกลงการซื้อสินค้า"],
-  "support_line": "ศูนย์บริการลูกค้า 1234 · ทุกวัน 09:00 – 20:00",
+  "payments": [
+    "DBD Registered",
+    "MasterCard SecureCode",
+    "Verified by VISA",
+    "JCB J/Secure"
+  ],
+  "legal_links": [
+    {
+      "label": "ประกาศความเป็นส่วนตัว",
+      "href": "/privacy-notice"
+    },
+    {
+      "label": "นโยบายความเป็นส่วนตัว",
+      "href": "/privacy-policy"
+    }
+  ],
+  "support_line": "LINE @sbdesignsquare · วันทำการ จันทร์–เสาร์ 8:30–17:00 น.",
   "free_shipping_note": "ส่งฟรีเมื่อช้อปครบ 3,000.-"
 }

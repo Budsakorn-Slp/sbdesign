@@ -7,7 +7,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.analytics import DailyJobOut, OrderOut, TrackIn, WishlistOut
 from app.schemas.catalog import MaterialCard
-from app.services import analytics_service, cart_service, catalog_service
+from app.services import analytics_service, cart_service, catalog_service, product_stock_service
 
 router = APIRouter(tags=["history"])
 
@@ -17,7 +17,7 @@ def _anon(request: Request) -> str | None:
 
 
 def _cards(db: Session, materials, user: User | None) -> list[MaterialCard]:
-    stock = catalog_service.stock_summary(db, [m.matnr for m in materials])
+    stock = product_stock_service.summary_for(db, [m.matnr for m in materials])
     return [to_card(m, user, stock.get(m.matnr)) for m in materials]
 
 
@@ -25,7 +25,7 @@ def _cards(db: Session, materials, user: User | None) -> list[MaterialCard]:
 def track_event(body: TrackIn, request: Request, db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
     if body.event not in analytics_service.EVENTS:
         raise HTTPException(status_code=422, detail="event ไม่รู้จัก")
-    analytics_service.track(db, user, _anon(request), body.event, body.matnr, body.query, body.source, body.payload, body.purpose)
+    analytics_service.track(db, user, _anon(request), body.event, body.matnr, body.query, body.source, body.payload, body.purpose, body.path)
     db.commit()
     return {"ok": True}
 
@@ -78,6 +78,28 @@ def run_daily_stats(days: int = Query(default=30, ge=1, le=180), db: Session = D
     return analytics_service.run_daily_job(db, days)
 
 
+@router.get("/admin/analytics/overview")
+def analytics_overview(days: int = Query(default=30, ge=1, le=365), db: Session = Depends(get_db), _: User = Depends(require_role("manager", "admin"))):
+    """ภาพรวมพฤติกรรมผู้ใช้ — คนเข้าเว็บ · หน้ายอดนิยม · สินค้าที่ดู/กด/ใส่ตะกร้าเยอะสุด
+    · คำค้นยอดฮิตพร้อมจำนวนคลิก · คำค้นที่ได้ผลลัพธ์ศูนย์"""
+    return analytics_service.overview(db, days)
+
+
 @router.get("/admin/top-searches")
 def top_searches(days: int = Query(default=30, ge=1, le=365), db: Session = Depends(get_db), _: User = Depends(require_role("manager", "admin"))):
     return analytics_service.top_searches(db, days)
+
+
+@router.get("/admin/wishlist-report")
+def wishlist_report(
+    limit: int = Query(default=50, ge=1, le=200),
+    days: int | None = Query(default=None, ge=1, le=365, description="ดูเฉพาะ N วันล่าสุด · ไม่ใส่ = ตั้งแต่เริ่มเก็บ"),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_role("manager", "admin")),
+):
+    """สินค้าที่ลูกค้ากดหัวใจมากที่สุด — เอาไว้ดูว่าของอะไรมีคนสนใจแต่ยังไม่ซื้อ
+
+    saved_now = ตอนนี้มีกี่คนเก็บไว้ · ever/users = เคยถูกกดกี่ครั้งจากกี่คน
+    removed = กดแล้วเปลี่ยนใจเอาออกกี่ครั้ง
+    """
+    return analytics_service.wishlist_report(db, limit=limit, days=days)

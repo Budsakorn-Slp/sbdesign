@@ -2,24 +2,38 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
-import PromoPanel from "../components/PromoPanel";
-import { apiPost, errorMessage } from "../lib/api";
-import { ROLE_PERMS, useAuth } from "../lib/auth";
+import { imageSources } from "../lib/images";
+import { ApiError, api, apiGet, apiPost, errorMessage } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { shipNeedsReview, useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { bahtWord, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
-import type { CartItem } from "../lib/types";
+import type { CartItem, StockRow } from "../lib/types";
+
+const LOGIN_NOTE_MS = 60_000;          // 1 นาที
+const LOGIN_NOTE_KEY = "sb_login_note";  // ต่อหนึ่งแท็บ/หนึ่งการเข้าใช้งาน
 
 export default function CartPage() {
   const auth = useAuth();
-  const { cart, loading, error, update, remove, ack, select, setShipTo, refresh, setCart } = useCart();
+  const { cart, loading, error, update, remove, select, setShipTo, refresh, setCart } = useCart();
   const { plants, shipTo } = useContent();
   const nav = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
+  // จอเล็ก: สรุปคำสั่งซื้อเป็นแผงลอยจากขอบล่าง (แบบเดียวกับฝั่งพนักงาน)
+  // ของเดิมต้องเลื่อนผ่านสินค้าทั้งตะกร้าลงไปสุดหน้าถึงจะเห็นยอดรวมกับปุ่มชำระเงิน
+  const [sheet, setSheet] = useState(false);
+  // ป้าย "เข้าสู่ระบบแล้ว" เป็นคำยืนยันชั่วคราว ไม่ใช่สถานะถาวร — โชว์ครั้งเดียวต่อการเข้าใช้งาน
+  // แล้วหายไปเองใน 1 นาที (ต่างจากป้าย "ยังไม่ได้เข้าสู่ระบบ" ที่ต้องค้างไว้ เพราะเป็นสิ่งที่ยังต้องทำ)
+  const [loginNote, setLoginNote] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [live, setLive] = useState<string | null>(null);
-  const [promoOpen, setPromoOpen] = useState(false);
+  const [code, setCode] = useState("");
+  const [codeErr, setCodeErr] = useState<string | null>(null);
+  // ข้อความบอกสถานะที่ไม่ใช่ความผิดพลาด เช่น ใส่โค้ดเดิมซ้ำ
+  const [codeNote, setCodeNote] = useState<string | null>(null);
+  // โค้ดที่ใช้ร่วมกับของเดิมไม่ได้ — ไม่ตีกลับเฉยๆ แต่ให้ลูกค้าเลือกเองว่าจะเอาอันไหน
+  const [conflict, setConflict] = useState<{ code: string; message: string; amount: number } | null>(null);
 
   // realtime: เซลล์เพิ่ม/แก้ของ → รีเฟรชทันที + เด้งข้อความ
   useCartSocket(cart?.id, (evt) => {
@@ -45,20 +59,17 @@ export default function CartPage() {
     setShipTo(wantPostcode).catch(() => {});
   }, [cart, wantPostcode, setShipTo]);
 
-  if (auth.role === "sales" || auth.role === "manager") {
-    return (
-      <main className="container sec">
-        <div className="card">
-          <b>โหมดพนักงานขาย</b> — ตะกร้าของลูกค้าจัดการที่หน้า <Link to="/sales" className="strong">ตะกร้าที่กำลังดูแล</Link> (STEP 4)
-        </div>
-      </main>
-    );
-  }
-
   const plantName = (code: string | null) => plants.find((p) => p.plant_code === code)?.name || code || "";
-  const items = cart?.items || [];
-  const pending = items.filter((it) => it.pending_ack);
+  // ค่าบริการขนส่งที่พนักงานเปิดไว้ (A534/A761/A533) ไม่ใช่ "สินค้า" ที่ลูกค้าเลือก
+  // ฝั่งพนักงานต้องเห็นเลข MATNR ไว้คุยกับคลัง/SAP แต่ลูกค้าเห็นแล้วสับสนว่าซื้ออะไรไป
+  // ยอดไปแสดงแยกบรรทัดในกล่องสรุปคำสั่งซื้อแทน
+  const SHIP_MATNRS = ["A534", "A761", "A533"];
+  const shipLines = (cart?.items || []).filter((it) => SHIP_MATNRS.includes(it.matnr) && it.selected);
+  const items = (cart?.items || []).filter((it) => !SHIP_MATNRS.includes(it.matnr));
   const canPay = auth.role === "customer";
+  // ของตัวโชว์/ฝากขาย (MATNR ขึ้นต้น 20 / 25) — ใส่ตะกร้าได้ แต่ยังจ่ายออนไลน์ไม่ได้
+  // ต้องไปดูของจริงแล้วรับที่สาขา · วันที่เปิดขายออนไลน์ได้ หลังบ้านปลดล็อกแล้วธงนี้จะเป็น false เอง
+  const pickupOnly = items.filter((it) => it.selected && it.pickup_only);
 
   const run = async (key: string, fn: () => Promise<unknown>) => {
     setBusy(key);
@@ -70,6 +81,85 @@ export default function CartPage() {
     } finally {
       setBusy(null);
     }
+  };
+
+  /** ออกจากการดูแลของพนักงาน กลับไปสั่งออนไลน์เอง
+   *  เตือนก่อนเพราะส่วนลดหน้าร้านถูกถอดทั้งหมด และกดแล้วย้อนเองไม่ได้ ต้องให้พนักงานผูกใหม่ */
+  const leaveSalesCare = () => {
+    const n = cart?.totals?.lines.length || 0;
+    const warn = n ? `ส่วนลด ${n} รายการที่พนักงานใส่ให้จะถูกยกเลิกทั้งหมด
+
+` : "";
+    if (!confirm(`${warn}ออกจากการดูแลของพนักงาน แล้วสั่งซื้อออนไลน์เอง?
+สินค้าในตะกร้ายังอยู่ครบ`)) return;
+    return run("leave", async () => {
+      setCart(await api<Cart>("DELETE", `/cart/${cart!.id}/sales-owner`));
+      setLive("ออกจากการดูแลของพนักงานแล้ว — สั่งซื้อออนไลน์ได้เลย");
+    });
+  };
+
+  /** ถอดโค้ดออก เพื่อเปลี่ยนไปใช้โค้ดอื่น */
+  const removeDiscount = (id: string) =>
+    run(id, async () => {
+      setCodeErr(null);
+      try {
+        setCart(await api<Cart>("DELETE", `/cart/${cart!.id}/discounts/${id}`));
+      } catch (e) {
+        setCodeErr(errorMessage(e));
+      }
+    });
+
+  /** ใส่โค้ดส่วนลดจากกล่องสรุป — ใช้ได้เฉพาะตะกร้าที่ไม่มีพนักงานดูแล */
+  const applyCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    const c = code.trim().toUpperCase();
+    if (!c || !cart) return;
+    setCodeErr(null);
+    setCodeNote(null);
+    setConflict(null);
+    // ใส่โค้ดเดิมซ้ำ ฝั่งเซิร์ฟเวอร์คืนอันเดิมกลับมาเฉยๆ (ถูกแล้ว กดซ้ำไม่ควรลดสองเด้ง)
+    // แต่ถ้าไม่บอกอะไรเลย หน้าจอจะแค่ล้างช่องที่พิมพ์ไป เหมือนกดแล้วโค้ดหายไปดื้อๆ
+    const already = cart.totals?.lines.some((l) => l.kind === "promotion" && l.code === c);
+    if (already) {
+      setCode("");
+      setCodeNote(`ใช้ ${c} อยู่แล้ว — ดูบรรทัดส่วนลดด้านบน`);
+      return;
+    }
+    return run("code", async () => {
+      try {
+        setCart(await apiPost<Cart>(`/cart/${cart.id}/discounts`, { kind: "promotion", promo_code: c }));
+        setCode("");
+      } catch (e2) {
+        // 409 = ใช้ร่วมกับโค้ดที่ใส่ไว้แล้วไม่ได้ ไม่ใช่โค้ดผิด — ถามลูกค้าว่าจะเอาอันไหน
+        if (e2 instanceof ApiError && e2.status === 409) {
+          // หลังบ้านแนบมูลค่าของโค้ดใหม่มาใน detail ด้วย ลูกค้าจะได้เทียบก่อนตัดสินใจสลับ
+          const d = (e2.detail && typeof e2.detail === "object" ? e2.detail : {}) as { amount?: string };
+          setConflict({ code: c, message: errorMessage(e2), amount: Number(d.amount ?? 0) });
+        }
+        else setCodeErr(errorMessage(e2));
+      }
+    });
+  };
+
+  /** ถอดโค้ดเดิมทั้งหมดแล้วใช้โค้ดใหม่แทน — ทางเลือกตอนใช้ร่วมกันไม่ได้ */
+  const swapToNewCode = () => {
+    if (!cart || !conflict) return;
+    const target = conflict.code;
+    return run("code", async () => {
+      try {
+        let latest = cart;
+        for (const l of cart.totals?.lines.filter((x) => x.kind === "promotion") ?? []) {
+          latest = await api<Cart>("DELETE", `/cart/${cart.id}/discounts/${l.id}`);
+        }
+        setCart(await apiPost<Cart>(`/cart/${cart.id}/discounts`, { kind: "promotion", promo_code: target }));
+        void latest;
+        setCode("");
+        setConflict(null);
+      } catch (e) {
+        setConflict(null);
+        setCodeErr(errorMessage(e));
+      }
+    });
   };
 
   // ติ๊ก = เก็บที่ฝั่งเซิร์ฟเวอร์ (cart_items.selected) เพราะยอดรวม ส่วนลด ค่าส่ง และการชำระเงินคิดจากรายการที่ติ๊กเท่านั้น
@@ -88,6 +178,10 @@ export default function CartPage() {
       nav("/checkout");
     });
 
+  /** เอาของที่รับได้เฉพาะที่สาขาออกจากรายการที่ติ๊ก — ของยังอยู่ในตะกร้า แค่ไม่คิดเงินรอบนี้ */
+  const unpickBranchOnly = () =>
+    run("unpick", () => select(pickupOnly.map((it) => it.id), false));
+
   const t = cart?.totals;
   const shipPostcode = cart?.delivery?.postcode || null;
   const shipFee = Number(t?.shipping_fee || 0);
@@ -95,26 +189,59 @@ export default function CartPage() {
   const needsShip = items.some((it) => it.selected && (it.supply_mode === "ship" || it.supply_mode === "install"));
   const shipReview = shipNeedsReview(t?.warnings);
 
+  useEffect(() => {
+    if (!auth.user) return;
+    try {
+      if (sessionStorage.getItem(LOGIN_NOTE_KEY)) return;  // รอบนี้เคยเห็นแล้ว ไม่ต้องโชว์ซ้ำทุกครั้งที่เปิดตะกร้า
+    } catch {
+      /* โหมดไม่ระบุตัวตน/ปิดคุกกี้ — โชว์แล้วหายเองก็ยังทำงานถูก */
+    }
+    setLoginNote(true);
+    const t = setTimeout(() => {
+      setLoginNote(false);
+      try {
+        sessionStorage.setItem(LOGIN_NOTE_KEY, "1");
+      } catch {
+        /* เก็บไม่ได้ก็ไม่เป็นไร */
+      }
+    }, LOGIN_NOTE_MS);
+    return () => clearTimeout(t);
+  }, [auth.user]);
+
+  // ทางแยกสำหรับพนักงาน ต้องอยู่ "หลัง" hook ทุกตัว
+  // เดิมวางไว้กลางฟังก์ชัน พอ auth โหลดเสร็จแล้ว role เปลี่ยนจาก undefined เป็น sales
+  // React จะเจอว่ารอบนี้เรียก hook น้อยกว่ารอบก่อน แล้วโยน "Rendered fewer hooks than expected"
+  // หน้าตะกร้าขาวทั้งหน้าเมื่อเปิดด้วยบัญชีพนักงาน
+  if (auth.role === "sales" || auth.role === "manager") {
+    return (
+      <main className="container sec">
+        <div className="card">
+          <b>โหมดพนักงานขาย</b> — ตะกร้าของลูกค้าจัดการที่หน้า <Link to="/sales" className="strong">ตะกร้าที่กำลังดูแล</Link> (STEP 4)
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="container sec cart">
       <Link to="/search" className="row small muted" style={{ marginBottom: 10 }}><Icon name="arrow_back" size={18} /> กลับไปช้อปต่อ</Link>
       <h1 className="cart-title">ตะกร้าสินค้าของคุณ</h1>
 
-      <div className="cart-grid">
+      <div className="cart-grid has-sheet">
         <div className="cart-main">
           {auth.role === "guest" && (
             <div className="banner guest">
               <Icon name="lock" size={22} />
               <div className="grow">
                 คุณยังไม่ได้เข้าสู่ระบบ — เพิ่ม/ลบสินค้าในตะกร้าได้ แต่ต้องเข้าสู่ระบบก่อนชำระเงิน หรือให้พนักงานขายช่วยดูแลตะกร้านี้
-                <div style={{ marginTop: 8 }}><button className="btn dark sm" onClick={auth.openLogin}>เข้าสู่ระบบ / ลงทะเบียน</button></div>
+                <div style={{ marginTop: 8 }}><button className="btn dark sm" onClick={auth.openLogin}>เข้าสู่ระบบ</button></div>
               </div>
             </div>
           )}
-          {auth.role === "customer" && auth.user && (
+          {auth.role === "customer" && auth.user && loginNote && (
             <div className="banner ok">
               <Icon name="verified_user" size={22} />
-              <div className="grow">เข้าสู่ระบบแล้ว — ใช้ราคาสมาชิก {auth.user.tier || ""} และชำระเงินได้ทันที</div>
+              <div className="grow">เข้าสู่ระบบแล้ว — สะสมพ้อยท์และชำระเงินได้ทันที</div>
             </div>
           )}
           {cart?.owner_sales && (
@@ -122,28 +249,11 @@ export default function CartPage() {
               <Icon name="support_agent" size={22} />
               <div className="grow">
                 <b>{cart.owner_sales.name}</b> กำลังช่วยดูแลตะกร้านี้ · สาขา{plantName(cart.owner_sales.branch_id)} · SESSION {cart.no}
+                <div className="tiny">ระหว่างนี้ชำระเงินออนไลน์เองไม่ได้ ส่วนลดให้พนักงานเป็นคนใส่ให้</div>
               </div>
-            </div>
-          )}
-
-          {pending.length > 0 && (
-            <div className="pending-card">
-              <div className="row"><Icon name="add_shopping_cart" size={22} /> <b>พนักงานเพิ่มสินค้าให้คุณ {pending.length} รายการ</b></div>
-              <p className="small muted" style={{ margin: "4px 0 10px" }}>คุณเลือกได้ว่าจะเก็บไว้หรือลบออก</p>
-              {pending.map((it) => (
-                <div key={it.id} className="pending-row">
-                  <Placeholder ratio="1 / 1" label="1:1" className="pending-img" />
-                  <div className="grow">
-                    <b>{it.name}</b>
-                    <div className="small muted">{it.variant} · {bahtWord(it.unit_price)} × {it.qty}</div>
-                    <div className="tiny muted">เพิ่มโดย {it.added_by_name || "พนักงานขาย"}{it.added_by_code ? ` (${it.added_by_code})` : ""} · {thTime(it.added_at)}</div>
-                  </div>
-                  <div className="row">
-                    <button className="btn dark sm" disabled={busy === it.id} onClick={() => run(it.id, () => ack(it.id))}>เก็บไว้</button>
-                    <button className="btn sm" disabled={busy === it.id} onClick={() => run(it.id, () => remove(it.id))}>ลบออก</button>
-                  </div>
-                </div>
-              ))}
+              {/* ทางออกให้ลูกค้าที่เปลี่ยนใจอยากสั่งออนไลน์เอง — ต้องเตือนเรื่องส่วนลดก่อน
+                  เพราะสิทธิ์หน้าร้านจะถูกถอดทั้งหมด กดแล้วย้อนเองไม่ได้ ต้องให้พนักงานผูกใหม่ */}
+              <button className="btn sm" disabled={!!busy} onClick={leaveSalesCare}>ออกจากการดูแล</button>
             </div>
           )}
 
@@ -189,27 +299,98 @@ export default function CartPage() {
           )}
         </div>
 
-        <aside className="cart-side">
-          <div className="summary">
+        <aside className={"cart-side sheet" + (sheet ? " on" : "")}>
+          {/* แถบลอย: ปิดอยู่เห็นยอดรวม + ปุ่มชำระเงิน · แตะเพื่อกางดูสรุปเต็ม (จอใหญ่ CSS ซ่อนแถบนี้) */}
+          <div className="sum-bar">
+            <button className="sum-bar-open" onClick={() => setSheet((v) => !v)} aria-expanded={sheet} aria-controls="cart-summary">
+              <span>
+                <small>{sheet ? "แตะเพื่อย่อสรุป" : `ยอดรวม · ${cart?.count || 0} ชิ้น`}</small>
+                <b>{bahtWord(t?.grand_total ?? t?.net_total ?? cart?.subtotal ?? 0)}</b>
+              </span>
+              <Icon name={sheet ? "expand_more" : "expand_less"} size={20} />
+            </button>
+            {canPay ? (
+              <button className="btn primary sum-bar-cta" disabled={!cart?.selected_count || busy === "checkout" || pickupOnly.length > 0}
+                      title={pickupOnly.length ? "มีสินค้าที่ต้องรับที่สาขา" : ""} onClick={checkout}>
+                ชำระเงิน{cart?.selected_count ? ` (${cart.selected_count})` : ""}
+              </button>
+            ) : (
+              <button className="btn dark sum-bar-cta" onClick={auth.openLogin}>เข้าสู่ระบบ</button>
+            )}
+          </div>
+          <div className="summary" id="cart-summary">
             <h3>สรุปคำสั่งซื้อ</h3>
             <div className="sum-row"><span>สินค้า ({cart?.count || 0})</span><b>{bahtWord(cart?.subtotal || 0)}</b></div>
-            {/* ยอดทั้งหมดคิดจากรายการที่ติ๊กเท่านั้น ของที่ไม่ติ๊กยังอยู่ในตะกร้า */}
-            {!!cart && cart.item_count > cart.selected_count && (
-              <div className="sum-row small muted"><span>ไม่ได้เลือก {cart.item_count - cart.selected_count} รายการ</span><span>ไม่คิดยอดรอบนี้</span></div>
-            )}
-            {cart?.totals?.lines.map((l) => (
-              <div key={l.id} className="sum-row"><span>{l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}</span><span className={l.status === "applied" ? "green" : "muted"}>−{bahtWord(l.amount)}</span></div>
+            {/* ส่วนลดที่เหลือ 0 ไม่ต้องโชว์ "−0 บาท" */}
+            {cart?.totals?.lines.filter((l) => Number(l.amount) > 0).map((l) => (
+              <div key={l.id} className="sum-row">
+                <span>
+                  {l.title}{l.status === "pending_approval" ? " (รออนุมัติ)" : ""}
+                  {/* ถอดโค้ดออกได้เฉพาะตอนไม่มีพนักงานดูแล — ส่วนลดที่พนักงานใส่ให้ ลูกค้าแตะเองไม่ได้
+                      (ปุ่มนี้คือทางเดียวที่จะเปลี่ยนไปใช้โค้ดอื่น เพราะใส่ซ้อนกันไม่ได้) */}
+                  {!cart?.owner_sales && (
+                    <button className="link-btn small danger" style={{ marginLeft: 8 }}
+                            disabled={busy === l.id} onClick={() => removeDiscount(l.id)}>
+                      เอาออก
+                    </button>
+                  )}
+                </span>
+                <span className={l.status === "applied" ? "green" : "muted"}>−{bahtWord(l.amount)}</span>
+              </div>
             ))}
-            {/* ปุ่มเต็มความกว้าง ให้เห็นชัดว่ากดได้ — ในแผงมีทั้งโปรที่เข้าเงื่อนไขให้กดใช้ และช่องกรอกโค้ดเอง */}
-            <button className="btn block promo-btn" disabled={!items.length} onClick={() => setPromoOpen(true)}>
-              <Icon name="local_offer" size={18} />
-              {cart?.totals && cart.totals.lines.length ? "แก้ไขโปรโมชั่น / โค้ดส่วนลด" : "เช็คโปรโมชั่น หรือกรอกโค้ดส่วนลด"}
-            </button>
+            {/* ช่องใส่โค้ดอยู่ในกล่องสรุปเลย ไม่ต้องกดเปิดหน้าต่างก่อน
+                — ลูกค้าที่ถือโค้ดมาอยากใส่ทันที การซ่อนไว้หลังปุ่มคือขั้นตอนที่ไม่ได้ช่วยอะไร
+
+                ตะกร้าที่พนักงานดูแลอยู่ไม่มีช่องนี้ ส่วนลดเป็นหน้าที่ของพนักงาน
+                (ฝั่งหลังบ้านก็กันไว้อีกชั้น ลูกค้ายิง API เองก็ไม่ผ่าน) */}
+            {cart?.owner_sales ? (
+              !!cart.totals?.lines.length && (
+                <div className="sum-row small muted"><span>ส่วนลดจากพนักงานที่ดูแล</span><span /></div>
+              )
+            ) : (
+              <form className="promo-code-row" onSubmit={applyCode}>
+                <Icon name="local_offer" size={16} />
+                <input
+                  value={code}
+                  onChange={(e) => { setCode(e.target.value.toUpperCase()); setCodeErr(null); setCodeNote(null); }}
+                  placeholder="มีโค้ดส่วนลด? ใส่ที่นี่"
+                  autoComplete="off"
+                  disabled={!items.length}
+                />
+                <button className="btn sm" type="submit" disabled={!code.trim() || !items.length || busy === "code"}>
+                  {busy === "code" ? "กำลังใช้…" : "ใช้โค้ด"}
+                </button>
+              </form>
+            )}
+            {codeErr && <div className="note err tiny" style={{ marginBottom: 8 }}>{codeErr}</div>}
+            {codeNote && <div className="note tiny" style={{ marginBottom: 8 }}>{codeNote}</div>}
+            {conflict && (
+              <div className="note warn tiny code-conflict">
+                {/* สองบรรทัดพอ: ใช้ร่วมไม่ได้ + ตัวใหม่ลดเท่าไร
+                    ข้อความเต็มจากหลังบ้านมีหางบอกวิธีแก้ ("— เอา X ออกก่อน") ซึ่งซ้ำกับปุ่มข้างล่าง */}
+                <div>{conflict.message.split(" — ")[0]}</div>
+                <div>{conflict.code} ลด {bahtWord(conflict.amount)}</div>
+                <div className="row" style={{ gap: 8, marginTop: 6 }}>
+                  <button className="btn sm" disabled={busy === "code"} onClick={swapToNewCode}>
+                    ใช้ {conflict.code} แทน
+                  </button>
+                  <button className="link-btn small" onClick={() => { setConflict(null); setCode(""); }}>
+                    ใช้โค้ดเดิมต่อ
+                  </button>
+                </div>
+              </div>
+            )}
+            {/* ค่าขนส่งที่พนักงานเปิดเป็น Mat ไว้ — แจกแจงให้ลูกค้าเห็นว่าแต่ละก้อนคืออะไร
+                (ตัวบรรทัดจริงถูกซ่อนจากลิสต์สินค้าไปแล้ว ไม่งั้นดูเหมือนซื้อของเพิ่ม) */}
+            {shipLines.map((it) => (
+              <div key={it.id} className="sum-row small muted">
+                <span>· {it.name}</span><span>{bahtWord(it.line_total)}</span>
+              </div>
+            ))}
             {/* ค่าส่งจริงตามเขตของปลายทาง — ยังไม่เลือกจังหวัดก็ยังคิดไม่ได้ อย่าโชว์เลขมั่ว */}
             <div className="sum-row">
               <span>
-                ราคาค่าจัดส่ง
-                {shipPostcode && <small className="muted"> {shipTo?.name_th || ""} {shipPostcode}</small>}
+                รวมค่าจัดส่ง
               </span>
               {!needsShip ? (
                 <span className="muted">ไม่มีรายการที่ต้องจัดส่ง</span>
@@ -235,8 +416,20 @@ export default function CartPage() {
               <b>{bahtWord(t?.grand_total ?? t?.net_total ?? cart?.subtotal ?? 0)}</b>
             </div>
             <p className="tiny muted">เมื่อคลิก "ชำระเงิน" แสดงว่าคุณยอมรับ <u>นโยบายความเป็นส่วนตัว</u></p>
+            {/* มีของที่ต้องรับที่สาขาอยู่ในรายการที่ติ๊ก — บอกเหตุผลและทางออกก่อนปุ่ม
+                ไม่ใช่ปล่อยให้กดแล้วเด้ง error (หลังบ้านก็กันอีกชั้นอยู่ดี) */}
+            {pickupOnly.length > 0 && (
+              <div className="note warn small" style={{ marginTop: 10 }}>
+                <b>{pickupOnly.length} รายการต้องรับที่สาขา</b> — ของตัวโชว์และของฝากขายมีชิ้นเดียวต่อสาขา
+                ยังสั่งซื้อออนไลน์ไม่ได้ ดูสาขาที่มีของได้ที่รายการสินค้าด้านบน
+                <button className="link-btn small" style={{ marginLeft: 6 }} disabled={busy === "unpick"} onClick={unpickBranchOnly}>
+                  เอาออกจากรายการที่เลือก
+                </button>
+              </div>
+            )}
             {canPay ? (
-              <button className="btn primary lg block" disabled={!cart?.selected_count || busy === "checkout"} onClick={checkout}>
+              <button className="btn primary lg block" disabled={!cart?.selected_count || busy === "checkout" || pickupOnly.length > 0}
+                      title={pickupOnly.length ? "มีสินค้าที่ต้องรับที่สาขา" : ""} onClick={checkout}>
                 ชำระเงิน{cart?.selected_count ? ` (${cart.selected_count} รายการ)` : ""}
               </button>
             ) : (
@@ -250,19 +443,81 @@ export default function CartPage() {
             <div className="row small" style={{ marginTop: 12 }}><Icon name="volunteer_activism" size={18} /> <u>365 วันในการเปลี่ยนความคิดของคุณ</u></div>
           </div>
 
-          {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
-          {promoOpen && cart && <PromoPanel cart={cart} isStaff={false} onClose={() => setPromoOpen(false)} onCartChange={setCart} />}
-          <div className="card flat" style={{ marginTop: 14 }}>
-            <div className="small muted">สิทธิ์ของบัญชีที่ใช้อยู่ · {auth.user ? `${auth.user.name}${auth.user.tier ? " · สมาชิก " + auth.user.tier : ""}` : "ผู้เยี่ยมชม (ไม่ล็อกอิน)"}</div>
-            <ul className="perm-list">
-              {ROLE_PERMS[auth.role].map((p) => (
-                <li key={p.label} className={p.ok ? "ok" : "no"}><Icon name={p.ok ? "check_circle" : "block"} size={16} /> {p.label}</li>
-              ))}
-            </ul>
-          </div>
         </aside>
+
+        {/* นอกแผงสรุป — บนจอเล็ก aside กลายเป็นแผงลอยติดขอบล่าง ของพวกนี้อยู่ข้างในไม่ได้
+            (toast ลอยเองอยู่แล้ว · แผงโปรฯ เป็น modal)
+            การ์ด "สิทธิ์ของบัญชี" ตัดออก — เป็นภาษาของระบบ ลูกค้าไม่ได้เข้ามาที่ตะกร้าเพื่ออ่านว่า
+            ตัวเองทำอะไรได้บ้าง และบรรทัด "ไม่เห็นต้นทุน/สต็อกข้ามสาขา" ยิ่งไม่ควรโผล่ฝั่งลูกค้า */}
+        {live && <div className="toast" role="status"><Icon name="notifications_active" size={20} /> {live}</div>}
+        {/* กางแผงอยู่แล้วแตะนอกแผง = ย่อกลับ (จอใหญ่ CSS ซ่อนฉากหลังนี้) */}
+        {sheet && <div className="scrim" onClick={() => setSheet(false)} />}
       </div>
     </main>
+  );
+}
+
+/** ป้ายสต็อกในตะกร้า — ใช้เกณฑ์เดียวกับการ์ดสินค้า ลูกค้าจะได้ไม่เห็นคำต่างกันสองที่
+ *  ตัวเลขมาจาก cache (อายุไม่เกิน TTL) ไม่ใช่ยอดสด — ของจริงยืนยันอีกทีตอนสั่งซื้อ
+ *  รหัสที่ยังไม่เคยเช็คกับ SAP จะไม่ขึ้นป้ายเลย ดีกว่าโชว์ "มีสต็อก 0 ชิ้น" ซึ่งไม่จริง
+ */
+function StockTag({ it }: { it: CartItem }) {
+  if (!it.stock) return null;
+  const ready = it.stock.ready_qty || 0;
+  const later = it.stock.later_qty || 0;
+  const made = !!it.stock.made_to_order;
+  if (ready >= it.qty) {
+    return <div className={"cart-stock" + (ready <= 5 ? " low" : " ok")}>{ready <= 5 ? `เหลือ ${ready} ชิ้น` : `มีสต็อก ${ready} ชิ้น`}</div>;
+  }
+  // ของไม่พอกับจำนวนที่สั่ง — บอกตรงๆ ตั้งแต่ในตะกร้า ไม่ใช่ให้ไปเจอตอนกดจ่ายเงิน
+  if (ready > 0) return <div className="cart-stock low">มีของ {ready} ชิ้น · ที่เหลือรอของเข้า</div>;
+  if (later > 0 || made) return <div className="cart-stock pre">พรีออเดอร์ — สั่งได้ ใช้เวลารอของ</div>;
+  return <div className="cart-stock no">สินค้าหมด</div>;
+}
+
+/** "มีที่สาขาไหนบ้าง" สำหรับของตัวโชว์/ฝากขาย — กดแล้วค่อยยิงถาม ไม่ถามล่วงหน้าทุกใบ
+ *  (เช็คสต็อกรายสาขาเป็นการยิง SAP สด ถ้าถามทุกใบตอนเปิดตะกร้าจะช้าและเปลืองโควตา) */
+function BranchPicker({ it }: { it: CartItem }) {
+  const [rows, setRows] = useState<StockRow[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await apiGet<{ rows: StockRow[] }>(`/materials/${it.matnr}/stock`);
+      setRows(res.rows.filter((r) => r.available > 0));
+    } catch (e) {
+      setErr(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="pickup-box">
+      <div className="pickup-head"><Icon name="storefront" size={15} /> รับที่สาขาเท่านั้น · ยังสั่งซื้อออนไลน์ไม่ได้</div>
+      {/* เงื่อนไขต้องอยู่ตรงที่ลูกค้าตัดสินใจ ไม่ใช่ซ่อนอยู่ในหน้านโยบาย */}
+      <div className="pickup-head warn"><Icon name="block" size={15} /> ซื้อแล้วไม่รับเปลี่ยนหรือคืน</div>
+      {rows === null ? (
+        <button className="link-btn small" disabled={busy} onClick={load}>{busy ? "กำลังเช็ค…" : "ดูสาขาที่มีของ"}</button>
+      ) : rows.length === 0 ? (
+        /* SAP ตอบยอดรวมทุกสาขามาก้อนเดียว ยังไม่มีตัวเลขแยกรายสาขาให้ — บอกเท่าที่รู้จริง
+           ดีกว่าโชว์รายชื่อสาขาแบบเดา ซึ่งทำให้ลูกค้าขับรถไปเก้อ */
+        <div className="tiny muted">
+          {it.stock?.ready_qty ? `มีของรวมทุกสาขา ${it.stock.ready_qty} ชิ้น · ` : ""}
+          ระบบยังไม่มีข้อมูลแยกรายสาขา — โทรถามสาขาที่สะดวก หรือติดต่อศูนย์บริการลูกค้าก่อนเดินทาง
+        </div>
+      ) : (
+        <ul className="pickup-list">
+          {rows.map((r) => (
+            <li key={r.plant_code}><b>{r.plant_name}</b> · มี {r.available} ชิ้น</li>
+          ))}
+        </ul>
+      )}
+      {err && <div className="tiny err">{err}</div>}
+    </div>
   );
 }
 
@@ -272,7 +527,7 @@ function CartRow({ it, busy, picked, onPick, onInc, onDec, onRemove }: { it: Car
       {/* หัวแถว: ติ๊กเลือก · รูป · ชื่อ+รหัส · ปุ่มแก้ไข/ลบ */}
       <div className="cart-row-head">
         <input type="checkbox" className="cart-pick" checked={picked} disabled={busy} onChange={onPick} aria-label={`เลือก ${it.name}`} />
-        <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={it.image_url} label="1:1" /></Link>
+        <Link to={`/p/${it.matnr}`} className="cart-img"><Placeholder src={imageSources(it.matnr, it.image_url)} label="1:1" /></Link>
         <div className="cart-info">
           {it.added_by === "sales" && (
             <div className="staff-tag"><Icon name="support_agent" size={14} /> พนักงานเพิ่มให้ · {it.added_by_name || "พนักงานขาย"}{it.added_by_code ? ` (${it.added_by_code})` : ""} · {thTime(it.added_at)}</div>
@@ -281,6 +536,8 @@ function CartRow({ it, busy, picked, onPick, onInc, onDec, onRemove }: { it: Car
           {it.variant && <div className="small muted">{it.variant}</div>}
           {it.spec && <div className="small muted">{it.spec}</div>}
           <div className="cart-code">รหัสสินค้า: {it.matnr}</div>
+          <StockTag it={it} />
+          {it.pickup_only && <BranchPicker it={it} />}
           {it.note && <div className="small muted">หมายเหตุ: {it.note}</div>}
         </div>
         <div className="cart-tools">
@@ -295,7 +552,6 @@ function CartRow({ it, busy, picked, onPick, onInc, onDec, onRemove }: { it: Car
         <div className="cart-col">
           <span className="cart-col-lbl">ราคา</span>
           <b>{bahtWord(it.unit_price)}</b>
-          {it.price_tier !== "standard" && <span className="tiny muted">ราคาสมาชิก {it.price_tier}</span>}
         </div>
         <div className="cart-col center">
           <span className="cart-col-lbl">จำนวน</span>

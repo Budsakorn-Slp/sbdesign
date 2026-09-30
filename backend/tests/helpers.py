@@ -7,7 +7,7 @@ def ensure_seed() -> None:
         seed_users(db)
 
 
-def login(client, identifier: str, password: str = "1234", account_type: str = "customer") -> dict:
+def login(client, identifier: str, password: str = "1122", account_type: str = "customer") -> dict:
     r = client.post("/auth/login", json={"identifier": identifier, "password": password, "account_type": account_type})
     assert r.status_code == 200, r.text
     return r.json()

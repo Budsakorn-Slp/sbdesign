@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from decimal import Decimal
+
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -9,8 +11,8 @@ from app.integrations.sap.base import SapError
 from app.models.catalog import Material
 from app.models.user import User
 from app.schemas.availability import AvailabilityBatchIn, AvailabilityItemOut, AvailabilityOneIn, AvailabilityOut
-from app.schemas.cart import AddItemIn, CartOut, UpdateItemIn
-from app.services import availability_service, cart_service, sales_service
+from app.schemas.cart import AddItemIn, CartOut, SelectIn, UpdateItemIn
+from app.services import availability_service, cart_service, relationship_service, sales_service, staff_shipping_service
 
 router = APIRouter(tags=["sales"])
 sales_only = require_role("sales", "manager")
@@ -18,6 +20,15 @@ sales_only = require_role("sales", "manager")
 
 class OpenCartIn(BaseModel):
     label: str | None = Field(default=None, max_length=120)
+
+
+class ShippingChargeIn(BaseModel):
+    """ค่าขนส่งที่พนักงานยืนยัน — ตัวเลขที่เสนอแก้ทับได้ เพราะหน้าสาขาเจอเคสนอกกฎเสมอ
+    (ของชิ้นใหญ่ ต่างจังหวัดไกล ลูกค้าต่อรอง) แต่ต้องบันทึกว่าใครแก้ ไว้ตรวจย้อนหลัง"""
+
+    matnr: str = Field(min_length=1, max_length=18, description="A534 หรือ A761")
+    fee: Decimal = Field(ge=0, le=1_000_000, description="ค่าขนส่งที่จะเปิดจริง")
+    remark: str | None = Field(default=None, max_length=300, description="เหตุผลที่แก้ / หมายเหตุให้คลัง")
 
 
 class AttachIn(BaseModel):
@@ -29,7 +40,6 @@ class SalesCartSummary(BaseModel):
     no: str
     label: str | None = None
     customer_name: str | None = None
-    customer_tier: str | None = None
     sap_customer_no: str | None = None
     count: int
     subtotal: str
@@ -41,8 +51,7 @@ class SalesCartSummary(BaseModel):
 def summary(c) -> SalesCartSummary:
     t = cart_service.totals(c)
     return SalesCartSummary(
-        id=c.id, no=c.no, label=c.label, customer_name=c.customer.name if c.customer else None, customer_tier=c.customer.tier if c.customer else None,
-        sap_customer_no=c.customer.sap_customer_no if c.customer else None, count=t["count"], subtotal=str(t["subtotal"]), pending_count=t["pending_count"],
+        id=c.id, no=c.no, label=c.label, customer_name=c.customer.name if c.customer else None,         sap_customer_no=c.customer.sap_customer_no if c.customer else None, count=t["count"], subtotal=str(t["subtotal"]), pending_count=t["pending_count"],
         expires_at=c.expires_at.isoformat() if c.expires_at else None, updated_at=c.updated_at.isoformat(),
     )
 
@@ -90,6 +99,19 @@ def update_item(cart_id: str, item_id: str, body: UpdateItemIn, db: Session = De
 def remove_item(cart_id: str, item_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
     cart = sales_service.require_my_cart(db, me, cart_id)
     cart_service.remove_item(db, cart, me, item_id)
+    return cart_out(cart_service.load_cart(db, cart.id), db)
+
+
+@router.post("/sales/carts/{cart_id}/select", response_model=CartOut)
+def select_items(cart_id: str, body: SelectIn, db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    """ติ๊กเลือกรายการที่จะคิดเงินในใบนี้ — ไม่ส่ง item_ids = ทั้งตะกร้า
+
+    หน้าเว็บลูกค้ามีช่องติ๊กมาตั้งแต่แรก แต่หน้าขายไม่มี ของที่ลูกค้าไม่ได้ติ๊กจึงหลุดจาก
+    ยอดบิลโดยพนักงานมองไม่เห็นและแก้ไม่ได้ ต้องมีช่องติ๊กฝั่งนี้ด้วย
+    """
+    cart = sales_service.require_my_cart(db, me, cart_id)
+    cart_service.set_selected(db, cart, me, body.item_ids, body.selected)
+    sales_service.touch(db, cart)
     return cart_out(cart_service.load_cart(db, cart.id), db)
 
 
@@ -148,3 +170,84 @@ def check_availability_batch(body: AvailabilityBatchIn, db: Session = Depends(ge
 def customers_search(q: str = Query(min_length=2), db: Session = Depends(get_db), me: User = Depends(sales_only)):
     """เลขสมาชิก / เบอร์โทร / อีเมล → รายชื่อลูกค้า + จำนวนของในตะกร้าออนไลน์"""
     return sales_service.search_customers(db, me, q)
+
+
+# ---------- ค่าขนส่งฝั่งพนักงาน (หน้า /sales เท่านั้น ลูกค้าเรียกไม่ได้) ----------
+@router.get("/sales/carts/{cart_id}/shipping-charge")
+def shipping_charge(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    """ดูว่าบิลนี้เข้าเทียร์ไหน ควรเปิด Mat ตัวไหน — ยังไม่เขียนอะไรลงตะกร้า"""
+    cart = sales_service.require_my_cart(db, me, cart_id)
+    return staff_shipping_service.suggest(cart)
+
+
+# ---------- ลูกค้าคนนี้เป็นของพนักงานคนไหน ----------
+def _who(db, uid: str | None) -> dict | None:
+    u = db.get(User, uid) if uid else None
+    return None if not u else {"id": u.id, "name": u.name, "staff_code": u.staff_code, "branch_id": u.branch_id}
+
+
+@router.get("/sales/customers/{customer_id}/owner")
+def customer_owner(customer_id: str, db: Session = Depends(get_db), _: User = Depends(sales_only)):
+    """พนักงานที่ควรดูแลลูกค้ารายนี้ + ประวัติย่อ
+
+    ไม่ได้บังคับว่าใครแตะได้ไม่ได้ — หน้าร้านจริงลูกค้าเดินเข้าหาใครก็ได้ การบล็อกจะทำให้ขายไม่ได้
+    หน้าจอเอาไปแสดงว่า "ลูกค้ารายนี้ปกติคุณ X ดูแล" แล้วให้คนหน้างานตัดสินใจเอง
+    """
+    link = relationship_service.owner_of(db, customer_id)
+    return {
+        "owner": _who(db, link.sales_user_id) if link else None,
+        "attach_count": link.attach_count if link else 0,
+        "sale_count": link.sale_count if link else 0,
+        "last_at": link.last_at if link else None,
+        "last_sale_at": link.last_sale_at if link else None,
+        "history": [
+            {"kind": e.kind, "sales": _who(db, e.sales_user_id), "doc_no": e.doc_no,
+             "note": e.note, "at": e.created_at}
+            for e in relationship_service.history_of(db, customer_id, limit=20)
+        ],
+    }
+
+
+@router.get("/sales/my-customers")
+def my_customers(db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    """ลูกค้าในมือของพนักงานคนนี้ — เรียงคนที่ขยับล่าสุดขึ้นก่อน"""
+    rows = relationship_service.customers_of(db, me.id)
+    return [
+        {"customer": _who(db, r.customer_user_id), "attach_count": r.attach_count,
+         "sale_count": r.sale_count, "last_at": r.last_at, "last_sale_at": r.last_sale_at,
+         "still_mine": (o.sales_user_id == me.id) if (o := relationship_service.owner_of(db, r.customer_user_id)) else False}
+        for r in rows
+    ]
+
+
+@router.get("/sales/fleets")
+def list_fleets(_: User = Depends(sales_only)):
+    """ชุดรถ/ทีมส่งที่ให้เลือกตอนจองคิว — คนละเรตค่าเดินทางกันได้"""
+    return staff_shipping_service.fleets()
+
+
+@router.get("/sales/delivery-extra")
+def delivery_extra(province: str = Query(min_length=1), district: str | None = Query(default=None),
+                   fleet: str | None = Query(default=None), _: User = Depends(sales_only)):
+    """ค่าจัดส่งเพิ่มเติมของปลายทางนี้ = ค่า fleet (กรุงเทพ/ต่างจังหวัด) + ค่าพื้นที่ห่างไกล
+
+    แยกจากเทียร์ Mat เพราะเทียร์ดูยอดบิล ส่วนอันนี้ดูปลายทาง ซึ่งเป็นเรื่องเดียวกับการจัดคิวรถ
+    ระบบไม่บวกให้เอง — พนักงานกดบวกเอง บางเคสลูกค้าไปรับเองที่ท่าเรือ/จุดนัด
+    """
+    return staff_shipping_service.delivery_extra(province, district, fleet)
+
+
+@router.post("/sales/carts/{cart_id}/shipping-charge", response_model=CartOut)
+def set_shipping_charge(cart_id: str, body: ShippingChargeIn, db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    cart = sales_service.require_my_cart(db, me, cart_id)
+    staff_shipping_service.apply(db, cart, me, body.matnr, body.fee, body.remark)
+    sales_service.touch(db, cart)
+    return cart_out(cart_service.load_cart(db, cart.id), db)
+
+
+@router.delete("/sales/carts/{cart_id}/shipping-charge", response_model=CartOut)
+def clear_shipping_charge(cart_id: str, role: str = Query(default="tier", pattern="^(tier|extra)$"),
+                          db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    cart = sales_service.require_my_cart(db, me, cart_id)
+    staff_shipping_service.remove(db, cart, me, role)
+    return cart_out(cart_service.load_cart(db, cart.id), db)

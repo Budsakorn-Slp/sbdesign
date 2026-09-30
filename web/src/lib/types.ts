@@ -9,10 +9,17 @@ export type User = {
   sap_customer_no: string | null;
   staff_code: string | null;
   branch_id: string | null;
-  tier: string | null;
+  points: number;
   is_guest: boolean;
   default_address: string | null;
   default_postcode: string | null;
+  /** ที่อยู่ในทะเบียนสมาชิกฝั่ง SAP — อ่านอย่างเดียว คนละอันกับสมุดที่อยู่จัดส่ง */
+  sap_address: string | null;
+  sap_postcode: string | null;
+  /** ตั้งรหัสผ่านไว้แล้ว — ใช้ซ่อนช่อง "ตั้งรหัสผ่าน" ที่ถ้ากดจะได้ 409 */
+  has_password: boolean;
+  /** ยังไม่เคยผ่านขั้น "ตั้งค่าบัญชี" หลังล็อกอินครั้งแรก — ผูกเลขสมาชิกแล้วจะเป็น false เสมอ */
+  needs_profile: boolean;
 };
 
 export type TokenPair = {
@@ -36,10 +43,13 @@ export type Brand = { id: string; name: string };
 
 export type Plant = { plant_code: string; name: string; type: "store" | "warehouse"; address: string | null };
 
-export type StockSummary = {
-  available_total: number;
-  store_available: number;
-  warehouse_available: number;
+/** ยอดของรวมทุกสาขาจาก SAP ที่ cache ไว้โชว์บนการ์ด — ไม่ใช่ยอดสด ยืนยันจริงตอนสั่งซื้อ */
+export type ProductStock = {
+  ready_qty: number;
+  later_qty: number;
+  later_date: string | null;
+  /** สั่งทำ — สั่งได้เสมอ ไม่ต้องรอสต็อก (SAP ไม่คุมสต็อกสินค้ากลุ่มนี้) */
+  made_to_order: boolean;
   fetched_at: string | null;
 };
 
@@ -59,34 +69,44 @@ export type MaterialCard = {
   price: string;
   price_tier: string;
   standard_price: string;
-  member_price: string | null;
   compare_at_price: string | null;
   discount_percent: number | null;
   requires_install: boolean;
   is_takeaway_ok: boolean;
   is_new: boolean;
+  /** ของที่ตั้งโชว์หน้าร้าน — backend ตัดสินจากกลุ่ม MATNR ให้แล้ว */
+  is_display?: boolean;
+  /** ของตัวโชว์/ฝากขาย — ซื้อได้ที่สาขาเท่านั้น และซื้อแล้วไม่รับเปลี่ยนคืน */
+  pickup_only?: boolean;
   tags: string[];
-  stock: StockSummary | null;
+  stock: ProductStock | null;
 };
 
 /** สีอื่นของรุ่นเดียวกัน — ต้นทางแยกทุกสีเป็นคนละ MATNR ปุ่มสีจึงเป็นลิงก์ไปอีกหน้าสินค้า */
-export type ColorOption = {
+/** ตัวเลือกหนึ่งปุ่มบนหน้าสินค้า — ขนาด หรือ สี · กดแล้วไป MATNR ตัวนั้น */
+export type VariantOption = {
+  label: string;
   matnr: string;
-  color: string | null;
-  name_th: string;
   image_url: string | null;
-  price: string;
+  price: string | null;
 };
 
 export type MaterialDetail = MaterialCard & {
   barcode: string | null;
   description: string | null;
+  /** LONG_DESC — คำบรรยายเต็ม (HTML ที่ล้างมาจากฝั่ง ETL แล้ว) */
+  description_long?: string | null;
   color: string | null;
   style: string | null;
   volume_m3: string | null;
   weight_kg: string | null;
   sold_qty: number;
-  colors: ColorOption[];
+  /** รูปทั้งหมดของสินค้าตัวนี้ เรียงตามลำดับของต้นทาง (ใบหลักมาก่อน) */
+  images: string[];
+  /** แกนขนาด (จาก MVGR5T) · ว่างถ้ารุ่นนี้มีขนาดเดียว */
+  sizes: VariantOption[];
+  /** แกนสี (จาก MVGR6T) · ว่างถ้ารุ่นนี้มีสีเดียว */
+  colors: VariantOption[];
   /** หมวดของสินค้านี้ + หมวดพี่น้อง — ใช้เป็นชิปสลับใน "สินค้าที่เกี่ยวข้อง" */
   related_categories: { id: string; name_th: string }[];
   synced_at: string;
@@ -94,7 +114,47 @@ export type MaterialDetail = MaterialCard & {
 
 export type BrandFacet = { id: string; name: string; count: number };
 export type Facets = { brands: BrandFacet[]; price_min: number | null; price_max: number | null };
-export type SearchOut = { items: MaterialCard[]; total: number; q: string | null; category: string | null; facets?: Facets | null };
+/** แบรนด์บนหน้าแรก — รูปคือสินค้าขายดีสุดของแบรนด์นั้น (ไม่มีไฟล์โลโก้ผูกกับรหัสแบรนด์) */
+export type HomeBrand = BrandFacet & { matnr: string | null; image_url: string | null };
+/** สิ่งที่ระบบตีความจากประโยคค้นหา — "ตู้เสื้อผ้าสีแดง สูง 180" → หมวด/สี/ขนาด */
+export type Understood = {
+  labels: string[];
+  /** เงื่อนไขที่ต้องยอมตัดทิ้งถึงจะเจอของ (specs | color) */
+  dropped: string[];
+  category_id: string | null;
+  color: string | null;
+  min_price: number | null;
+  max_price: number | null;
+};
+
+export type SearchOut = {
+  items: MaterialCard[];
+  total: number;
+  q: string | null;
+  category: string | null;
+  facets?: Facets | null;
+  /** ระบบแก้ตัวสะกดให้ถึงจะเจอของ */
+  corrected?: string | null;
+  understood?: Understood | null;
+  /** ต้องผ่อนเป็น "เข้าคำใดคำหนึ่ง" ผลจึงไม่ตรงครบทุกคำ */
+  relaxed?: boolean;
+};
+
+/** ข้อมูลสมาชิกเท่าที่เห็นได้ก่อนพิสูจน์ตัวตน — เบอร์/อีเมลปิดบังมาจาก backend แล้ว */
+export type MemberCard = {
+  sap_customer_no: string;
+  name: string;
+  points: number;
+  phone_masked: string;
+  email_masked: string | null;
+  /** true = เบอร์ตรงกับที่ยืนยันไว้ กดผูกได้เลย · false = ต้องยืนยัน OTP ที่เบอร์ในทะเบียนก่อน */
+  can_link_now: boolean;
+};
+
+export type MemberLinkStart = { sap_customer_no: string; requires_otp: boolean; member: MemberCard };
+
+export type SuggestItem = { kind: "term" | "category" | "brand"; label: string; href: string };
+export type SuggestOut = { q: string; suggestions: SuggestItem[]; items: MaterialCard[] };
 
 export type StockRow = {
   plant_code: string;
@@ -176,6 +236,12 @@ export type CartItem = {
   added_by_code: string | null;
   added_at: string;
   pending_ack: boolean;
+  /** ยอดของจาก cache ไว้โชว์ป้ายสต็อกในตะกร้า (ไม่ใช่ยอดสด) */
+  stock: ProductStock | null;
+  /** กลุ่มสินค้าจากตัวขึ้นต้น MATNR — regular (19) · display (20) · consign (25) */
+  group: string | null;
+  /** ใส่ตะกร้าได้ แต่ยังชำระเงินออนไลน์ไม่ได้ ต้องไปรับที่สาขา */
+  pickup_only: boolean;
   selected: boolean; // ติ๊กในหน้าตะกร้า = คิดเงินรอบนี้
   supply_mode: SupplyMode;
   plant_code: string | null;
@@ -187,7 +253,7 @@ export type CartItem = {
 export type CartPerson = {
   id: string;
   name: string;
-  tier: string | null;
+  points: number;
   sap_customer_no: string | null;
   staff_code: string | null;
   phone: string | null;
@@ -283,12 +349,13 @@ export type Offer = {
   discount_type: "percent" | "amount" | "gift";
   applied: boolean;
   applied_id: string | null;
+  /** true = คูปองที่ต้องเลือก/กรอกโค้ด · false = โปรฯ ที่ระบบเช็คจากของในตะกร้าให้เอง */
+  requires_code: boolean;
 };
 
 export type EvaluateOut = {
   cart_id: string;
   customer_name: string | null;
-  customer_tier: string | null;
   eligible: Offer[];
   ineligible: Offer[];
   staff_discount_quota_percent: number;
@@ -328,6 +395,42 @@ export type Cart = {
   updated_at: string;
   totals: Totals | null;
   delivery: CartDelivery | null;
+  /** ด่านก่อนบันทึกใบ PRE — มาเฉพาะตะกร้าที่พนักงานถือ */
+  preso: PresoReady | null;
+};
+
+/** หนึ่งด่านในผังงานหน้าร้าน (ลูกค้า → ข้อมูล → สต็อก → โปรฯ → คิวส่ง) */
+export type PresoStepKey = "customer" | "profile" | "stock" | "promo" | "delivery";
+export type PresoStep = {
+  key: PresoStepKey;
+  title: string;
+  ok: boolean;
+  note: string;
+  /** ยังไม่ถึงคิว เพราะด่านก่อนหน้ายังไม่ผ่าน */
+  blocked: boolean;
+};
+export type PresoReady = {
+  ready: boolean;
+  next: PresoStepKey | null;
+  message: string;
+  steps: PresoStep[];
+};
+
+/** ที่อยู่จัดส่งหนึ่งใบในสมุดที่อยู่ของลูกค้า */
+export type SavedAddress = {
+  id: string;
+  label: string | null;
+  receiver: string;
+  phone: string;
+  address: string;
+  sub: string | null;
+  district: string | null;
+  province: string | null;
+  postcode: string;
+  note: string | null;
+  is_default: boolean;
+  /** ที่อยู่รวมบรรทัดเดียว — ใช้โชว์และส่งให้ระบบคิดค่าส่ง */
+  one_line: string;
 };
 
 // ---------- preso / quotation ----------
@@ -337,7 +440,6 @@ export type PresoSummary = {
   status: "draft" | "quoted" | "expired" | "cancelled";
   cart_id: string;
   customer_name: string | null;
-  customer_tier: string | null;
   sales_name: string | null;
   item_count: number;
   grand_total: string;
@@ -374,7 +476,7 @@ export type Quotation = {
   preso_no: string | null;
   status: "issued" | "paid" | "converted" | "expired" | "cancelled";
   channel: "online" | "in_store_assisted";
-  customer: { id?: string; name?: string; tier?: string | null; sap_customer_no?: string | null; phone?: string | null; email?: string | null };
+  customer: { id?: string; name?: string; points?: number; sap_customer_no?: string | null; phone?: string | null; email?: string | null };
   sales_name: string | null;
   sales_code: string | null;
   lines: QuotationLine[];
@@ -437,7 +539,7 @@ export type SyncJob = {
 };
 
 // ---------- home content ----------
-export type NavLink = { label: string; href: string };
+export type NavLink = { label: string; label_en?: string | null; href: string };
 /** ภาพจริงจาก Magento CMS (ตาราง home_media) — ไม่มีเมื่อยังไม่ได้รัน sync_home_media */
 export type MediaTile = { id: string; label: string | null; alt: string | null; image: string; image_mb: string | null; href: string };
 export type HomeContent = {
@@ -452,18 +554,20 @@ export type HomeContent = {
   new_collections: NavLink[];
   room_rows: { label: string; room: string; href?: string; items: MaterialCard[] }[];
   rooms: { label: string; room: string }[];
-  main_nav: { label: string; href?: string; items: NavLink[] }[];
+  /** groups = เมนู 3 ชั้น (ห้องที่ยกหมวดมาจากเว็บจริงแล้ว) · items = เมนู 2 ชั้นแบบเดิม */
+  main_nav: { label: string; label_en?: string | null; href?: string; items: NavLink[]; groups?: { label: string; label_en?: string | null; href: string; items: NavLink[] }[] }[];
   footer_promos: { head: string; body: string; cta: string; href: string }[];
-  footer_cols: { head: string; items: string[] }[];
+  footer_cols: { head: string; items: NavLink[] }[];
   payments: string[];
-  legal_links: string[];
+  legal_links: NavLink[];
   support_line: string;
   free_shipping_note: string;
   categories: Category[];
   new_products: MaterialCard[];
   deals: MaterialCard[];
   bestsellers: MaterialCard[];
-  brands: Brand[];
+  /** แบรนด์ที่มีสินค้าขายอยู่จริง (พร้อมจำนวน + รูปสินค้าขายดีของแบรนด์) — backend กรองมาให้แล้ว */
+  brands: HomeBrand[];
 };
 
 // ---------- ประวัติ + สินค้าขายดี (STEP 10) ----------

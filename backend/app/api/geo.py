@@ -82,6 +82,31 @@ def provinces(db: Session = Depends(get_db)):
     return sorted(out.values(), key=lambda p: p.name_th)
 
 
+def _bare(name: str) -> str:
+    """ตัดคำนำหน้าออกเพื่อใช้เป็นคีย์เทียบ — ต้นทางเขียนไม่เหมือนกัน (อ.ขนอม / อำเภอขนอม)"""
+    v = (name or "").strip()
+    for p in ("อำเภอ", "เขต", "อ."):
+        if v.startswith(p):
+            return v[len(p):].strip()
+    return v
+
+
+def district_siblings(db: Session, district_id: int) -> list[int]:
+    """id ทั้งหมดที่จริงๆ แล้วคืออำเภอเดียวกัน
+
+    ต้นทางมีอำเภอซ้ำ 7 คู่ (เช่น 638 "อำเภอเกาะพะงัน" กับ 639 "อ.เกาะพะงัน") แต่ละ id
+    ถือตำบลคนละชุด · เวลายุบให้เหลือรายการเดียวจึงต้องรวมตำบลของพี่น้องมาด้วย
+    ไม่งั้นเลือกอำเภอแล้วตำบลหายไปครึ่งหนึ่งโดยไม่มีใครรู้
+    """
+    row = db.execute(select(ThaiGeo.province_id, ThaiGeo.district_th).where(ThaiGeo.district_id == district_id).limit(1)).first()
+    if not row:
+        return [district_id]
+    pv, th = row
+    ids = db.execute(select(ThaiGeo.district_id, ThaiGeo.district_th).where(ThaiGeo.province_id == pv).group_by(ThaiGeo.district_id)).all()
+    key = _bare(th)
+    return [d for d, name in ids if _bare(name) == key] or [district_id]
+
+
 @router.get("/districts", response_model=list[DistrictOut])
 def districts(province_id: int = Query(...), db: Session = Depends(get_db)):
     rows = db.execute(
@@ -92,13 +117,30 @@ def districts(province_id: int = Query(...), db: Session = Depends(get_db)):
     ).all()
     if not rows:
         raise HTTPException(status_code=404, detail="ไม่พบจังหวัดนี้")
-    return [DistrictOut(district_id=d, name_th=th, name_en=en, province_id=province_id, serviceable=not b)
-            for d, th, en, b in rows]
+    # ยุบอำเภอที่ซ้ำให้เหลือรายการเดียว — เลือกชื่อที่เขียนเต็ม ("อำเภอขนอม") เป็นตัวแทน
+    # และเอา id น้อยสุดเป็นค่าที่ส่งกลับ ส่วนตำบลจะถูกรวมให้ตอนเรียก /subdistricts
+    merged: dict[str, dict] = {}
+    for d, th, en, b in rows:
+        k = _bare(th)
+        cur = merged.get(k)
+        full = th.startswith(("อำเภอ", "เขต"))
+        if cur is None:
+            merged[k] = {"id": d, "th": th, "en": en, "blocked": b, "full": full}
+            continue
+        cur["id"] = min(cur["id"], d)
+        cur["blocked"] = min(cur["blocked"], b)
+        if full and not cur["full"]:
+            cur["th"], cur["en"], cur["full"] = th, en, True
+    return [DistrictOut(district_id=v["id"], name_th=v["th"], name_en=v["en"], province_id=province_id, serviceable=not v["blocked"])
+            for v in sorted(merged.values(), key=lambda v: v["th"])]
 
 
 @router.get("/subdistricts", response_model=list[SubdistrictOut])
 def subdistricts(district_id: int = Query(...), db: Session = Depends(get_db)):
-    rows = db.scalars(select(ThaiGeo).where(ThaiGeo.district_id == district_id).order_by(ThaiGeo.subdistrict_th)).all()
+    # รวมตำบลของอำเภอที่ซ้ำกันมาด้วย (ดู district_siblings) ไม่งั้นตำบลหายไปครึ่ง
+    rows = db.scalars(
+        select(ThaiGeo).where(ThaiGeo.district_id.in_(district_siblings(db, district_id))).order_by(ThaiGeo.subdistrict_th)
+    ).all()
     if not rows:
         raise HTTPException(status_code=404, detail="ไม่พบอำเภอนี้")
     return [SubdistrictOut(subdistrict_id=r.subdistrict_id, name_th=r.subdistrict_th, name_en=r.subdistrict_en,

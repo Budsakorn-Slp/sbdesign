@@ -1,0 +1,4325 @@
+{
+ "_note": [
+  "ค่าจัดส่งต่างจังหวัดรายอำเภอ — ทีมขนส่งเป็นเจ้าของข้อมูล (นำเข้าครั้งแรก 2026-09-30)",
+  "ใช้ในบล็อก \"ตรวจสอบคิวจัดส่ง\" ฝั่งพนักงาน เปิดเป็น Mat A533 แยกบรรทัดจากค่าขนส่งตามยอดบิล",
+  "จังหวัดที่ไม่มีในรายการนี้ = ไม่มีค่าส่งเพิ่ม (กรุงเทพฯ นนทบุรี ปทุมธานี สมุทรปราการ)",
+  "ค่า 10000 = ค่าส่งจริงของพื้นที่พิเศษ (เกาะ / สามจังหวัดชายแดนใต้) บวกเข้าบิลตามปกติ"
+ ],
+ "rows": [
+  {
+   "province": "กระบี่",
+   "district": "อ.คลองท่อม",
+   "fee": 432
+  },
+  {
+   "province": "กระบี่",
+   "district": "อ.ปลายพระยา",
+   "fee": 576
+  },
+  {
+   "province": "กระบี่",
+   "district": "อ.ลำทับ",
+   "fee": 522
+  },
+  {
+   "province": "กระบี่",
+   "district": "อ.อ่าวลึก",
+   "fee": 240
+  },
+  {
+   "province": "กระบี่",
+   "district": "อ.เกาะลันตา",
+   "fee": 10000
+  },
+  {
+   "province": "กระบี่",
+   "district": "อ.เขาพนม",
+   "fee": 432
+  },
+  {
+   "province": "กระบี่",
+   "district": "อ.เมืองกระบี่",
+   "fee": 0
+  },
+  {
+   "province": "กระบี่",
+   "district": "อ.เหนือคลอง",
+   "fee": 0
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.ด่านมะขามเตี้ย",
+   "fee": 240
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.ทองผาภูมิ",
+   "fee": 2178
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.ท่ามะกา",
+   "fee": 0
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.ท่าม่วง",
+   "fee": 0
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.บ่อพลอย",
+   "fee": 648
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.พนมทวน",
+   "fee": 0
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.ศรีสวัสดิ์",
+   "fee": 2214
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.สังขละบุรี",
+   "fee": 3456
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.หนองปรือ",
+   "fee": 954
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.ห้วยกระเจา",
+   "fee": 450
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.เมืองกาญจนบุรี",
+   "fee": 0
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.เลาขวัญ",
+   "fee": 1152
+  },
+  {
+   "province": "กาญจนบุรี",
+   "district": "อ.ไทรโยค",
+   "fee": 504
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.กมลาไสย",
+   "fee": 0
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.กุฉินารายณ์",
+   "fee": 1026
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.คำม่วง",
+   "fee": 1476
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.ฆ้องชัย",
+   "fee": 240
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.ดอนจาน",
+   "fee": 612
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.ท่าคันโท",
+   "fee": 1044
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.นาคู",
+   "fee": 522
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.นามน",
+   "fee": 1116
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.ยางตลาด",
+   "fee": 774
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.ร่องคำ",
+   "fee": 240
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.สมเด็จ",
+   "fee": 1260
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.สหัสขันธ์",
+   "fee": 1062
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.สามชัย",
+   "fee": 1530
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.หนองกุงศรี",
+   "fee": 1422
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.ห้วยผึ้ง",
+   "fee": 1368
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.ห้วยเม็ก",
+   "fee": 1008
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.เขาวง",
+   "fee": 1404
+  },
+  {
+   "province": "กาฬสินธุ์",
+   "district": "อ.เมืองกาฬสินธุ์",
+   "fee": 1062
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.ขาณุวรลักษบุรี",
+   "fee": 828
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.คลองขลุง",
+   "fee": 954
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.คลองลาน",
+   "fee": 1710
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.ทรายทองวัฒนา",
+   "fee": 1080
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.บึงสามัคคี",
+   "fee": 864
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.ปางศิลาทอง",
+   "fee": 1674
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.พรานกระต่าย",
+   "fee": 720
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.ลานกระบือ",
+   "fee": 594
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.เมืองกำแพงเพชร",
+   "fee": 918
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.โกสัมพีนคร",
+   "fee": 1134
+  },
+  {
+   "province": "กำแพงเพชร",
+   "district": "อ.ไทรงาม",
+   "fee": 954
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.กระนวน",
+   "fee": 720
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.ชนบท",
+   "fee": 738
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.ชุมแพ",
+   "fee": 1242
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.ซำสูง",
+   "fee": 324
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.น้ำพอง",
+   "fee": 240
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.บ้านฝาง",
+   "fee": 0
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.บ้านแฮด",
+   "fee": 0
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.บ้านไผ่",
+   "fee": 288
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.พระยืน",
+   "fee": 0
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.พล",
+   "fee": 846
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.ภูผาม่าน",
+   "fee": 1818
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.ภูเวียง",
+   "fee": 702
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.มัญจาคีรี",
+   "fee": 432
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.สีชมพู",
+   "fee": 1620
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.หนองนาคำ",
+   "fee": 1152
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.หนองสองห้อง",
+   "fee": 1170
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.หนองเรือ",
+   "fee": 324
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.อุบลรัตน์",
+   "fee": 450
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.เขาสวนกวาง",
+   "fee": 666
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.เปือยน้อย",
+   "fee": 828
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.เมืองขอนแก่น",
+   "fee": 0
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.แวงน้อย",
+   "fee": 558
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.แวงใหญ่",
+   "fee": 720
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.โคกโพธิ์ไชย",
+   "fee": 846
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "อ.โนนศิลา",
+   "fee": 468
+  },
+  {
+   "province": "ขอนแก่น",
+   "district": "เวียงเก่า",
+   "fee": 1044
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.ขลุง",
+   "fee": 0
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.ท่าใหม่",
+   "fee": 0
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.นายายอาม",
+   "fee": 240
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.มะขาม",
+   "fee": 0
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.สอยดาว",
+   "fee": 972
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.เขาคิชฌกูฏ",
+   "fee": 0
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.เมืองจันทบุรี",
+   "fee": 0
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.แก่งหางแมว",
+   "fee": 1116
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.แหลมสิงห์",
+   "fee": 0
+  },
+  {
+   "province": "จันทบุรี",
+   "district": "อ.โป่งน้ำร้อน",
+   "fee": 522
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.คลองเขื่อน",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.ท่าตะเกียบ",
+   "fee": 1494
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.บางคล้า",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.บางน้ำเปรี้ยว",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.บางปะกง",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.บ้านโพธิ์",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.พนมสารคาม",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.ราชสาส์น",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.สนามชัยเขต",
+   "fee": 360
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.เมืองฉะเชิงเทรา",
+   "fee": 0
+  },
+  {
+   "province": "ฉะเชิงเทรา",
+   "district": "อ.แปลงยาว",
+   "fee": 252
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.บางละมุง",
+   "fee": 0
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.บ่อทอง",
+   "fee": 702
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.บ้านบึง",
+   "fee": 0
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.พนัสนิคม",
+   "fee": 0
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.พานทอง",
+   "fee": 0
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.ศรีราชา",
+   "fee": 0
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.สัตหีบ",
+   "fee": 0
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.หนองใหญ่",
+   "fee": 612
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.เกาะจันทร์",
+   "fee": 576
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.เกาะสีชัง",
+   "fee": 10000
+  },
+  {
+   "province": "ชลบุรี",
+   "district": "อ.เมืองชลบุรี",
+   "fee": 0
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.มโนรมย์",
+   "fee": 396
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.วัดสิงห์",
+   "fee": 864
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.สรรคบุรี",
+   "fee": 1026
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.สรรพยา",
+   "fee": 1008
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.หนองมะโมง",
+   "fee": 1098
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.หันคา",
+   "fee": 1134
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.เนินขาม",
+   "fee": 1098
+  },
+  {
+   "province": "ชัยนาท",
+   "district": "อ.เมืองชัยนาท",
+   "fee": 684
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.คอนสวรรค์",
+   "fee": 306
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.คอนสาร",
+   "fee": 1890
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.จัตุรัส",
+   "fee": 240
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.ซับใหญ่",
+   "fee": 522
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.บำเหน็จณรงค์",
+   "fee": 702
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.บ้านเขว้า",
+   "fee": 0
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.บ้านแท่น",
+   "fee": 1098
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.ภักดีชุมพล",
+   "fee": 1152
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.ภูเขียว",
+   "fee": 1080
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.หนองบัวระเหว",
+   "fee": 378
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.หนองบัวแดง",
+   "fee": 486
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.เกษตรสมบูรณ์",
+   "fee": 684
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.เทพสถิต",
+   "fee": 936
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.เนินสง่า",
+   "fee": 0
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.เมืองชัยภูมิ",
+   "fee": 0
+  },
+  {
+   "province": "ชัยภูมิ",
+   "district": "อ.แก้งคร้อ",
+   "fee": 558
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.ทุ่งตะโก",
+   "fee": 504
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.ท่าแซะ",
+   "fee": 240
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.ปะทิว",
+   "fee": 378
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.พะโต๊ะ",
+   "fee": 1296
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.ละแม",
+   "fee": 1188
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.สวี",
+   "fee": 0
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.หลังสวน",
+   "fee": 774
+  },
+  {
+   "province": "ชุมพร",
+   "district": "อ.เมืองชุมพร",
+   "fee": 0
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.กันตรัง",
+   "fee": 0
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.กันตัง",
+   "fee": 0
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.นาโยง",
+   "fee": 0
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.ปะเหลียน",
+   "fee": 240
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.ย่านตาขาว",
+   "fee": 0
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.รัษฎา",
+   "fee": 504
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.วังวิเศษ",
+   "fee": 378
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.สิเกา",
+   "fee": 0
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.หาดสำราญ",
+   "fee": 288
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.ห้วยยอด",
+   "fee": 240
+  },
+  {
+   "province": "ตรัง",
+   "district": "อ.เมืองตรัง",
+   "fee": 0
+  },
+  {
+   "province": "ตราด",
+   "district": "อ.คลองใหญ่",
+   "fee": 1800
+  },
+  {
+   "province": "ตราด",
+   "district": "อ.บ่อไร่",
+   "fee": 990
+  },
+  {
+   "province": "ตราด",
+   "district": "อ.เกาะกูด",
+   "fee": 10000
+  },
+  {
+   "province": "ตราด",
+   "district": "อ.เกาะช้าง",
+   "fee": 10000
+  },
+  {
+   "province": "ตราด",
+   "district": "อ.เขาสมิง",
+   "fee": 450
+  },
+  {
+   "province": "ตราด",
+   "district": "อ.เมืองตราด",
+   "fee": 684
+  },
+  {
+   "province": "ตราด",
+   "district": "อ.แหลมงอบ",
+   "fee": 702
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.ท่าสองยาง",
+   "fee": 2538
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.บ้านตาก",
+   "fee": 1476
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.พบพระ",
+   "fee": 342
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.วังเจ้า",
+   "fee": 1170
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.สามเงา",
+   "fee": 1548
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.อุ้มผาง",
+   "fee": 5958
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.เมืองตาก",
+   "fee": 900
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.แม่ระมาด",
+   "fee": 450
+  },
+  {
+   "province": "ตาก",
+   "district": "อ.แม่สอด",
+   "fee": 0
+  },
+  {
+   "province": "นครนายก",
+   "district": "อ.บ้านนา",
+   "fee": 630
+  },
+  {
+   "province": "นครนายก",
+   "district": "อ.ปากพลี",
+   "fee": 240
+  },
+  {
+   "province": "นครนายก",
+   "district": "อ.องครักษ์",
+   "fee": 306
+  },
+  {
+   "province": "นครนายก",
+   "district": "อ.เมืองนครนายก",
+   "fee": 0
+  },
+  {
+   "province": "นครปฐม",
+   "district": "อ.กำแพงแสน",
+   "fee": 240
+  },
+  {
+   "province": "นครปฐม",
+   "district": "อ.ดอนตูม",
+   "fee": 0
+  },
+  {
+   "province": "นครปฐม",
+   "district": "อ.นครชัยศรี",
+   "fee": 0
+  },
+  {
+   "province": "นครปฐม",
+   "district": "อ.บางเลน",
+   "fee": 240
+  },
+  {
+   "province": "นครปฐม",
+   "district": "อ.พุทธมณฑล",
+   "fee": 0
+  },
+  {
+   "province": "นครปฐม",
+   "district": "อ.สามพราน",
+   "fee": 0
+  },
+  {
+   "province": "นครปฐม",
+   "district": "อ.เมืองนครปฐม",
+   "fee": 0
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.ท่าอุเทน",
+   "fee": 990
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.ธาตุพนม",
+   "fee": 936
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.นาทม",
+   "fee": 1044
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.นาหว้า",
+   "fee": 396
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.นาแก",
+   "fee": 360
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.บ้านแพง",
+   "fee": 1242
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.ปลาปาก",
+   "fee": 738
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.วังยาง",
+   "fee": 396
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.ศรีสงคราม",
+   "fee": 738
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.เมืองนครพนม",
+   "fee": 1116
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.เรณูนคร",
+   "fee": 828
+  },
+  {
+   "province": "นครพนม",
+   "district": "อ.โพนสวรรค์",
+   "fee": 702
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ขามทะเลสอ",
+   "fee": 240
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ขามสะแกแสง",
+   "fee": 594
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.คง",
+   "fee": 936
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ครบุรี",
+   "fee": 792
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.จักราช",
+   "fee": 576
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ชุมพวง",
+   "fee": 1260
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ด่านขุนทด",
+   "fee": 630
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.บัวลาย",
+   "fee": 1512
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.บัวใหญ่",
+   "fee": 738
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.บ้านเหลื่อม",
+   "fee": 954
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ประทาย",
+   "fee": 1422
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ปักธงชัย",
+   "fee": 240
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ปากช่อง",
+   "fee": 0
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.พระทองคำ",
+   "fee": 450
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.พิมาย",
+   "fee": 540
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ลำทะเมนชัย",
+   "fee": 1746
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.วังน้ำเขียว",
+   "fee": 918
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.สีคิ้ว",
+   "fee": 594
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.สีดา",
+   "fee": 1044
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.สูงเนิน",
+   "fee": 0
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.หนองบุญมาก",
+   "fee": 378
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.ห้วยแถลง",
+   "fee": 648
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.เฉลิมพระเกียรติ",
+   "fee": 0
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.เทพารักษ์",
+   "fee": 1278
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.เมืองนครราชสีมา",
+   "fee": 0
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.เมืองยาง",
+   "fee": 1728
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.เสิงสาง",
+   "fee": 1386
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.แก้งสนามนาง",
+   "fee": 1152
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.โชคชัย",
+   "fee": 240
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.โนนสูง",
+   "fee": 288
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.โนนแดง",
+   "fee": 900
+  },
+  {
+   "province": "นครราชสีมา",
+   "district": "อ.โนนไทย",
+   "fee": 240
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ขนอม",
+   "fee": 810
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.จุฬาภรณ์",
+   "fee": 180
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ฉวาง",
+   "fee": 324
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ชะอวด",
+   "fee": 360
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ช้างกลาง",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ถ้ำพรรณรา",
+   "fee": 522
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ทุ่งสง",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ทุ่งใหญ่",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ท่าศาลา",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.นบพิตำ",
+   "fee": 882
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.นาบอน",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.บางขัน",
+   "fee": 234
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ปากพนัง",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.พรหมคีรี",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.พระพรหม",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.พิปูน",
+   "fee": 594
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ร่อนพิบูลย์",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.ลานสกา",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.สิชล",
+   "fee": 774
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.หัวไทร",
+   "fee": 612
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.เฉลิมพระเกียรติ",
+   "fee": 0
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.เชียรใหญ่",
+   "fee": 324
+  },
+  {
+   "province": "นครศรีธรรมราช",
+   "district": "อ.เมืองนครศรีธรรมราช",
+   "fee": 0
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.ชุมตาบง",
+   "fee": 792
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.ชุมแสง",
+   "fee": 240
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.ตากฟ้า",
+   "fee": 828
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.ตาคลี",
+   "fee": 918
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.ท่าตะโก",
+   "fee": 522
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.บรรพตพิสัย",
+   "fee": 252
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.พยุหะคีรี",
+   "fee": 240
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.ลาดยาว",
+   "fee": 288
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.หนองบัว",
+   "fee": 756
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.เก้าเลี้ยว",
+   "fee": 0
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.เมืองนครสวรรค์",
+   "fee": 0
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.แม่วงก์",
+   "fee": 1386
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.แม่เปิน",
+   "fee": 1278
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.โกรกพระ",
+   "fee": 0
+  },
+  {
+   "province": "นครสวรรค์",
+   "district": "อ.ไพศาลี",
+   "fee": 882
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.จะแนะ",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.ตากใบ",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.บาเจาะ",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.ยี่งอ",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.ระแงะ",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.รือเสาะ",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.ศรีสาคร",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.สุคิริน",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.สุไหงปาดี",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.สุไหงโก-ลก",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.สุไหงโกลก",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.เจาะไอร้อง",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.เมืองนราธิวาส",
+   "fee": 10000
+  },
+  {
+   "province": "นราธิวาส",
+   "district": "อ.แว้ง",
+   "fee": 10000
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.ทุ่งช้าง",
+   "fee": 3510
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.ท่าวังผา",
+   "fee": 2466
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.นาน้อย",
+   "fee": 1224
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.นาหมื่น",
+   "fee": 810
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.บ่อเกลือ",
+   "fee": 3222
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.บ้านหลวง",
+   "fee": 1872
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.ปัว",
+   "fee": 3024
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.ภูเพียง",
+   "fee": 1944
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.สองแคว",
+   "fee": 3168
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.สันติสุข",
+   "fee": 2232
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.เฉลิมพระเกียรติ",
+   "fee": 4500
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.เชียงกลาง",
+   "fee": 2844
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.เมืองน่าน",
+   "fee": 1638
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.เวียงสา",
+   "fee": 1008
+  },
+  {
+   "province": "น่าน",
+   "district": "อ.แม่จริม",
+   "fee": 2448
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.บึงโขงหลง",
+   "fee": 1782
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.บุ่งคล้า",
+   "fee": 3654
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.ปากคาด",
+   "fee": 2106
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.พรเจริญ",
+   "fee": 2160
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.ศรีวิไล",
+   "fee": 2556
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.เซกา",
+   "fee": 2250
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.เมืองบึงกาฬ",
+   "fee": 2844
+  },
+  {
+   "province": "บึงกาฬ",
+   "district": "อ.โซ่พิสัย",
+   "fee": 1998
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.กระสัง",
+   "fee": 252
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.คูเมือง",
+   "fee": 594
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.ชำนิ",
+   "fee": 240
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.นางรอง",
+   "fee": 414
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.นาโพธิ์",
+   "fee": 1332
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.บ้านกรวด",
+   "fee": 720
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.บ้านด่าน",
+   "fee": 240
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.บ้านใหม่ไชยพจน์",
+   "fee": 1314
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.ประโคนชัย",
+   "fee": 360
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.ปะคำ",
+   "fee": 1080
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.พลับพลาชัย",
+   "fee": 240
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.พุทไธสง",
+   "fee": 1062
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.ละหานทราย",
+   "fee": 1098
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.ลำปลายมาศ",
+   "fee": 240
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.สตึก",
+   "fee": 504
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.หนองกี่",
+   "fee": 954
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.หนองหงส์",
+   "fee": 684
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.ห้วยราช",
+   "fee": 0
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.เฉลิมพระเกียรติ",
+   "fee": 612
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.เมืองบุรีรัมย์",
+   "fee": 0
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.แคนดง",
+   "fee": 630
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.โนนดินแดง",
+   "fee": 1584
+  },
+  {
+   "province": "บุรีรัมย์",
+   "district": "อ.โนนสุวรรณ",
+   "fee": 1080
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.กุยบุรี",
+   "fee": 396
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.ทับสะแก",
+   "fee": 306
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.บางสะพาน",
+   "fee": 954
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.บางสะพานน้อย",
+   "fee": 1386
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.ปราณบุรี",
+   "fee": 0
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.สามร้อยยอด",
+   "fee": 240
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.หัวหิน",
+   "fee": 0
+  },
+  {
+   "province": "ประจวบคีรีขันธ์",
+   "district": "อ.เมืองประจวบคีรีขันธ์",
+   "fee": 0
+  },
+  {
+   "province": "ปราจีนบุรี",
+   "district": "อ.กบินทร์บุรี",
+   "fee": 0
+  },
+  {
+   "province": "ปราจีนบุรี",
+   "district": "อ.นาดี",
+   "fee": 216
+  },
+  {
+   "province": "ปราจีนบุรี",
+   "district": "อ.บ้านสร้าง",
+   "fee": 0
+  },
+  {
+   "province": "ปราจีนบุรี",
+   "district": "อ.ประจันตคาม",
+   "fee": 0
+  },
+  {
+   "province": "ปราจีนบุรี",
+   "district": "อ.ศรีมหาโพธิ",
+   "fee": 0
+  },
+  {
+   "province": "ปราจีนบุรี",
+   "district": "อ.ศรีมโหสถ",
+   "fee": 0
+  },
+  {
+   "province": "ปราจีนบุรี",
+   "district": "อ.เมืองปราจีนบุรี",
+   "fee": 0
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.กะพ้อ",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.ทุ่งยางแดง",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.ปะนาเระ",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.มายอ",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.ยะรัง",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.ยะหริ่ง",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.สายบุรี",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.หนองจิก",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.เมืองปัตตานี",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.แม่ลาน",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.โคกโพธิ์",
+   "fee": 10000
+  },
+  {
+   "province": "ปัตตานี",
+   "district": "อ.ไม้แก่น",
+   "fee": 10000
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.ท่าเรือ",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.นครหลวง",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.บางซ้าย",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.บางบาล",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.บางปะหัน",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.บางปะอิน",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.บางไทร",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.บ้านแพรก",
+   "fee": 270
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.ผักไห่",
+   "fee": 240
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.พระนครศรีอยุธยา",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.ภาชี",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.มหาราช",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.ลาดบัวหลวง",
+   "fee": 240
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.วังน้อย",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.อุทัย",
+   "fee": 0
+  },
+  {
+   "province": "พระนครศรีอยุธยา",
+   "district": "อ.เสนา",
+   "fee": 0
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.จุน",
+   "fee": 738
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.ดอกคำใต้",
+   "fee": 1224
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.ปง",
+   "fee": 1566
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.ภูกามยาว",
+   "fee": 1314
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.ภูซาง",
+   "fee": 1170
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.เชียงคำ",
+   "fee": 1008
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.เชียงม่วน",
+   "fee": 2106
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.เมืองพะเยา",
+   "fee": 1134
+  },
+  {
+   "province": "พะเยา",
+   "district": "อ.แม่ใจ",
+   "fee": 648
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.กะปง",
+   "fee": 1386
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.คุระบุรี",
+   "fee": 2592
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.ตะกั่วทุ่ง",
+   "fee": 240
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.ตะกั่วป่า",
+   "fee": 1548
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.ทับปุด",
+   "fee": 1170
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.ท้ายเหมือง",
+   "fee": 720
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.เกาะยาว",
+   "fee": 10000
+  },
+  {
+   "province": "พังงา",
+   "district": "อ.เมืองพังงา",
+   "fee": 720
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.กงหรา",
+   "fee": 0
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.ควนขนุน",
+   "fee": 0
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.ตะโหมด",
+   "fee": 360
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.บางแก้ว",
+   "fee": 252
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.ปากพะยูน",
+   "fee": 432
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.ป่าบอน",
+   "fee": 504
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.ป่าพะยอม",
+   "fee": 240
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.ศรีนครินทร์",
+   "fee": 0
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.ศรีบรรพต",
+   "fee": 0
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.เขาชัยสน",
+   "fee": 0
+  },
+  {
+   "province": "พัทลุง",
+   "district": "อ.เมืองพัทลุง",
+   "fee": 0
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.ดงเจริญ",
+   "fee": 2106
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.ตะพานหิน",
+   "fee": 1224
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.ทับคล้อ",
+   "fee": 1746
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.บางมูลนาก",
+   "fee": 666
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.บึงนาราง",
+   "fee": 540
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.วชิรบารมี",
+   "fee": 522
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.วังทรายพูน",
+   "fee": 702
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.สากเหล็ก",
+   "fee": 594
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.สามง่าม",
+   "fee": 630
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.เมืองพิจิตร",
+   "fee": 756
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.โพทะเล",
+   "fee": 504
+  },
+  {
+   "province": "พิจิตร",
+   "district": "อ.โพธิ์ประทับช้าง",
+   "fee": 900
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.ชาติตระการ",
+   "fee": 1512
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.นครไทย",
+   "fee": 1296
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.บางกระทุ่ม",
+   "fee": 162
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.บางระกำ",
+   "fee": 240
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.พรหมพิราม",
+   "fee": 270
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.วังทอง",
+   "fee": 0
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.วัดโบสถ์",
+   "fee": 738
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.เนินมะปราง",
+   "fee": 702
+  },
+  {
+   "province": "พิษณุโลก",
+   "district": "อ.เมืองพิษณุโลก",
+   "fee": 0
+  },
+  {
+   "province": "ภูเก็ต",
+   "district": "อ.กะทู้",
+   "fee": 0
+  },
+  {
+   "province": "ภูเก็ต",
+   "district": "อ.ถลาง",
+   "fee": 0
+  },
+  {
+   "province": "ภูเก็ต",
+   "district": "อ.เมืองภูเก็ต",
+   "fee": 0
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.กันทรวิชัย",
+   "fee": 540
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.กุดรัง",
+   "fee": 972
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.ชื่นชม",
+   "fee": 450
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.นาดูน",
+   "fee": 648
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.นาเชือก",
+   "fee": 1044
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.บรบือ",
+   "fee": 774
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.พยัคฆภูมิพิสัย",
+   "fee": 936
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.ยางสีสุราช",
+   "fee": 900
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.วาปีปทุม",
+   "fee": 240
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.เชียงยืน",
+   "fee": 240
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.เมืองมหาสารคาม",
+   "fee": 240
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.แกดำ",
+   "fee": 240
+  },
+  {
+   "province": "มหาสารคาม",
+   "district": "อ.โกสุมพิสัย",
+   "fee": 240
+  },
+  {
+   "province": "มุกดาหาร",
+   "district": "อ.คำชะอี",
+   "fee": 378
+  },
+  {
+   "province": "มุกดาหาร",
+   "district": "อ.ดงหลวง",
+   "fee": 576
+  },
+  {
+   "province": "มุกดาหาร",
+   "district": "อ.ดอนตาล",
+   "fee": 240
+  },
+  {
+   "province": "มุกดาหาร",
+   "district": "อ.นิคมคำสร้อย",
+   "fee": 0
+  },
+  {
+   "province": "มุกดาหาร",
+   "district": "อ.หนองสูง",
+   "fee": 378
+  },
+  {
+   "province": "มุกดาหาร",
+   "district": "อ.หว้านใหญ่",
+   "fee": 0
+  },
+  {
+   "province": "มุกดาหาร",
+   "district": "อ.เมืองมุกดาหาร",
+   "fee": 0
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.กรงปีนัง",
+   "fee": 10000
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.กาบัง",
+   "fee": 10000
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.ธารโต",
+   "fee": 10000
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.บันนังสตา",
+   "fee": 10000
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.ยะหา",
+   "fee": 10000
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.รามัน",
+   "fee": 10000
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.เบตง",
+   "fee": 10000
+  },
+  {
+   "province": "ยะลา",
+   "district": "อ.เมืองยะลา",
+   "fee": 10000
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.กุดชุม",
+   "fee": 918
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.คำเขื่อนแก้ว",
+   "fee": 1332
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.ค้อวัง",
+   "fee": 1584
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.ทรายมูล",
+   "fee": 792
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.ป่าติ้ว",
+   "fee": 1314
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.มหาชนะชัย",
+   "fee": 1206
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.เมืองยโสธร",
+   "fee": 792
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.เลิงนกทา",
+   "fee": 414
+  },
+  {
+   "province": "ยโสธร",
+   "district": "อ.ไทยเจริญ",
+   "fee": 1296
+  },
+  {
+   "province": "ระนอง",
+   "district": "อ.กระบุรี",
+   "fee": 468
+  },
+  {
+   "province": "ระนอง",
+   "district": "อ.กะเปอร์",
+   "fee": 2394
+  },
+  {
+   "province": "ระนอง",
+   "district": "อ.ละอุ่น",
+   "fee": 1242
+  },
+  {
+   "province": "ระนอง",
+   "district": "อ.สุขสำราญ",
+   "fee": 2826
+  },
+  {
+   "province": "ระนอง",
+   "district": "อ.เมืองระนอง",
+   "fee": 1764
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.นิคมพัฒนา",
+   "fee": 0
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.บ้านค่าย",
+   "fee": 252
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.บ้านฉาง",
+   "fee": 0
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.ปลวกแดง",
+   "fee": 0
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.วังจันทร์",
+   "fee": 414
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.เขาชะเมา",
+   "fee": 954
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.เมืองระยอง",
+   "fee": 0
+  },
+  {
+   "province": "ระยอง",
+   "district": "อ.แกลง",
+   "fee": 684
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.จอมบึง",
+   "fee": 0
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.ดำเนินสะดวก",
+   "fee": 0
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.บางแพ",
+   "fee": 0
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.บ้านคา",
+   "fee": 774
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.บ้านโป่ง",
+   "fee": 252
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.ปากท่อ",
+   "fee": 0
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.วัดเพลง",
+   "fee": 0
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.สวนผึ้ง",
+   "fee": 594
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.เมืองราชบุรี",
+   "fee": 0
+  },
+  {
+   "province": "ราชบุรี",
+   "district": "อ.โพธาราม",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.จตุรพักตรพิมาน",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.จังหาร",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.ทุ่งเขาหลวง",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.ธวัชบุรี",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.ปทุมรัตต์",
+   "fee": 684
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.พนมไพร",
+   "fee": 594
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.ศรีสมเด็จ",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.สุวรรณภูมิ",
+   "fee": 576
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.หนองพอก",
+   "fee": 990
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.หนองฮี",
+   "fee": 918
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.อาจสามารถ",
+   "fee": 240
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.เกษตรวิสัย",
+   "fee": 558
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.เชียงขวัญ",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.เมยวดี",
+   "fee": 774
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.เมืองร้อยเอ็ด",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.เมืองสรวง",
+   "fee": 0
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.เสลภูมิ",
+   "fee": 252
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.โพธิ์ชัย",
+   "fee": 486
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.โพนทราย",
+   "fee": 918
+  },
+  {
+   "province": "ร้อยเอ็ด",
+   "district": "อ.โพนทอง",
+   "fee": 486
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.ชัยบาดาล",
+   "fee": 1008
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.ท่าวุ้ง",
+   "fee": 0
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.ท่าหลวง",
+   "fee": 828
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.บ้านหมี่",
+   "fee": 0
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.พัฒนานิคม",
+   "fee": 360
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.ลำสนธิ",
+   "fee": 1728
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.สระโบสถ์",
+   "fee": 810
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.หนองม่วง",
+   "fee": 738
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.เมืองลพบุรี",
+   "fee": 0
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.โคกสำโรง",
+   "fee": 342
+  },
+  {
+   "province": "ลพบุรี",
+   "district": "อ.โคกเจริญ",
+   "fee": 1224
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.งาว",
+   "fee": 1044
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.วังเหนือ",
+   "fee": 1494
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.สบปราบ",
+   "fee": 468
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.ห้างฉัตร",
+   "fee": 0
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.เกาะคา",
+   "fee": 0
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.เถิน",
+   "fee": 1422
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.เมืองปาน",
+   "fee": 756
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.เมืองลำปาง",
+   "fee": 0
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.เสริมงาม",
+   "fee": 450
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.แจ้ห่ม",
+   "fee": 864
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.แม่ทะ",
+   "fee": 0
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.แม่พริก",
+   "fee": 1782
+  },
+  {
+   "province": "ลำปาง",
+   "district": "อ.แม่เมาะ",
+   "fee": 648
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.ทุ่งหัวช้าง",
+   "fee": 1116
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.บ้านธิ",
+   "fee": 0
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.บ้านโฮ่ง",
+   "fee": 900
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.ป่าซาง",
+   "fee": 432
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.ลี้",
+   "fee": 1170
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.เมืองลำพูน",
+   "fee": 0
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.เวียงหนองล่อง",
+   "fee": 684
+  },
+  {
+   "province": "ลำพูน",
+   "district": "อ.แม่ทา",
+   "fee": 522
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.กันทรลักษ์",
+   "fee": 1062
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.กันทรารมย์",
+   "fee": 240
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ขุขันธ์",
+   "fee": 1134
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ขุนหาญ",
+   "fee": 1476
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.น้ำเกลี้ยง",
+   "fee": 558
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.บึงบูรพ์",
+   "fee": 1386
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ปรางค์กู่",
+   "fee": 774
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.พยุห์",
+   "fee": 684
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ภูสิงห์",
+   "fee": 1908
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ยางชุมน้อย",
+   "fee": 648
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ราษีไศล",
+   "fee": 1152
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.วังหิน",
+   "fee": 990
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ศรีรัตนะ",
+   "fee": 828
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ศิลาลาด",
+   "fee": 1566
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ห้วยทับทัน",
+   "fee": 774
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.อุทุมพรพิสัย",
+   "fee": 900
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.เบญจลักษ์",
+   "fee": 576
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.เมืองจันทร์",
+   "fee": 1350
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.เมืองศรีสะเกษ",
+   "fee": 630
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.โนนคูณ",
+   "fee": 612
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.โพธิ์ศรีสุวรรณ",
+   "fee": 1224
+  },
+  {
+   "province": "ศรีสะเกษ",
+   "district": "อ.ไพรบึง",
+   "fee": 972
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.กุดบาก",
+   "fee": 324
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.กุสุมาลย์",
+   "fee": 240
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.คำตากล้า",
+   "fee": 1242
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.นิคมน้ำอูน",
+   "fee": 558
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.บ้านม่วง",
+   "fee": 1566
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.พรรณานิคม",
+   "fee": 240
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.พังโคน",
+   "fee": 432
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.ภูพาน",
+   "fee": 306
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.วานรนิวาส",
+   "fee": 864
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.วาริชภูมิ",
+   "fee": 738
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.สว่างแดนดิน",
+   "fee": 882
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.ส่องดาว",
+   "fee": 1152
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.อากาศอำนวย",
+   "fee": 774
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.เจริญศิลป์",
+   "fee": 1242
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.เต่างอย",
+   "fee": 0
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.เมืองสกลนคร",
+   "fee": 0
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.โคกศรีสุพรรณ",
+   "fee": 0
+  },
+  {
+   "province": "สกลนคร",
+   "district": "อ.โพนนาแก้ว",
+   "fee": 0
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.กระแสสินธุ์",
+   "fee": 1224
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.คลองหอยโข่ง",
+   "fee": 0
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.ควนเนียง",
+   "fee": 0
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.จะนะ",
+   "fee": 414
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.นาทวี",
+   "fee": 702
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.นาหม่อม",
+   "fee": 0
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.บางกล่ำ",
+   "fee": 0
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.ระโนด",
+   "fee": 1458
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.รัตภูมิ",
+   "fee": 0
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.สทิงพระ",
+   "fee": 666
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.สะบ้าย้อย",
+   "fee": 1332
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.สะเดา",
+   "fee": 240
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.สิงหนคร",
+   "fee": 240
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.หาดใหญ่",
+   "fee": 0
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.เทพา",
+   "fee": 936
+  },
+  {
+   "province": "สงขลา",
+   "district": "อ.เมืองสงขลา",
+   "fee": 0
+  },
+  {
+   "province": "สตูล",
+   "district": "อ.ควนกาหลง",
+   "fee": 1170
+  },
+  {
+   "province": "สตูล",
+   "district": "อ.ควนโดน",
+   "fee": 1026
+  },
+  {
+   "province": "สตูล",
+   "district": "อ.ทุ่งหว้า",
+   "fee": 1836
+  },
+  {
+   "province": "สตูล",
+   "district": "อ.ท่าแพ",
+   "fee": 1350
+  },
+  {
+   "province": "สตูล",
+   "district": "อ.มะนัง",
+   "fee": 1494
+  },
+  {
+   "province": "สตูล",
+   "district": "อ.ละงู",
+   "fee": 1620
+  },
+  {
+   "province": "สตูล",
+   "district": "อ.เมืองสตูล",
+   "fee": 1296
+  },
+  {
+   "province": "สมุทรสงคราม",
+   "district": "อ.บางคนที",
+   "fee": 0
+  },
+  {
+   "province": "สมุทรสงคราม",
+   "district": "อ.อัมพวา",
+   "fee": 0
+  },
+  {
+   "province": "สมุทรสงคราม",
+   "district": "อ.เมืองสมุทรสงคราม",
+   "fee": 0
+  },
+  {
+   "province": "สมุทรสาคร",
+   "district": "อ.กระทุ่มแบน",
+   "fee": 0
+  },
+  {
+   "province": "สมุทรสาคร",
+   "district": "อ.บ้านแพ้ว",
+   "fee": 0
+  },
+  {
+   "province": "สมุทรสาคร",
+   "district": "อ.เมืองสมุทรสาคร",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.ดอนพุด",
+   "fee": 240
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.บ้านหมอ",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.พระพุทธบาท",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.มวกเหล็ก",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.วังม่วง",
+   "fee": 468
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.วิหารแดง",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.หนองแค",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.หนองแซง",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.หนองโดน",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.เฉลิมพระเกียรติ",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.เมืองสระบุรี",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.เสาไห้",
+   "fee": 0
+  },
+  {
+   "province": "สระบุรี",
+   "district": "อ.แก่งคอย",
+   "fee": 0
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.คลองหาด",
+   "fee": 432
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.ตาพระยา",
+   "fee": 594
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.วังน้ำเย็น",
+   "fee": 774
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.วังสมบูรณ์",
+   "fee": 1044
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.วัฒนานคร",
+   "fee": 180
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.อรัญประเทศ",
+   "fee": 0
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.เขาฉกรรจ์",
+   "fee": 810
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.เมืองสระแก้ว",
+   "fee": 774
+  },
+  {
+   "province": "สระแก้ว",
+   "district": "อ.โคกสูง",
+   "fee": 0
+  },
+  {
+   "province": "สิงห์บุรี",
+   "district": "อ.ค่ายบางระจัน",
+   "fee": 882
+  },
+  {
+   "province": "สิงห์บุรี",
+   "district": "อ.ท่าช้าง",
+   "fee": 666
+  },
+  {
+   "province": "สิงห์บุรี",
+   "district": "อ.บางระจัน",
+   "fee": 1062
+  },
+  {
+   "province": "สิงห์บุรี",
+   "district": "อ.พรหมบุรี",
+   "fee": 504
+  },
+  {
+   "province": "สิงห์บุรี",
+   "district": "อ.อินทร์บุรี",
+   "fee": 1080
+  },
+  {
+   "province": "สิงห์บุรี",
+   "district": "อ.เมืองสิงห์บุรี",
+   "fee": 810
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.ดอนเจดีย์",
+   "fee": 0
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.ด่านช้าง",
+   "fee": 1044
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.บางปลาม้า",
+   "fee": 0
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.ศรีประจันต์",
+   "fee": 0
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.สองพี่น้อง",
+   "fee": 240
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.สามชุก",
+   "fee": 288
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.หนองหญ้าไซ",
+   "fee": 540
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.อู่ทอง",
+   "fee": 0
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.เดิมบางนางบวช",
+   "fee": 522
+  },
+  {
+   "province": "สุพรรณบุรี",
+   "district": "อ.เมืองสุพรรณบุรี",
+   "fee": 0
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.กาญจนดิษฐ์",
+   "fee": 0
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.คีรีรัฐนิคม",
+   "fee": 468
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.ชัยบุรี",
+   "fee": 1422
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.ดอนสัก",
+   "fee": 522
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.ท่าฉาง",
+   "fee": 882
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.ท่าชนะ",
+   "fee": 1440
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.บ้านตาขุน",
+   "fee": 0
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.บ้านตาขุน",
+   "fee": 792
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.บ้านนาสาร",
+   "fee": 240
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.บ้านนาเดิม",
+   "fee": 0
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.พนม",
+   "fee": 1332
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.พระแสง",
+   "fee": 1152
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.พุนพิน",
+   "fee": 0
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.วิภาวดี",
+   "fee": 666
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.เกาะพงัน",
+   "fee": 10000
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.เกาะพะงัน",
+   "fee": 10000
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.เกาะสมุย",
+   "fee": 10000
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.เคียนซา",
+   "fee": 612
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.เมืองสุราษฎร์ธานี",
+   "fee": 0
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.เวียงสระ",
+   "fee": 684
+  },
+  {
+   "province": "สุราษฎร์ธานี",
+   "district": "อ.ไชยา",
+   "fee": 738
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.กาบเชิง",
+   "fee": 558
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.จอมพระ",
+   "fee": 0
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.ชุมพลบุรี",
+   "fee": 918
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.ท่าตูม",
+   "fee": 450
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.บัวเชด",
+   "fee": 864
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.ปราสาท",
+   "fee": 240
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.พนมดงรัก",
+   "fee": 738
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.รัตนบุรี",
+   "fee": 810
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.ลำดวน",
+   "fee": 0
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.ศรีณรงค์",
+   "fee": 576
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.ศีขรภูมิ",
+   "fee": 0
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.สนม",
+   "fee": 432
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.สังขะ",
+   "fee": 450
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.สำโรงทาบ",
+   "fee": 468
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.เขวาสินรินทร์",
+   "fee": 0
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.เมืองสุรินทร์",
+   "fee": 0
+  },
+  {
+   "province": "สุรินทร์",
+   "district": "อ.โนนนารายณ์",
+   "fee": 738
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.กงไกรลาศ",
+   "fee": 0
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.คีรีมาศ",
+   "fee": 0
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.ทุ่งเสลี่ยม",
+   "fee": 684
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.บ้านด่านลานหอย",
+   "fee": 360
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.ศรีนคร",
+   "fee": 468
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.ศรีสัชนาลัย",
+   "fee": 1080
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.ศรีสำโรง",
+   "fee": 0
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.สวรรคโลก",
+   "fee": 240
+  },
+  {
+   "province": "สุโขทัย",
+   "district": "อ.เมืองสุโขทัย",
+   "fee": 0
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.ท่าบ่อ",
+   "fee": 0
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.รัตนวาปี",
+   "fee": 882
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.ศรีเชียงใหม่",
+   "fee": 270
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.สระใคร",
+   "fee": 0
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.สังคม",
+   "fee": 1674
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.เฝ้าไร่",
+   "fee": 846
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.เมืองหนองคาย",
+   "fee": 0
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.โพธิ์ตาก",
+   "fee": 324
+  },
+  {
+   "province": "หนองคาย",
+   "district": "อ.โพนพิสัย",
+   "fee": 468
+  },
+  {
+   "province": "หนองบัวลำภู",
+   "district": "อ.นากลาง",
+   "fee": 990
+  },
+  {
+   "province": "หนองบัวลำภู",
+   "district": "อ.นาวัง",
+   "fee": 450
+  },
+  {
+   "province": "หนองบัวลำภู",
+   "district": "อ.ศรีบุญเรือง",
+   "fee": 1008
+  },
+  {
+   "province": "หนองบัวลำภู",
+   "district": "อ.สุวรรณคูหา",
+   "fee": 918
+  },
+  {
+   "province": "หนองบัวลำภู",
+   "district": "อ.เมืองหนองบัวลำภู",
+   "fee": 450
+  },
+  {
+   "province": "หนองบัวลำภู",
+   "district": "อ.โนนสัง",
+   "fee": 774
+  },
+  {
+   "province": "อำนาจเจริญ",
+   "district": "อ.ชานุมาน",
+   "fee": 576
+  },
+  {
+   "province": "อำนาจเจริญ",
+   "district": "อ.ปทุมราชวงศา",
+   "fee": 1116
+  },
+  {
+   "province": "อำนาจเจริญ",
+   "district": "อ.พนา",
+   "fee": 504
+  },
+  {
+   "province": "อำนาจเจริญ",
+   "district": "อ.ลืออำนาจ",
+   "fee": 774
+  },
+  {
+   "province": "อำนาจเจริญ",
+   "district": "อ.หัวตะพาน",
+   "fee": 756
+  },
+  {
+   "province": "อำนาจเจริญ",
+   "district": "อ.เมืองอำนาจเจริญ",
+   "fee": 828
+  },
+  {
+   "province": "อำนาจเจริญ",
+   "district": "อ.เสนางคนิคม",
+   "fee": 1296
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.กุดจับ",
+   "fee": 240
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.กุมภวาปี",
+   "fee": 288
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.กู่แก้ว",
+   "fee": 612
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.ทุ่งฝน",
+   "fee": 504
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.นายูง",
+   "fee": 1584
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.น้ำโสม",
+   "fee": 1350
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.บ้านดุง",
+   "fee": 918
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.บ้านผือ",
+   "fee": 450
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.ประจักษ์ศิลปาคม",
+   "fee": 0
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.พิบูลย์รักษ์",
+   "fee": 0
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.วังสามหมอ",
+   "fee": 1242
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.ศรีธาตุ",
+   "fee": 882
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.สร้างคอม",
+   "fee": 576
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.หนองวัวซอ",
+   "fee": 270
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.หนองหาน",
+   "fee": 0
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.หนองแสง",
+   "fee": 240
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.เพ็ญ",
+   "fee": 252
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.เมืองอุดรธานี",
+   "fee": 0
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.โนนสะอาด",
+   "fee": 648
+  },
+  {
+   "province": "อุดรธานี",
+   "district": "อ.ไชยวาน",
+   "fee": 738
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.ตรอน",
+   "fee": 918
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.ทองแสนขัน",
+   "fee": 1152
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.ท่าปลา",
+   "fee": 1620
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.น้ำปาด",
+   "fee": 2070
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.บ้านโคก",
+   "fee": 2790
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.พิชัย",
+   "fee": 1080
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.ฟากท่า",
+   "fee": 2610
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.ลับแล",
+   "fee": 1188
+  },
+  {
+   "province": "อุตรดิตถ์",
+   "district": "อ.เมืองอุตรดิตถ์",
+   "fee": 1080
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.ทัพทัน",
+   "fee": 666
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.บ้านไร่",
+   "fee": 2304
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.ลานสัก",
+   "fee": 1458
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.สว่างอารมณ์",
+   "fee": 846
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.หนองขาหย่าง",
+   "fee": 594
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.หนองฉาง",
+   "fee": 828
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.ห้วยคต",
+   "fee": 1494
+  },
+  {
+   "province": "อุทัยธานี",
+   "district": "อ.เมืองอุทัยธานี",
+   "fee": 414
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.กุดข้าวปุ้น",
+   "fee": 1080
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.ดอนมดแดง",
+   "fee": 0
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.ตระการพืชผล",
+   "fee": 378
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.ตาลสุม",
+   "fee": 396
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.ทุ่งศรีอุดม",
+   "fee": 846
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.นาจะหลวย",
+   "fee": 1260
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.นาตาล",
+   "fee": 1458
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.นาเยีย",
+   "fee": 486
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.น้ำขุ่น",
+   "fee": 1296
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.น้ำยืน",
+   "fee": 1638
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.บุณฑริก",
+   "fee": 1278
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.พิบูลมังสาหาร",
+   "fee": 720
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.ม่วงสามสิบ",
+   "fee": 240
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.วารินชำราบ",
+   "fee": 0
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.ศรีเมืองใหม่",
+   "fee": 1134
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.สว่างวีระวงศ์",
+   "fee": 0
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.สำโรง",
+   "fee": 0
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.สิรินธร",
+   "fee": 1476
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.เขมราฐ",
+   "fee": 1314
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.เขื่องใน",
+   "fee": 306
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.เดชอุดม",
+   "fee": 540
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.เมืองอุบลราชธานี",
+   "fee": 0
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.เหล่าเสือโก้ก",
+   "fee": 0
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.โขงเจียม",
+   "fee": 1368
+  },
+  {
+   "province": "อุบลราชธานี",
+   "district": "อ.โพธิ์ไทร",
+   "fee": 1386
+  },
+  {
+   "province": "อ่างทอง",
+   "district": "อ.ป่าโมก",
+   "fee": 0
+  },
+  {
+   "province": "อ่างทอง",
+   "district": "อ.วิเศษชัยชาญ",
+   "fee": 240
+  },
+  {
+   "province": "อ่างทอง",
+   "district": "อ.สามโก้",
+   "fee": 468
+  },
+  {
+   "province": "อ่างทอง",
+   "district": "อ.เมืองอ่างทอง",
+   "fee": 0
+  },
+  {
+   "province": "อ่างทอง",
+   "district": "อ.แสวงหา",
+   "fee": 576
+  },
+  {
+   "province": "อ่างทอง",
+   "district": "อ.โพธิ์ทอง",
+   "fee": 360
+  },
+  {
+   "province": "อ่างทอง",
+   "district": "อ.ไชโย",
+   "fee": 240
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.ขุนตาล",
+   "fee": 540
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.ดอยหลวง",
+   "fee": 378
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.ป่าแดด",
+   "fee": 558
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.พญาเม็งราย",
+   "fee": 240
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.พาน",
+   "fee": 342
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เชียงของ",
+   "fee": 1188
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เชียงแสน",
+   "fee": 918
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เทิง",
+   "fee": 738
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เมืองเชียงราย",
+   "fee": 0
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เวียงชัย",
+   "fee": 0
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เวียงป่าเป้า",
+   "fee": 1008
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เวียงเชียงรุ้ง",
+   "fee": 0
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.เวียงแก่น",
+   "fee": 1242
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.แม่จัน",
+   "fee": 396
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.แม่ฟ้าหลวง",
+   "fee": 810
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.แม่ลาว",
+   "fee": 0
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.แม่สรวย",
+   "fee": 432
+  },
+  {
+   "province": "เชียงราย",
+   "district": "อ.แม่สาย",
+   "fee": 720
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.กัลยาณิวัฒนา",
+   "fee": 2160
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.จอมทอง",
+   "fee": 396
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.ดอยสะเก็ด",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.ดอยหล่อ",
+   "fee": 240
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.ดอยเต่า",
+   "fee": 1836
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.ฝาง",
+   "fee": 1602
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.พร้าว",
+   "fee": 1080
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.สะเมิง",
+   "fee": 720
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.สันกำแพง",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.สันทราย",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.สันป่าตอง",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.สารภี",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.หางดง",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.อมก๋อย",
+   "fee": 2844
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.ฮอด",
+   "fee": 1692
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.เชียงดาว",
+   "fee": 738
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.เมืองเชียงใหม่",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.เวียงแหง",
+   "fee": 2160
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.แม่ริม",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.แม่วาง",
+   "fee": 450
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.แม่ออน",
+   "fee": 0
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.แม่อาย",
+   "fee": 1296
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.แม่แจ่ม",
+   "fee": 2160
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.แม่แตง",
+   "fee": 432
+  },
+  {
+   "province": "เชียงใหม่",
+   "district": "อ.ไชยปราการ",
+   "fee": 1566
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.ชะอำ",
+   "fee": 0
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.ท่ายาง",
+   "fee": 0
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.บ้านลาด",
+   "fee": 0
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.บ้านแหลม",
+   "fee": 0
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.หนองหญ้าปล้อง",
+   "fee": 288
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.เขาย้อย",
+   "fee": 0
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.เมืองเพชรบุรี",
+   "fee": 0
+  },
+  {
+   "province": "เพชรบุรี",
+   "district": "อ.แก่งกระจาน",
+   "fee": 900
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.ชนแดน",
+   "fee": 918
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.น้ำหนาว",
+   "fee": 1980
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.บึงสามพัน",
+   "fee": 972
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.วังโป่ง",
+   "fee": 828
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.วิเชียรบุรี",
+   "fee": 1350
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.ศรีเทพ",
+   "fee": 1836
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.หนองไผ่",
+   "fee": 522
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.หล่มสัก",
+   "fee": 468
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.หล่มเก่า",
+   "fee": 1242
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.เขาค้อ",
+   "fee": 324
+  },
+  {
+   "province": "เพชรบูรณ์",
+   "district": "อ.เมืองเพชรบูรณ์",
+   "fee": 0
+  },
+  {
+   "province": "เลย",
+   "district": "อ.ด่านซ้าย",
+   "fee": 1026
+  },
+  {
+   "province": "เลย",
+   "district": "อ.ท่าลี่",
+   "fee": 396
+  },
+  {
+   "province": "เลย",
+   "district": "อ.นาด้วง",
+   "fee": 306
+  },
+  {
+   "province": "เลย",
+   "district": "อ.นาแห้ว",
+   "fee": 1494
+  },
+  {
+   "province": "เลย",
+   "district": "อ.ปากชม",
+   "fee": 954
+  },
+  {
+   "province": "เลย",
+   "district": "อ.ผาขาว",
+   "fee": 684
+  },
+  {
+   "province": "เลย",
+   "district": "อ.ภูกระดึง",
+   "fee": 918
+  },
+  {
+   "province": "เลย",
+   "district": "อ.ภูหลวง",
+   "fee": 846
+  },
+  {
+   "province": "เลย",
+   "district": "อ.ภูเรือ",
+   "fee": 612
+  },
+  {
+   "province": "เลย",
+   "district": "อ.วังสะพุง",
+   "fee": 0
+  },
+  {
+   "province": "เลย",
+   "district": "อ.หนองหิน",
+   "fee": 396
+  },
+  {
+   "province": "เลย",
+   "district": "อ.เชียงคาน",
+   "fee": 486
+  },
+  {
+   "province": "เลย",
+   "district": "อ.เมืองเลย",
+   "fee": 0
+  },
+  {
+   "province": "เลย",
+   "district": "อ.เอราวัณ",
+   "fee": 270
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.ร้องกวาง",
+   "fee": 432
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.ลอง",
+   "fee": 240
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.วังชิ้น",
+   "fee": 1080
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.สอง",
+   "fee": 738
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.สูงเม่น",
+   "fee": 0
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.หนองม่วงไข่",
+   "fee": 0
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.เด่นชัย",
+   "fee": 0
+  },
+  {
+   "province": "แพร่",
+   "district": "อ.เมืองแพร่",
+   "fee": 0
+  },
+  {
+   "province": "แม่ฮ่องสอน",
+   "district": "อ.ขุนยวม",
+   "fee": 4644
+  },
+  {
+   "province": "แม่ฮ่องสอน",
+   "district": "อ.ปางมะผ้า",
+   "fee": 2934
+  },
+  {
+   "province": "แม่ฮ่องสอน",
+   "district": "อ.ปาย",
+   "fee": 1818
+  },
+  {
+   "province": "แม่ฮ่องสอน",
+   "district": "อ.สบเมย",
+   "fee": 3672
+  },
+  {
+   "province": "แม่ฮ่องสอน",
+   "district": "อ.เมืองแม่ฮ่องสอน",
+   "fee": 3708
+  },
+  {
+   "province": "แม่ฮ่องสอน",
+   "district": "อ.แม่ลาน้อย",
+   "fee": 4338
+  },
+  {
+   "province": "แม่ฮ่องสอน",
+   "district": "อ.แม่สะเรียง",
+   "fee": 3132
+  }
+ ]
+}

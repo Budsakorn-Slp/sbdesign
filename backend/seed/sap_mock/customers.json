@@ -1,5 +1,6 @@
 [
-  {"sap_customer_no": "4400182", "name": "ณภัทร พงษ์ศรี", "tier": "Gold", "phone": "0892344471", "email": "napat@email.com", "address": "88/12 ซ.สุขุมวิท 71 คลองตันเหนือ วัฒนา กทม.", "postcode": "10110"},
-  {"sap_customer_no": "4400205", "name": "วีระ ศรีสุข", "tier": "Silver", "phone": "0812223333", "email": "weera@email.com", "address": "55 ถ.บางนา-ตราด บางนา กทม.", "postcode": "10260"},
-  {"sap_customer_no": "4400310", "name": "บริษัท ทรัพย์ทวี จำกัด", "tier": "Corporate", "phone": "022345678", "email": "purchase@suptawee.co.th", "address": "999 อาคารทรัพย์ทวี ถ.พระราม 9 ห้วยขวาง กทม.", "postcode": "10310"}
+  {"sap_customer_no": "1100440182", "name": "ณภัทร พงษ์ศรี", "points": 1250, "phone": "0949164600", "email": "napat@email.com", "address": "88/12 ซ.สุขุมวิท 71 คลองตันเหนือ วัฒนา กทม.", "postcode": "10110"},
+  {"sap_customer_no": "1100440205", "name": "วีระ ศรีสุข", "points": 340, "phone": "0812223333", "email": "weera@email.com", "address": "55 ถ.บางนา-ตราด บางนา กทม.", "postcode": "10260"},
+  {"sap_customer_no": "1100440310", "name": "บริษัท ทรัพย์ทวี จำกัด", "points": 8600, "phone": "022345678", "email": "purchase@suptawee.co.th", "address": "999 อาคารทรัพย์ทวี ถ.พระราม 9 ห้วยขวาง กทม.", "postcode": "10310"},
+  {"sap_customer_no": "1100440518", "name": "ปิยะดา วงศ์สถิตย์", "points": 720, "phone": "0917778888", "email": "piyada@email.com", "address": "12/7 ถ.นวมินทร์ คลองกุ่ม บึงกุ่ม กทม.", "postcode": "10240"}
 ]

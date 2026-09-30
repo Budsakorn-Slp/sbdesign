@@ -118,19 +118,39 @@ def check_cart(db: Session, cart: Cart, actor: User | None) -> CartAvailability:
     """ยิงทั้งตะกร้าครั้งเดียว — ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน"""
     s = get_settings()
     items = [it for it in cart.items if it.qty > 0]
-    customer_no = (cart.customer.sap_customer_no if cart.customer else None) or s.sap_walkin_customer
+    # เช็คสต็อกส่งไปแต่รหัสสินค้า — เลขลูกค้ายังไม่ส่ง (รอ API ฝั่ง SAP ที่รับข้อมูลลูกค้าทั้งชุด)
+    # ดู sap_avail_send_customer_no ใน core/config.py · เลขลูกค้าจริงยังบันทึกลง audit ไว้ตรวจได้
+    member_no = cart.customer.sap_customer_no if cart.customer else None
+    customer_no = (member_no or s.sap_walkin_customer) if s.sap_avail_send_customer_no else s.sap_walkin_customer
     req = req_date_for()
     asks = [AvailAsk(matnr=it.matnr, qty=it.qty) for it in items]
     client = get_availability_client()
     source = "mock" if type(client).__name__.startswith("Mock") else "sap"
     lines = client.check(asks, customer_no, req) if asks else []
+    # ตาข่ายรับสำหรับตอนเปิด sap_avail_send_customer_no แล้ว (ตอนนี้ไม่ทำงาน เพราะส่งลูกค้าทั่วไปอยู่)
+    # SAP ตอบเปล่าทั้งบิล = มักไม่ใช่ "ไม่รู้จักสินค้า" แต่เป็น "ไม่รู้จักเลขลูกค้า" — มันทิ้งทั้งใบ
+    # ลองใหม่ด้วยลูกค้าทั่วไป ถ้าได้ของขึ้นมาแปลว่าเลขลูกค้าคือตัวปัญหา บอกให้ชัดจะได้ไปแก้ถูกที่
+    # (ไม่งั้นเซลล์เห็น "SAP ไม่รู้จักรหัสนี้" ทุกบรรทัดแล้วนึกว่าสินค้าหาย)
+    note = ""
+    if asks and all(ln is None for ln in lines) and customer_no != s.sap_walkin_customer:
+        fallback = client.check(asks, s.sap_walkin_customer, req)
+        if any(ln is not None for ln in fallback):
+            note = (f"SAP ไม่รับเลขลูกค้า {customer_no} (ตอบกลับเปล่าทั้งใบ) — ตัวเลขข้างล่างเช็คด้วยลูกค้าทั่วไป "
+                    f"{s.sap_walkin_customer} แทน ให้ตรวจเลขลูกค้าใน SAP ก่อนออกใบจริง")
+            log.warning("SAP ไม่รับเลขลูกค้า %s — ใช้ %s แทน", customer_no, s.sap_walkin_customer)
+            lines, customer_no = fallback, s.sap_walkin_customer
     out = [_classify(it.qty, ln, it.matnr, it.name_snapshot, it.unit_price_snapshot, it.id) for it, ln in zip(items, lines)]
     all_ok, message = _summarize(out)
+    if note:
+        message = f"{note} · {message}"
     bad = [o for o in out if o.status not in ("full", "split")]
     audit_service.log(db, actor, "sap.availability", "cart", cart.id, {
-        "customer": customer_no, "req_date": req.isoformat(), "source": source,
+        "customer": customer_no, "member_customer_no": member_no, "req_date": req.isoformat(), "source": source,
         "lines": len(out), "not_ok": len(bad),
     })
+    # จำไว้ว่าเช็คผ่านตอนตะกร้ารุ่นไหน — ด่านเช็คสต็อกของใบ PRE ดูจากเลขนี้
+    # ของไม่พอ = ล้างทิ้ง ไม่ใช่ปล่อยผลเก่าค้างไว้ให้ผ่านด่าน
+    cart.stock_ok_rev = (cart.rev or 0) if all_ok else None
     db.commit()
     return CartAvailability(
         cart_id=cart.id, checked_at=utcnow(), req_date=req, customer_no=customer_no,
