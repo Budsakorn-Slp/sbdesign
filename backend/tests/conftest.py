@@ -15,6 +15,10 @@ os.environ["SAP_CATALOG_URL"] = ""
 # (เครื่องที่เปิด INVITE_ONLY=true ไว้ทดลอง จะทำให้เทสล็อกอิน/สมัครล้มทั้งแผง)
 # เทสที่ต้องการโหมด invite_only เปิดเองเฉพาะกรณี ดู fixture invite_only
 os.environ["INVITE_ONLY"] = "false"
+# เทสวิ่งบน http (TestClient) — APP_ENV=prod จะทำให้คุกกี้ตะกร้าติดธง Secure
+# ซึ่งใช้ได้เฉพาะ https คุกกี้จึงไม่ถูกเก็บ แล้วเทสของ guest/websocket จะค้างรอตลอดไป
+# เครื่องที่ตั้ง prod ไว้เพื่อ deploy ต้องไม่ลากเทสไปด้วย
+os.environ["APP_ENV"] = "dev"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

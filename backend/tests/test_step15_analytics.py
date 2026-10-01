@@ -59,7 +59,10 @@ def test_overview_lists_top_pages_and_products(client):
     client.post("/events", json={"event": "click_product", "matnr": MATNR, "payload": {"from": "home"}}, headers=h)
     body = _overview(client)
     assert body["top_pages"][0] == {"key": "/", "count": 2}
-    assert body["top_clicked"][0] == {"key": MATNR, "count": 1}
+    # ลิสต์ที่คีย์เป็นรหัสสินค้ามี name ติดมาด้วย — หน้าแดชบอร์ดอ่าน "19210764" เฉยๆ ไม่รู้เรื่อง
+    top = body["top_clicked"][0]
+    assert (top["key"], top["count"]) == (MATNR, 1)
+    assert "name" in top
     assert body["product_clicks"] == 1
 
 

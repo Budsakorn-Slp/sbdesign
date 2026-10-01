@@ -265,3 +265,34 @@ def test_suggest_returns_matching_products_without_logging_a_search(client):
     assert all("โซฟา" in it["name_th"] or "โซฟา" in (it["category_name"] or "") for it in body["items"])
     with SessionLocal() as db:
         assert int(db.scalar(select(func.count()).select_from(SearchQuery)) or 0) == before
+
+
+# ---------- แคชหน้าแรก ----------
+def test_หน้าแรกใช้แคชแต่ของเปลี่ยนแล้วต้องสดเอง(client):
+    """หน้าแรกประกอบจาก 8 ส่วน ~0.9 วิ ถ้าคิดใหม่ทุก request ทุกคนต้องรอทุกครั้ง
+
+    แคชได้เพราะหน้าแรกไม่ขึ้นกับว่าใครเปิด — ถ้าวันหลังมีราคาเฉพาะกลุ่ม เทสนี้จะยังผ่าน
+    แต่พฤติกรรมจะผิด ต้องกลับมาเลิกแคชรวมเอง (ดูหมายเหตุที่ catalog.home)
+    """
+    from app.api import catalog as cat
+    from app.db.session import SessionLocal
+    from app.models.catalog import Material
+    from app.models.common import utcnow
+
+    cat._home_cache.update(key=None, at=0.0, data=None)
+    first = client.get("/home")
+    assert first.status_code == 200
+    assert cat._home_cache["data"] is not None, "ครั้งแรกต้องเก็บผลไว้"
+
+    # ครั้งที่สองต้องได้ของจากแคชตัวเดิม ไม่ใช่คำนวณใหม่
+    cached = cat._home_cache["data"]
+    assert client.get("/home").json()["categories"] == first.json()["categories"]
+    assert cat._home_cache["data"] is cached
+
+    # ETL แตะสินค้า -> ลายเซ็นข้อมูลเปลี่ยน -> ต้องคิดใหม่ ไม่ต้องรอหมดอายุ
+    with SessionLocal() as db:
+        m = db.query(Material).first()
+        m.synced_at = utcnow()
+        db.commit()
+    assert client.get("/home").status_code == 200
+    assert cat._home_cache["data"] is not cached, "ข้อมูลเปลี่ยนแล้วต้องไม่ใช้ของเก่า"

@@ -5,6 +5,7 @@ import Icon from "../components/Icon";
 import { errorMessage } from "../lib/api";
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, useAuth } from "../lib/auth";
 import { usePublicConfig } from "../lib/publicConfig";
+import { redirectFor } from "../lib/routes";
 
 /** ทางเข้าของพนักงาน — แยกจากหน้าลูกค้าโดยสิ้นเชิง
  *
@@ -34,8 +35,12 @@ export default function StaffLoginPage() {
     setBusy(true);
     try {
       const user = await auth.login(code.trim(), pass, "staff");
+      const home = user.role === "admin" ? "/manager/sap-sync" : "/sales";
       // มี next = โดนเด้งออกมาจากหน้านั้น พากลับไปที่เดิม · ไม่มีก็เข้าหน้าประจำของแต่ละบทบาท
-      nav(next || (user.role === "admin" ? "/manager/sap-sync" : "/sales"), { replace: true });
+      //
+      // แต่ต้องเช็คก่อนว่าบัญชีที่เพิ่งเข้ามา "มีสิทธิ์" เข้าหน้านั้นจริงไหม
+      // ไม่งั้นพนักงานขายที่ล็อกอินเพื่อไปหน้าของผู้จัดการจะโดนเด้งกลับมาที่นี่ แล้ววนไม่จบ
+      nav(next && !redirectFor(next, user.role) ? next : home, { replace: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -44,9 +49,27 @@ export default function StaffLoginPage() {
   };
 
   if (auth.user?.role && auth.user.role !== "customer") {
+    const home = auth.user.role === "admin" ? "/manager/sap-sync" : "/sales";
+    // สิทธิ์ไม่ถึงหน้าปลายทาง = กดปุ่มไปก็โดนเด้งกลับมาที่นี่อีก วนไม่จบและดูเหมือนปุ่มเสีย
+    // บอกตรงๆ ว่าบัญชีนี้เข้าไม่ได้ แล้วให้ทางออกสองทาง: ไปหน้าที่ใช้ได้ หรือสลับบัญชี
+    const denied = !!next && !!redirectFor(next, auth.user.role);
     return (
-      <AuthShell title="เข้าสู่ระบบอยู่แล้ว" subtitle={`${auth.user.name} · ${auth.user.staff_code}`}>
-        <Link className="btn primary block" to={next || "/sales"}>{next ? "กลับไปหน้าที่ค้างไว้" : "ไปที่ตะกร้าที่กำลังดูแล"}</Link>
+      <AuthShell
+        title={denied ? "บัญชีนี้เข้าหน้านั้นไม่ได้" : "เข้าสู่ระบบอยู่แล้ว"}
+        subtitle={`${auth.user.name} · ${auth.user.staff_code}`}
+      >
+        {denied && (
+          <p className="note tiny" style={{ marginBottom: 10 }}>
+            หน้า <b>{next}</b> เปิดให้เฉพาะผู้จัดการและแอดมิน — เข้าด้วยบัญชีที่มีสิทธิ์ถึงจะเข้าได้
+          </p>
+        )}
+        <Link className="btn primary block" to={denied || !next ? home : next}>
+          {denied ? "ไปหน้าเครื่องมือขาย" : next ? "กลับไปหน้าที่ค้างไว้" : "ไปที่ตะกร้าที่กำลังดูแล"}
+        </Link>
+        <button type="button" className="link-btn small" style={{ marginTop: 10 }}
+                onClick={() => { void auth.logout(); }}>
+          เข้าสู่ระบบด้วยบัญชีอื่น
+        </button>
       </AuthShell>
     );
   }

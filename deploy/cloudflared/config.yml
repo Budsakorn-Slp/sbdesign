@@ -10,14 +10,26 @@
 #   cloudflared แยก path ได้ก็จริง แต่มัน "ไม่ตัด" path ให้ API จะได้ /api/products ซึ่งไม่มีจริง
 #   ยิงเข้า 4173 ที่เดียวจึงง่ายกว่า และได้ของแถมคือทุกอย่างอยู่ origin เดียว ไม่ต้องยุ่งกับ CORS
 #
+# เครื่องนี้มี Windows Service "Cloudflared" รัน tunnel ของ Disney Home อยู่แล้ว
+# (disneyhomethailand.sbhapps.com -> :8080 · config อยู่ที่ ~/.cloudflared/config.yml)
+# ของเราเป็น tunnel คนละตัว คนละไฟล์ จึงไม่กระทบกัน และ serve_test.ps1 ส่ง --config
+# ชี้มาที่ไฟล์นี้เสมอ ไม่ไปแตะไฟล์ของ Disney
+#
+# !! ห้ามรัน "cloudflared service install" ซ้ำ — มันจะทับ service ของ Disney ที่ใช้งานจริงอยู่
+#
 # ---------------------------------------------------------------------------
 # แก้ 2 บรรทัดนี้หลังสร้าง tunnel เสร็จ (คำสั่งอยู่ใน deploy/README.md)
-tunnel: PUT-TUNNEL-UUID-HERE
-credentials-file: C:\Users\Budsakorn.s\.cloudflared\PUT-TUNNEL-UUID-HERE.json
+tunnel: 0b2c834e-bb3a-4b71-a2ab-f83cccd589c4
+credentials-file: C:/Users/Budsakorn.s/.cloudflared/0b2c834e-bb3a-4b71-a2ab-f83cccd589c4.json
 # ---------------------------------------------------------------------------
 
 # ปิด metrics ออกสู่ภายนอก เปิดไว้เฉพาะ localhost ไว้ดูสถานะ
-metrics: 127.0.0.1:20241
+#
+# ใช้ 20242 ไม่ใช่ 20241 ซึ่งเป็นค่าเริ่มต้นของ cloudflared — เครื่องนี้มี tunnel ของ Disney
+# จองพอร์ตนั้นไว้อยู่แล้ว ถ้าชนกัน tunnel ของเราจะตายทันทีตอนเริ่ม ด้วย error "bind address"
+metrics: 127.0.0.1:20242
+# ใช้ 20242 ไม่ใช่ 20241 ซึ่งเป็นค่าเริ่มต้นของ cloudflared — เครื่องนี้มี tunnel ของ Disney
+# จองพอร์ตนั้นไว้แล้ว ถ้าชนกัน tunnel ของเราจะตายทันทีตอนเริ่ม พร้อม error bind address
 loglevel: info
 
 ingress:

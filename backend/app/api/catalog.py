@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
@@ -366,8 +367,38 @@ def info_page(slug: str, db: Session = Depends(get_db)):
     return InfoPageOut(slug=row.slug, title=row.title, body_html=row.body_html, source_url=row.source_url)
 
 
+# แคชหน้าแรก — ของชิ้นเดียวใช้ร่วมกันทุกคน
+#
+# ทำไมแคชได้: หน้าแรกไม่มีอะไรขึ้นกับว่าใครเปิด — ทุกคนเห็นราคาเดียวกัน
+# (ดู catalog_service.unit_price_for) ถ้าวันหลังมีราคาเฉพาะกลุ่ม ต้องเลิกแคชรวมแบบนี้
+#
+# ทำไมต้องแคช: ประกอบจาก 8 ส่วน ยิงฐานใหม่ทุกครั้งที่มีคนเข้า รวม ~0.9 วินาที
+# ซึ่งเป็นเวลาที่ทุกคนต้องนั่งมองคำว่า "กำลังโหลดหน้าแรก" ทุกครั้งที่เปิดเว็บ
+#
+# อายุ 1 วัน แต่ไม่ได้รอให้หมดอายุอย่างเดียว — คีย์ผูกกับ "ของเปลี่ยนหรือยัง" ด้วย
+# (เวลา sync ล่าสุดของสินค้า + เวลาแก้ไฟล์เนื้อหา) พอ ETL กลางคืนรันเสร็จ คีย์เปลี่ยนเอง
+# หน้าแรกจึงสดทันทีโดยไม่ต้องรอครบวันและไม่ต้องสั่งล้างแคชจากที่ไหน
+_HOME_TTL = 24 * 60 * 60
+_home_cache: dict[str, object] = {"key": None, "at": 0.0, "data": None}
+
+
+def _home_stamp(db: Session) -> str:
+    """ลายเซ็นของข้อมูลที่หน้าแรกใช้ — เปลี่ยนเมื่อไรแปลว่าต้องคำนวณใหม่"""
+    synced = db.scalar(select(func.max(Material.synced_at)))
+    try:
+        mtime = (CONTENT_DIR / "home.json").stat().st_mtime
+    except OSError:
+        mtime = 0
+    return f"{synced}|{mtime}"
+
+
 @router.get("/home")
 def home(db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
+    stamp = _home_stamp(db)
+    if (_home_cache["data"] is not None and _home_cache["key"] == stamp
+            and time.time() - float(_home_cache["at"]) < _HOME_TTL):
+        return _home_cache["data"]
+
     with open(CONTENT_DIR / "home.json", encoding="utf-8") as f:
         content = json.load(f)
     # เดิมกรองด้วย tag ของ seed (new/deal/bestseller) ซึ่งข้อมูลจริงแทบไม่มี — ใช้สัญญาณจริงแทน
@@ -398,6 +429,7 @@ def home(db: Session = Depends(get_db), user: User | None = Depends(get_current_
     ] or content.get("room_rows", [])
     content.update(home_media(db))
     content["main_nav"] = main_nav(db, content["categories"])
+    _home_cache.update(key=stamp, at=time.time(), data=content)
     return content
 
 

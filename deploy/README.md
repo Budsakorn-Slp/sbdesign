@@ -46,6 +46,29 @@ cloudflared tunnel route dns sbdesign-dev designdev.sbhapps.com
 
 ---
 
+## ⚠️ กับดักของเครื่องนี้ — ต้องใส่ `--config` ทุกครั้ง
+
+เครื่องนี้มี `~/.cloudflared/config.yml` ของ Disney Home อยู่ และ cloudflared **อ่านไฟล์นั้นเป็นค่าตั้งต้น**
+ทำให้คำสั่งที่ไม่ได้ใส่ `--config` ไปทำงานกับ tunnel ของ Disney แทน **แม้จะพิมพ์ชื่อ tunnel ของเราไปแล้วก็ตาม**
+
+เจอของจริงมาแล้ว — สั่ง route ชื่อ `sbdesign-dev` แต่มันไปผูกกับ tunnel ของ Disney:
+
+```
+cloudflared tunnel route dns sbdesign-dev designdev.sbhapps.com
+INF Added CNAME designdev.sbhapps.com ... tunnelID=9738d7ff-...   <- ของ Disney!
+```
+
+ที่ถูกต้องคือใส่ `--config` **ก่อน** คำสั่งย่อยเสมอ:
+
+```powershell
+cloudflared tunnel --config deploy\cloudflared\config.yml info sbdesign-dev
+cloudflared tunnel --config deploy\cloudflared\config.yml route dns --overwrite-dns sbdesign-dev designdev.sbhapps.com
+```
+
+`serve_test.ps1` ส่ง `--config` ให้อยู่แล้ว จึงไม่มีปัญหานี้ — ระวังเฉพาะตอนพิมพ์คำสั่งเอง
+
+---
+
 ## เปิดใช้งาน
 
 ```powershell

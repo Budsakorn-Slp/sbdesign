@@ -794,3 +794,28 @@
 .pickup-terms b { font-size: 14px; }
 .pickup-terms .row:nth-child(2) b { color: #a12626; }
 .pickup-terms p { margin: 4px 0 0; color: var(--ink-2); line-height: 1.5; }
+
+/* ---------- หน้าสรุปการใช้งาน (/manager/insights) ---------- */
+.ins-page { padding-top: 20px; padding-bottom: 48px; }
+.ins-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 18px 0; }
+.ins-kpi { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.ins-kpi b { font-size: 24px; line-height: 1.2; }
+.ins-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; }
+.ins-card { padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.ins-card h3 { margin: 0 0 2px; font-size: 15px; }
+.ins-card p { margin: 0 0 10px; }
+/* แท่งเทียบสัดส่วนกับอันดับหนึ่ง — เห็นช่องว่างได้โดยไม่ต้องอ่านตัวเลขทีละบรรทัด */
+.ins-rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ins-rank li { display: grid; grid-template-columns: 18px minmax(0, 1fr) 70px auto; align-items: center; gap: 8px; font-size: 13px; }
+.ins-no { color: var(--ink-3); font: 500 11px/1 var(--mono); }
+.ins-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ins-bar { height: 6px; border-radius: 3px; background: var(--bg-3); overflow: hidden; }
+.ins-bar i { display: block; height: 100%; background: var(--brand); }
+.ins-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ins-table th { text-align: left; font-weight: 500; color: var(--ink-3); border-bottom: 1px solid var(--line); padding: 4px 0; }
+.ins-table td { padding: 5px 0; border-bottom: 1px solid var(--bg-3); }
+.ins-table td:not(:first-child), .ins-table th:not(:first-child) { text-align: right; width: 56px; }
+@media (max-width: 560px) {
+  .ins-rank li { grid-template-columns: 18px minmax(0, 1fr) auto; }
+  .ins-bar { display: none; }
+}

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiPost, errorMessage } from "../lib/api";
+import { ApiError, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { usePublicConfig } from "../lib/publicConfig";
 import type { TokenPair, User } from "../lib/types";
 import Icon from "./Icon";
 import OtpInput from "./OtpInput";
@@ -55,6 +56,7 @@ export default function CustomerLogin({ onDone, presetPhone, allowSignup = true,
      *  เพราะทั้งสองทางจบที่หน้ากรอกรหัสที่ไม่มีวันส่งมาถึง */
     allowOtp?: boolean }) {
   const auth = useAuth();
+  const cfg = usePublicConfig();
   const nav = useNavigate();
   const [mode, setMode] = useState<Mode>("password");
   const [id, setId] = useState(""); // เบอร์ (หรืออีเมลเฉพาะโหมดรหัสผ่าน)
@@ -63,6 +65,8 @@ export default function CustomerLogin({ onDone, presetPhone, allowSignup = true,
   const [sent, setSent] = useState<string | null>(null);
   const [wait, setWait] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // ช่วงทดสอบ: เข้าไม่ได้ -> โชว์การ์ด "เร็ว ๆ นี้" แทนข้อความ error (ดูเหตุผลที่ catch ใน run)
+  const [blocked, setBlocked] = useState(false);
   const [busy, setBusy] = useState(false);
   // รหัส OTP ที่ยิงอัตโนมัติไปแล้ว — กันยิงซ้ำวนลูปตอนรหัสผิด (ดู useEffect ข้างล่าง)
   const tried = useRef<string | null>(null);
@@ -127,6 +131,18 @@ export default function CustomerLogin({ onDone, presetPhone, allowSignup = true,
         onDone?.(t.user, mode);
       }
     } catch (err) {
+      // ช่วงทดสอบ (invite_only): เข้าไม่ได้ด้วยเหตุใดก็ตาม -> ขึ้นหน้า "เร็ว ๆ นี้" แทนข้อความ error
+      //
+      // ต้องเหมือนกันทุกกรณี (เบอร์ไม่มีบัญชี / ยังไม่ตั้งรหัส / รหัสผิด) ไม่งั้นกลายเป็น
+      // เครื่องมือไล่เช็คว่าเบอร์ไหนเป็นผู้ทดสอบ — ซึ่งเป็นเหตุผลเดียวกับที่หลังบ้าน
+      // ตอบข้อความเดียวกันหมดมาตั้งแต่แรก
+      const e = err as ApiError;
+      const authFailed = e instanceof ApiError && (e.status === 401 || e.status === 403);
+      if (cfg?.invite_only && authFailed) {
+        setBlocked(true);
+        setBusy(false);
+        return;
+      }
       setError(errorMessage(err));
       // รหัสผิด: ล้างช่องให้พิมพ์ใหม่ได้เลย (ไม่ต้องลบทีละหลัก) และปลดล็อกการยิงอัตโนมัติ
       if (mode !== "forgot" && sent) {
@@ -198,6 +214,21 @@ export default function CustomerLogin({ onDone, presetPhone, allowSignup = true,
         ? id.length === PHONE_LEN
         : code.trim().length >= 4
           && (mode !== "forgot" || pass.trim().length >= 4);
+
+  // เข้าไม่ได้ช่วงทดสอบ — บอกว่ายังไม่เปิด แทนที่จะบอกว่ารหัสผิด
+  // มีปุ่มกลับไปลองใหม่เสมอ เผื่อผู้ทดสอบที่มีรหัสจริงพิมพ์ผิด จะได้ไม่ตันอยู่ตรงนี้
+  if (blocked) {
+    return (
+      <div className="auth-soon">
+        <h2>{cfg?.coming_soon_title || "เร็ว ๆ นี้"}</h2>
+        <p className="muted">{cfg?.coming_soon_text}</p>
+        <p className="tiny muted">ช่วงนี้เข้าได้เฉพาะบัญชีที่ได้รับรหัสแล้วเท่านั้น</p>
+        <button type="button" className="btn block" onClick={() => { setBlocked(false); setPass(""); setCode(""); setSent(null); }}>
+          ได้รับรหัสแล้ว — ลองใหม่อีกครั้ง
+        </button>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={submit} className="form" autoComplete="on">

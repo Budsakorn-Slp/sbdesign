@@ -684,3 +684,9 @@ table.tbl tr:last-child td {
 @media (max-width: 599px) {
   .to-top { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); width: 40px; height: 40px; }
 }
+
+/* การ์ด "เร็ว ๆ นี้" ตอนเข้าระบบไม่ได้ช่วงทดสอบ (ดู CustomerLogin) */
+.auth-soon { display: flex; flex-direction: column; gap: 8px; text-align: center; }
+.auth-soon h2 { margin: 4px 0 0; font-size: 20px; }
+.auth-soon p { margin: 0; }
+.auth-soon .btn { margin-top: 10px; }

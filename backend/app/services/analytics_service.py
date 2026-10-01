@@ -366,6 +366,19 @@ def overview(db: Session, days: int = 30) -> dict:
         .group_by(SearchQuery.q).order_by(func.count().desc()).limit(10)
     ).all()
 
+    # เติมชื่อสินค้าให้ลิสต์ที่คีย์เป็นรหัส — หน้าแดชบอร์ดอ่าน "19210764" ไม่รู้เรื่อง
+    # ดึงทีเดียวทุกรหัสที่โผล่ในทุกลิสต์ แทนที่จะให้หน้าเว็บยิงถามทีละตัว 30 รอบ
+    by_matnr = {
+        "top_viewed": top(UserEvent.matnr, UserEvent.event == "view_material"),
+        "top_clicked": top(UserEvent.matnr, UserEvent.event == "click_product"),
+        "top_added": top(UserEvent.matnr, UserEvent.event == "add_to_cart"),
+    }
+    codes = {r["key"] for rows in by_matnr.values() for r in rows}
+    names = dict(db.execute(select(Material.matnr, Material.name_th).where(Material.matnr.in_(codes))).all()) if codes else {}
+    for rows in by_matnr.values():
+        for r in rows:
+            r["name"] = names.get(r["key"])
+
     return {
         "days": days,
         "visitors": visitors,
@@ -378,9 +391,9 @@ def overview(db: Session, days: int = 30) -> dict:
         "add_to_cart": count_where(UserEvent.event == "add_to_cart"),
         "purchases": count_where(UserEvent.event == "purchase"),
         "top_pages": top(UserEvent.path, UserEvent.event == "page_view"),
-        "top_viewed": top(UserEvent.matnr, UserEvent.event == "view_material"),
-        "top_clicked": top(UserEvent.matnr, UserEvent.event == "click_product"),
-        "top_added": top(UserEvent.matnr, UserEvent.event == "add_to_cart"),
+        "top_viewed": by_matnr["top_viewed"],
+        "top_clicked": by_matnr["top_clicked"],
+        "top_added": by_matnr["top_added"],
         # คำค้นยอดฮิต + มีคนกดผลลัพธ์กี่ครั้ง (clicks น้อยทั้งที่ค้นเยอะ = ผลลัพธ์ยังไม่ตรง)
         "top_searches": [{"q": q, "count": int(n), "clicks": int(c or 0)} for q, n, c in top_searches_rows],
         "zero_result_searches": [{"q": q, "count": int(n)} for q, n in zero_rows],

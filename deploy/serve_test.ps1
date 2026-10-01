@@ -70,7 +70,29 @@ function Stop-All {
 try {
   # ถ้า API รันค้างอยู่แล้ว (เช่น หน้าต่าง dev ที่เปิดทิ้งไว้) ใช้ตัวนั้นต่อ อย่าไปเปิดซ้อน
   # เปิดซ้อนจะชนพอร์ตแล้วตายทันที ทำให้ดูเหมือนสคริปต์พัง ทั้งที่ของเดิมยังทำงานดีอยู่
-  $apiUp = Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue
+  # เช็คว่า "ตอบได้จริง" ไม่ใช่แค่ "มีคนยึดพอร์ต"
+  #
+  # เจอของจริงมาแล้ว: uvicorn โหมด reload แยกเป็นโปรเซสพ่อ-ลูก พอ reload ไม่สมบูรณ์
+  # ตัวลูกจะค้างยึดพอร์ต 8000 ไว้แล้วตอบ 500 ทุก request · สคริปต์เห็นว่า "API รันอยู่แล้ว"
+  # แล้วไปใช้ตัวที่พังต่อ หน้าเว็บเลยค้างที่ "กำลังโหลด..." โดยไม่มีอะไรบอกว่าพัง
+  $apiUp = $false
+  if (Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue) {
+    try {
+      $apiUp = (Invoke-WebRequest "http://127.0.0.1:8000/healthz" -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200
+    } catch { $apiUp = $false }
+    if (-not $apiUp) {
+      Write-Host "`n!! มี API ค้างอยู่ที่ :8000 แต่ตอบไม่ได้ - ปิดทิ้งแล้วเปิดใหม่" -ForegroundColor Yellow
+      Get-NetTCPConnection -LocalPort 8000 -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -Expand OwningProcess -Unique | ForEach-Object {
+          Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue
+        }
+      # ตัวลูกของ uvicorn --reload ไม่ตายตามพ่อ ต้องตามเก็บเอง
+      Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+        Where-Object { $_.CommandLine -match 'uvicorn|spawn_main' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+      Start-Sleep -Seconds 3
+    }
+  }
   if ($apiUp) {
     Write-Host "`n=== api :8000 รันอยู่แล้ว ใช้ตัวเดิม ===" -ForegroundColor DarkYellow
     Write-Host "    (ถ้าเพิ่งแก้ .env ต้องปิดตัวเดิมแล้วรันใหม่ ไม่งั้นยังใช้ค่าเก่า)" -ForegroundColor DarkYellow

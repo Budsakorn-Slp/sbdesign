@@ -48,7 +48,15 @@ def cmd_list(_args) -> int:
 
 
 def cmd_add(args) -> int:
-    digits = normalize_phone(args.phone)
+    """ใส่ได้หลายเบอร์ในครั้งเดียว — ตั้งทีมทดสอบทั้งชุดจบในคำสั่งเดียว"""
+    bad = 0
+    for phone in args.phone:
+        bad += _add_one(args, phone)
+    return 1 if bad else 0
+
+
+def _add_one(args, phone: str) -> int:
+    digits = normalize_phone(phone)
     if len(digits) != 10:
         print(f"! เบอร์ต้องมี 10 หลัก (ได้ {digits!r})")
         return 1
@@ -100,7 +108,7 @@ def main(argv=None) -> int:
     sub.add_parser("list", help="ดูบัญชีลูกค้าทั้งหมดที่เข้าได้").set_defaults(fn=cmd_list)
 
     a = sub.add_parser("add", help="สร้าง/อัปเดตบัญชีผู้ทดสอบ")
-    a.add_argument("phone", help="เบอร์ 10 หลัก เช่น 0812345678")
+    a.add_argument("phone", nargs="+", help="เบอร์ 10 หลัก ใส่ได้หลายเบอร์คั่นด้วยเว้นวรรค")
     a.add_argument("--name", help="ชื่อที่จะแสดง")
     a.add_argument("--password", help="รหัสผ่านสำหรับเข้าระบบโดยไม่ต้องรอ OTP")
     a.add_argument("--member", help="เลขสมาชิก SAP ถ้าอยากให้ผูกบัตรไว้เลย")

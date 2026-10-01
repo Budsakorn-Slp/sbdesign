@@ -27,6 +27,9 @@ const SalesPage = lazy(() => import("./pages/SalesPage"));
 const PresosPage = lazy(() => import("./pages/PresosPage"));
 const ApprovalsPage = lazy(() => import("./pages/ApprovalsPage"));
 const SapSyncPage = lazy(() => import("./pages/SapSyncPage"));
+// สรุปการใช้งานช่วงทดสอบ — ตั้งใจไม่ใส่ลิงก์ในเมนู ให้เฉพาะคนที่รู้ URL
+// ด่านจริงคือ guard ของ /manager/* (manager + admin) ไม่ใช่ความลับของ URL
+const InsightsPage = lazy(() => import("./pages/InsightsPage"));
 import "./styles/layout.css";
 import "./styles/pages.css";
 import "./styles/cart.css";
@@ -73,6 +76,7 @@ export default function App() {
                   <Route path="/pay/:no" element={<PayPage />} />
                   <Route path="/manager/approvals" element={<ApprovalsPage />} />
                   <Route path="/manager/sap-sync" element={<SapSyncPage />} />
+                  <Route path="/manager/insights" element={<InsightsPage />} />
                   {/* หน้าเนื้อหาคงที่จาก CMS (/warranty, /career, ...) — ต้องอยู่ก่อน * เท่านั้น
                       และอยู่ท้ายสุดของเส้นทางที่เจาะจง ไม่งั้นมันจะกลืนเส้นทางอื่นที่มีชั้นเดียว */}
                   <Route path="/:slug" element={<InfoPage />} />
