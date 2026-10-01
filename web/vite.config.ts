@@ -26,6 +26,9 @@ export default defineConfig({
   // vite preview ไม่ได้ใช้ server.proxy ข้างบน ต้องประกาศซ้ำ — ไม่งั้นเวลาทดสอบไฟล์ที่ build แล้ว
   // (ซึ่งเป็นอย่างเดียวที่เห็นผลของ manualChunks) ทุก API จะ 404 จนดูอะไรไม่ได้เลย
   preview: {
+    // vite ปฏิเสธ request ที่ Host ไม่ตรงกับที่อนุญาต (กัน DNS rebinding) — ถ้าไม่ใส่โดเมนนี้
+    // เปิดผ่าน Cloudflare Tunnel แล้วจะเจอ "Blocked request. This host is not allowed."
+    allowedHosts: ["designdev.sbhapps.com"],
     proxy: {
       "/api": { target, changeOrigin: true, rewrite: (p) => p.replace(/^\/api/, "") },
       "/ws": { target: target.replace(/^http/, "ws"), ws: true },

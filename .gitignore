@@ -35,3 +35,6 @@ Thumbs.db
 .idea/
 .vscode/
 .lsp/
+
+# snapshot ราคาจาก SAP — ไฟล์ที่ job สร้างเอง ไม่ต้องเก็บใน git
+backend/data/

@@ -4,6 +4,7 @@ import AuthShell from "../components/AuthShell";
 import Icon from "../components/Icon";
 import { errorMessage } from "../lib/api";
 import { DEMO_ACCOUNTS, DEMO_PASSWORD, useAuth } from "../lib/auth";
+import { usePublicConfig } from "../lib/publicConfig";
 
 /** ทางเข้าของพนักงาน — แยกจากหน้าลูกค้าโดยสิ้นเชิง
  *
@@ -15,6 +16,7 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD, useAuth } from "../lib/auth";
  * เอาตัวเลือกที่ลูกค้าไม่มีวันใช้ไปวางขวางหน้าลูกค้า
  */
 export default function StaffLoginPage() {
+  const cfg = usePublicConfig();
   const auth = useAuth();
   const nav = useNavigate();
   const [params] = useSearchParams();
@@ -75,16 +77,21 @@ export default function StaffLoginPage() {
           <Icon name="shield" size={14} /> ลองรหัสผิดหลายครั้งติดกันระบบจะหยุดรับชั่วคราว · ทุกครั้งที่เข้าสู่ระบบมีการบันทึกไว้
         </p>
 
-        <div className="auth-or">บัญชีทดสอบ</div>
-
-        <div className="demo-accounts">
-          {DEMO_ACCOUNTS.filter((d) => d.type === "staff").map((d) => (
-            <button key={d.id} className="demo-row" onClick={() => { setCode(d.id); setPass(DEMO_PASSWORD); setError(null); }}>
-              <Icon name="badge" size={20} />
-              <span><b>{d.title}</b><small>{d.sub}</small></span>
-            </button>
-          ))}
-        </div>
+        {/* รายชื่อบัญชีทดสอบพร้อมรหัสผ่าน — มีไว้ให้ dev กดเร็วๆ เท่านั้น
+            ห้ามโผล่บนของจริง ไม่งั้นเท่ากับแปะรหัสเข้าระบบหลังร้านไว้หน้าเว็บ */}
+        {cfg && !cfg.invite_only && (
+          <>
+            <div className="auth-or">บัญชีทดสอบ</div>
+            <div className="demo-accounts">
+              {DEMO_ACCOUNTS.filter((d) => d.type === "staff").map((d) => (
+                <button key={d.id} className="demo-row" onClick={() => { setCode(d.id); setPass(DEMO_PASSWORD); setError(null); }}>
+                  <Icon name="badge" size={20} />
+                  <span><b>{d.title}</b><small>{d.sub}</small></span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </>
     </AuthShell>
   );

@@ -128,13 +128,14 @@ def test_preso_blocked_until_every_step_done(client):
 
     # 1 ยังไม่ผูกลูกค้า — บันทึกร่างได้ แต่ด่านยังไม่ผ่าน
     assert save().status_code == 201
-    assert steps() == {"customer": False, "profile": False, "stock": False, "promo": False, "delivery": False}
+    assert steps() == {"customer": False, "stock": False, "promo": False, "delivery": False}
+    # ผูกลูกค้าแล้วแต่ยังไม่มีที่อยู่จัดส่ง — ด่านข้อมูลลูกค้ายังไม่ผ่าน (ผูกกับกรอกครบคือด่านเดียวกัน)
     client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": "1100440310"}, headers=hs)
-    assert steps()["customer"] is True
+    assert steps()["customer"] is False
 
-    # 2 ยังไม่มีที่อยู่จัดส่ง
+    # 2 ใส่ที่อยู่จัดส่งแล้วด่านข้อมูลลูกค้าถึงจะผ่าน
     client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110"}, headers=hs)
-    assert steps()["profile"] is True
+    assert steps()["customer"] is True
 
     # 3 ยังไม่ได้เช็คสต็อก
     client.post(f"/sales/carts/{cart['id']}/availability", headers=hs)

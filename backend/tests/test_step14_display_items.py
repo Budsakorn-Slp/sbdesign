@@ -57,9 +57,17 @@ class FakeStock:
         return {m: self.table[m] for m in matnrs if m in self.table}
 
 
-def run_sync(monkeypatch, table, **kw):
+def run_sync(monkeypatch, table, *, zd06=None, **kw):
+    """zd06 = รหัสที่มีส่วนลดตัวโชว์ใน SAP · None = ทุกตัวที่ถูกถามสต็อกถือว่ามี
+
+    ต้องแทน snapshot ราคาเสมอ ไม่งั้นเทสจะไปอ่านไฟล์จริงบนเครื่อง dev
+    ซึ่งไม่มีรหัสสมมุติของเทสอยู่ ทำให้ทุกตัวถูกซ่อนหมด
+    """
     fake = FakeStock(table)
     monkeypatch.setattr(product_stock_service, "get_material_stock_client", lambda: fake)
+    codes = table.keys() if zd06 is None else zd06
+    monkeypatch.setattr(sync_display_items, "load_price_snapshot",
+                        lambda: {c: {"sellable": True} for c in codes})
     with SessionLocal() as db:
         res = sync_display_items.sync(db, refresh_all=kw.get("refresh_all", True), limit=None, mock=False)
     return fake, res
@@ -153,3 +161,63 @@ def test_staff_can_still_find_a_display_code(client, monkeypatch, parents):
     h = auth_headers(client, "SA-104", "staff")
     got = client.get("/materials/search?q=20000001&limit=20", headers=h).json()
     assert "20000001" in [i["matnr"] for i in got["items"]]
+
+
+def test_มีของแต่ไม่มีส่วนลดตัวโชว์ต้องซ่อน(monkeypatch, parents):
+    """กติกาใหม่: ขึ้นเว็บได้ต้อง "มีของ" และ "มี ZD06" ครบทั้งสองอย่าง
+
+    ของที่ตั้งโชว์อยู่หน้าร้านแต่ยังไม่ตั้งส่วนลดใน SAP ถือว่ายังไม่พร้อมขาย
+    """
+    _, (_, shown, hidden) = run_sync(
+        monkeypatch, in_stock_table({"20000001": 4, "20000002": 4}), zd06=["20000001"])
+    assert (shown, hidden) == (1, 2)
+    with SessionLocal() as db:
+        rows = {m.matnr: m for m in db.scalars(select(Material).where(Material.matnr.like("200000%"))).all()}
+    assert rows["20000001"].is_public is True     # มีของ + มี ZD06
+    assert rows["20000002"].is_public is False    # มีของ แต่ไม่มี ZD06
+
+
+def test_ยังไม่เคยรันงานราคาต้องไม่เผลอเปิดทั้งชุด(monkeypatch, parents):
+    """ไม่มี snapshot = ไม่รู้ว่าตัวไหนมีส่วนลด ต้องซ่อนไว้ก่อน ไม่ใช่เปิดหมด"""
+    _, (_, shown, hidden) = run_sync(monkeypatch, in_stock_table({"20000001": 4}), zd06=[])
+    assert shown == 0 and hidden == 3
+
+
+def test_ราคาตัวโชว์มาจากsnapshotไม่ใช่ก๊อปราคาตัวปกติ(monkeypatch, parents):
+    """ราคาตัวปกติที่เก็บไว้คือราคาหลังลดของตัวปกติ ซึ่งคนละตัวกับส่วนลดตัวโชว์"""
+    fake = FakeStock(in_stock_table({"20000001": 4}))
+    monkeypatch.setattr(product_stock_service, "get_material_stock_client", lambda: fake)
+    monkeypatch.setattr(sync_display_items, "load_price_snapshot", lambda: {
+        "20000001": {"sellable": True, "list": "3200.00", "net": "2240.00"}})
+    with SessionLocal() as db:
+        sync_display_items.sync(db, refresh_all=True, limit=None, mock=False)
+    with SessionLocal() as db:
+        got = {p.tier: p.price for p in db.scalars(
+            select(MaterialPrice).where(MaterialPrice.matnr == "20000001"))}
+    assert got["standard"] == Decimal("2240.00")      # ราคาป้าย 3,200 ลบ ZD06 30%
+    assert got["compare_at"] == Decimal("3200.00")
+
+
+def test_หมวดตัวโชว์กรองเหมือนกันทั้งลูกค้าและพนักงาน(client, monkeypatch, parents):
+    """เปิดดูทั้งหมวด = เห็นเฉพาะที่พร้อมขาย · ค้นหา = พนักงานเจอทุกตัวรวมที่ซ่อน
+
+    เหตุผล: หมวดตัวโชว์มี 3,400 ตัว ส่วนใหญ่ยังไม่มีส่วนลดให้ขาย
+    โหลดมาทั้งหมดทำให้หน้าพนักงานช้าโดยไม่ได้อะไร
+    """
+    from tests.helpers import auth_headers
+
+    run_sync(monkeypatch, in_stock_table({"20000001": 4, "20000002": 4}), zd06=["20000001"])
+    hs = auth_headers(client, "SA-104", "staff")
+
+    def codes(params, headers=None):
+        r = client.get("/materials/search", params=params, headers=headers or {})
+        assert r.status_code == 200, r.text
+        return {i["matnr"] for i in r.json()["items"]}
+
+    # เปิดดูหมวด — ทั้งลูกค้าและพนักงานเห็นเฉพาะตัวที่พร้อมขาย
+    assert "20000002" not in codes({"group": "display", "limit": 100})
+    assert "20000002" not in codes({"group": "display", "limit": 100}, hs)
+    assert "20000001" in codes({"group": "display", "limit": 100}, hs)
+
+    # ค้นหาด้วยรหัส — พนักงานต้องเจอตัวที่ซ่อน ไม่งั้นเช็คของให้ลูกค้าหน้าร้านไม่ได้
+    assert "20000002" in codes({"q": "20000002", "limit": 100}, hs)

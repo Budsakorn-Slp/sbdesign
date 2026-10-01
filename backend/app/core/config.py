@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     stock_batch_size: int = 20  # กี่รหัสต่อการยิง SAP หนึ่งครั้ง
     # สร้าง Sales Order (ดู app/integrations/sap/http.py + docs/sap-sales-order.md)
     # ว่าง = ยังใช้ mock · ฝั่งหลังบ้านเปิด endpoint เมื่อไหร่ใส่ URL แล้วตั้ง SAP_MODE=http
+    # ---------- ราคาสินค้าจาก SAP (ZAIBAPI_MATERIAL_GET_ALL) ----------
+    # งานรายวันแบบยกชุด คนละเรื่องกับ sap_avail_url/sap_stock_url ซึ่งถามสดตอนลูกค้ากดปุ่ม
+    sap_catalog_url: str = ""
+    # ช่วงกว้างใช้เวลาเป็นนาที (ช่วง 19xxxxxxx ทั้งก้อน ~200 วิ) ตั้งเผื่อไว้มาก
+    sap_catalog_timeout_seconds: float = 600.0
+
     sap_so_url: str = ""
     sap_so_timeout_seconds: float = 30.0  # สร้างเอกสารช้ากว่าการอ่าน เผื่อเวลาไว้มากกว่า avail
     # กลุ่มสินค้าที่ให้โชว์บนเว็บ ตัดสินจากตัวขึ้นต้นของ MATNR
@@ -94,6 +100,28 @@ class Settings(BaseSettings):
     # OTP_DEBUG=true จะส่งรหัสกลับมาใน response ให้เห็นบนหน้าจอ (สำหรับ dev/เทสเท่านั้น)
     # ห้ามเปิดบนโปรดักชันเด็ดขาด — ใครก็ขอ OTP ของเบอร์คนอื่นแล้วอ่านรหัสจาก response ได้
     otp_debug: bool = True
+    # จำกัดว่า "โชว์รหัส OTP บนจอ" ใช้ได้กับเบอร์ไหนบ้าง — คั่นด้วยจุลภาค ว่าง = ทุกเบอร์
+    #
+    # ทำไมต้องมี: OTP_DEBUG เปล่าๆ คืนรหัสให้ "ทุกเบอร์ที่ขอ" ซึ่งแปลว่าใครก็ขอ OTP
+    # ของเบอร์คนอื่นแล้วอ่านรหัสจาก response เพื่อยึดบัญชีได้ทันที
+    # ใส่รายชื่อเบอร์ทดสอบไว้ จะเหลือความเสี่ยงเฉพาะบัญชีทดสอบที่เราคุมเอง
+    # บัญชีลูกค้าจริงจะไม่มีทางได้รหัสทางนี้ ต้องรอ SMS จริงเท่านั้น
+    otp_debug_phones: str = ""
+
+    # ---------- ช่วงเปิดให้ทดสอบก่อนเปิดจริง (soft launch) ----------
+    # true = หน้าเข้าสู่ระบบขึ้น "เร็ว ๆ นี้" และ "สมัครสมาชิก" ปิด
+    #        เข้าได้เฉพาะบัญชีที่มีอยู่แล้ว (คนที่เราแจกรหัสให้)
+    #
+    # ต้องกันที่ฝั่งนี้ด้วย ไม่ใช่แค่ซ่อนปุ่มบนหน้าเว็บ — ระบบนี้ "สมัคร" กับ "เข้าสู่ระบบ"
+    # เป็นทางเดียวกัน (ยืนยัน OTP ของเบอร์ที่ยังไม่มีบัญชี = ได้บัญชีใหม่ทันที)
+    # ซ่อนแค่ปุ่มจึงไม่ได้กันอะไรเลย ใครยิง API เองก็สมัครได้อยู่ดี
+    invite_only: bool = False
+    # dev | prod — prod จะปิดหน้าเอกสาร API, บังคับ cookie secure และใส่ security header
+    # แยกจาก invite_only เพราะคนละเรื่อง: อันนั้นคือ "ใครสมัครได้" อันนี้คือ "เปิดสู่เน็ตจริงหรือยัง"
+    app_env: str = "dev"
+    # ข้อความบนหน้า "เร็ว ๆ นี้" — แก้ได้จาก env ไม่ต้อง build หน้าเว็บใหม่
+    coming_soon_title: str = "เร็ว ๆ นี้"
+    coming_soon_text: str = "เรากำลังเตรียมร้านค้าออนไลน์ให้พร้อมที่สุด อีกไม่นานเจอกันแน่นอน"
 
     # ---------- SMS gateway (ดู app/integrations/sms/) ----------
     sms_mode: str = "mock"  # mock = พิมพ์ออก console · http = ยิง REST API ของผู้ให้บริการ
@@ -113,6 +141,26 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    def otp_debug_for(self, digits: str) -> bool:
+        """เบอร์นี้ขอดูรหัส OTP บนจอได้ไหม"""
+        if not self.otp_debug:
+            return False
+        allow = [p.strip() for p in self.otp_debug_phones.split(",") if p.strip()]
+        return not allow or digits in allow
+
+    @property
+    def is_prod(self) -> bool:
+        return self.app_env.lower() in ("prod", "production")
+
+    @property
+    def otp_enabled(self) -> bool:
+        """OTP ใช้ได้จริงไหม — ต้องส่ง SMS ได้ หรืออยู่โหมด debug ที่คืนรหัสมาบนจอ
+
+        ถ้าทั้งสองอย่างไม่มี การกดปุ่ม OTP จะค้างอยู่ตรงหน้ากรอกรหัสที่ไม่มีวันมาถึง
+        หน้าเว็บจึงต้องซ่อนปุ่มนั้นไปเลย ไม่ใช่ปล่อยให้กดแล้วตัน
+        """
+        return self.sms_mode.lower() != "mock" or self.otp_debug
 
     @property
     def is_sqlite(self) -> bool:

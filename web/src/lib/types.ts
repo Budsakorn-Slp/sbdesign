@@ -242,6 +242,11 @@ export type CartItem = {
   group: string | null;
   /** ใส่ตะกร้าได้ แต่ยังชำระเงินออนไลน์ไม่ได้ ต้องไปรับที่สาขา */
   pickup_only: boolean;
+  /** บรรทัดค่าบริการขนส่งที่พนักงานเปิด Mat ไว้ ไม่ใช่สินค้าที่ลูกค้าหยิบ
+   *  หลังบ้านเป็นคนบอก (อ่านจากไฟล์กฎ) หน้าเว็บจึงไม่ต้องถือลิสต์รหัสเอง */
+  is_charge?: boolean;
+  /** tier = ตามยอดบิล · extra = ค่าส่งเพิ่มจากปลายทาง */
+  charge_role?: "tier" | "extra" | null;
   selected: boolean; // ติ๊กในหน้าตะกร้า = คิดเงินรอบนี้
   supply_mode: SupplyMode;
   plant_code: string | null;
@@ -400,7 +405,7 @@ export type Cart = {
 };
 
 /** หนึ่งด่านในผังงานหน้าร้าน (ลูกค้า → ข้อมูล → สต็อก → โปรฯ → คิวส่ง) */
-export type PresoStepKey = "customer" | "profile" | "stock" | "promo" | "delivery";
+export type PresoStepKey = "customer" | "stock" | "promo" | "delivery";
 export type PresoStep = {
   key: PresoStepKey;
   title: string;

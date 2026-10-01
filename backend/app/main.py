@@ -35,7 +35,29 @@ def _setup_logging(level: str) -> None:
 def create_app() -> FastAPI:
     settings = get_settings()
     _setup_logging(settings.log_level)
-    app = FastAPI(title=settings.app_name, version="0.11.0", lifespan=lifespan)
+    # บน prod ปิดหน้าเอกสาร API — /docs กับ /openapi.json บอกทุก endpoint ทุกพารามิเตอร์
+    # เท่ากับแจกแผนที่ระบบให้คนที่กำลังหาช่องโหว่ · บนเครื่อง dev ยังเปิดไว้ตามเดิม
+    docs = {} if not settings.is_prod else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    app = FastAPI(title=settings.app_name, version="0.11.0", lifespan=lifespan, **docs)
+
+    @app.middleware("http")
+    async def security_headers(request, call_next):
+        """หัวข้อความปลอดภัยพื้นฐาน — กันคลิกแจ็ก กันเดาชนิดไฟล์ กันข้อมูลรั่วทาง referrer
+
+        ใส่ที่ชั้นแอปไม่ใช่ที่ Cloudflare อย่างเดียว เพราะวันหนึ่งอาจมีคนต่อตรงเข้าเครื่อง
+        (เช่น ทดสอบในวง LAN) แล้วหัวพวกนี้ต้องยังอยู่
+        """
+        r = await call_next(request)
+        r.headers.setdefault("X-Content-Type-Options", "nosniff")
+        r.headers.setdefault("X-Frame-Options", "DENY")
+        r.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        r.headers.setdefault("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+        if settings.is_prod:
+            # บอกเบราว์เซอร์ว่าโดเมนนี้ใช้ HTTPS เท่านั้น — ใส่เฉพาะ prod
+            # ถ้าใส่ตอน dev เบราว์เซอร์จะจำแล้วบังคับ https กับ localhost ไปด้วย เปิดเว็บไม่ได้
+            r.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        return r
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,

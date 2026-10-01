@@ -222,6 +222,54 @@ def current_line(cart: Cart, role: str = "tier") -> CartItem | None:
     return next((it for it in cart.items if is_charge_line(it) and role_of(it.matnr) == role), None)
 
 
+def options(role: str = "tier") -> list[dict]:
+    """รหัสค่าบริการที่ให้พนักงานเลือกได้ในบทบาทนั้น — มาจากไฟล์กฎ ไม่ได้ฮาร์ดโค้ดในหน้าเว็บ
+
+    เพิ่มรหัสใหม่ในไฟล์กฎแล้วช่องเลือกขึ้นเอง · ถ้าให้หน้าเว็บถือลิสต์ไว้เอง เติมรหัสทีต้องแก้
+    สองที่แล้วลืมที่ใดที่หนึ่งทุกครั้ง
+    """
+    return [{"matnr": m, "name": c.get("name", m), "default_fee": None if c.get("default_fee") is None else str(Decimal(str(c["default_fee"])))}
+            for m, c in _load().get("charges", {}).items() if c.get("role", "tier") == role]
+
+
+def known_roles() -> list[str]:
+    """บทบาททั้งหมดที่ไฟล์กฎประกาศไว้ — ใช้ตรวจ input แทนการเขียนรายชื่อตายไว้ใน API"""
+    d = _load()
+    declared = list(d.get("roles", {}))
+    used = [c.get("role", "tier") for c in d.get("charges", {}).values()]
+    return declared or sorted(set(used))
+
+
+def picker_roles(cart: Cart) -> list[dict]:
+    """บล็อกค่าบริการที่พนักงานเปิดเองได้ เรียงตามไฟล์กฎ
+
+    หนึ่ง role = หนึ่งบรรทัดในบิล แต่ต่าง role บวกกันได้ เช่น ตัวโชว์ส่งต่างจังหวัด
+    จะมี A052 (เหมา) + A761 (ตามยอด) + A533 (พื้นที่ห่างไกล) พร้อมกันสามบรรทัด
+    """
+    d = _load()
+    out = []
+    for role, meta in d.get("roles", {}).items():
+        if not meta.get("picker"):
+            continue          # extra เปิดจากเมนูจัดคิวส่ง ไม่ใช่กล่องนี้
+        if not meta.get("enabled", True):
+            continue          # ทำโครงไว้แล้วแต่ยังไม่เปิดใช้ — แก้ enabled ในไฟล์กฎเป็น true ก็ขึ้นเลย
+        line = current_line(cart, role)
+        opts = options(role)
+        out.append({
+            "role": role,
+            "label": meta.get("label", role),
+            "hint": meta.get("hint"),
+            "options": opts,
+            "default_matnr": (opts[0]["matnr"] if opts else None),
+            "default_fee": (opts[0]["default_fee"] if opts else None),
+            "current": None if not line else {
+                "item_id": line.id, "matnr": line.matnr, "name": line.name_snapshot,
+                "fee": str(line.unit_price_snapshot), "remark": line.note,
+            },
+        })
+    return out
+
+
 def suggest(cart: Cart) -> dict:
     """เสนอว่าบิลนี้ควรเปิด Mat ตัวไหน ราคาเท่าไร — ยังไม่เขียนอะไรลงตะกร้า"""
     data = _load()
@@ -236,6 +284,9 @@ def suggest(cart: Cart) -> dict:
         "fee": str(Decimal(str(tier["fee"]))),
         "tier_label": tier["label"],
         "editable": True,
+        "options": options("tier"),
+        # หนึ่งบล็อกต่อหนึ่งบทบาท — หน้าเว็บวาดตามนี้ ไม่ต้องรู้จักรหัสไหนเลย
+        "roles": picker_roles(cart),
         "extra": None if not (ex := current_line(cart, "extra")) else {
             "item_id": ex.id, "matnr": ex.matnr, "name": ex.name_snapshot,
             "fee": str(ex.unit_price_snapshot), "remark": ex.note,

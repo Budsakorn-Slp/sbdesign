@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DEMO_ACCOUNTS, useAuth } from "../lib/auth";
+import { usePublicConfig } from "../lib/publicConfig";
 import AuthShell from "./AuthShell";
 import CustomerLogin from "./CustomerLogin";
 import Icon from "./Icon";
@@ -15,6 +16,7 @@ import MemberLink, { SHELL, type Phase } from "./MemberLink";
  * และคีย์บอร์ดเด้งขึ้นมาทับพอดี
  */
 export default function LoginModal() {
+  const cfg = usePublicConfig();
   const auth = useAuth();
   const [preset, setPreset] = useState("");
   const [linking, setLinking] = useState(false);
@@ -61,9 +63,13 @@ export default function LoginModal() {
           >
             <CustomerLogin
               presetPhone={preset}
+              allowSignup={!cfg?.invite_only}
+              allowOtp={cfg?.otp_enabled !== false}
               onDone={(u) => (u.needs_profile ? setLinking(true) : close())}
             />
 
+            {cfg && !cfg.invite_only && (
+            <>
             <div className="auth-or">เบอร์ทดสอบ</div>
             <div className="demo-accounts">
               {DEMO_ACCOUNTS.filter((d) => d.type === "customer").map((d) => (
@@ -73,6 +79,8 @@ export default function LoginModal() {
                 </button>
               ))}
             </div>
+            </>
+            )}
           </AuthShell>
         )}
       </div>

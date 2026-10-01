@@ -26,6 +26,8 @@ BAD = "NOPE"  # id ที่ไม่มีจริง → handler ตอบ 40
 MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     # ---------- สาธารณะ ----------
     ("GET", "/healthz", ALL, None),
+    # หน้าเว็บต้องอ่านได้ก่อนล็อกอิน (ใช้ตัดสินว่าจะขึ้นหน้า "เร็ว ๆ นี้" ไหม) — ไม่มีข้อมูลลับ
+    ("GET", "/public-config", ALL, None),
     ("GET", "/home", ALL, None),
     ("GET", f"/pages/{BAD}", ALL, None),  # หน้าเนื้อหาคงที่ — เปิดให้ทุกคนอ่าน ไม่ต้องล็อกอิน
     ("GET", "/categories", ALL, None),

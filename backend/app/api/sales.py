@@ -246,8 +246,12 @@ def set_shipping_charge(cart_id: str, body: ShippingChargeIn, db: Session = Depe
 
 
 @router.delete("/sales/carts/{cart_id}/shipping-charge", response_model=CartOut)
-def clear_shipping_charge(cart_id: str, role: str = Query(default="tier", pattern="^(tier|extra)$"),
+def clear_shipping_charge(cart_id: str, role: str = Query(default="tier"),
                           db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    # ตรวจกับไฟล์กฎ ไม่ใช่ regex ที่เขียนรายชื่อตายไว้ — เพิ่ม role ใหม่ในไฟล์แล้วลบได้เลย
+    known = staff_shipping_service.known_roles()
+    if role not in known:
+        raise HTTPException(status_code=422, detail=f"ไม่รู้จักบทบาทค่าบริการ '{role}' — มีแค่ {', '.join(known)}")
     cart = sales_service.require_my_cart(db, me, cart_id)
     staff_shipping_service.remove(db, cart, me, role)
     return cart_out(cart_service.load_cart(db, cart.id), db)

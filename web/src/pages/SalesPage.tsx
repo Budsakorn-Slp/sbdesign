@@ -167,14 +167,14 @@ export default function SalesPage() {
   }
 
   const cart = sales.active;
-  // บรรทัดค่าขนส่งในตะกร้า (Mat A534/A761 = ตามยอดบิล · A776 = ค่าส่งเพิ่มเติมจากปลายทาง)
+  // บรรทัดค่าขนส่งในตะกร้า (role tier = ตามยอดบิล · extra = ค่าส่งเพิ่มเติมจากปลายทาง)
   // ยอดพวกนี้ไม่ถูกนับเป็น "สินค้า" อยู่แล้ว ฝั่งหลังบ้านโยนไปรวมที่ค่าขนส่งให้
-  const SHIP_MATNRS = ["A534", "A761", "A533"];
-  const shipLines = (cart?.items || []).filter((it) => SHIP_MATNRS.includes(it.matnr) && it.selected);
+  // ธง is_charge มาจากไฟล์กฎ — เติมรหัสใหม่ในไฟล์แล้วหน้านี้รู้เอง ไม่ต้องตามแก้ลิสต์
+  const shipLines = (cart?.items || []).filter((it) => it.is_charge && it.selected);
   // บรรทัดค่าขนส่งโชว์ในลิสต์ด้วย — พนักงานต้องเห็นว่า Mat ตัวไหนถูกเปิดเข้าบิลไปแล้ว
   // (เลข MATNR คือสิ่งที่ใช้คุยกับคลัง/SAP) แต่ไม่นับรวมใน "สินค้า (N)"
   // เพราะมันเป็นค่าบริการ ไม่ใช่ของที่ลูกค้าเลือก — ยอดก็ไปอยู่บรรทัดค่าขนส่งของกล่องสรุป
-  const goods = (cart?.items || []).filter((it) => !SHIP_MATNRS.includes(it.matnr));
+  const goods = (cart?.items || []).filter((it) => !it.is_charge);
   const rows = cart?.items || [];
 
   const plantName = (code: string | null) => plants.find((p) => p.plant_code === code)?.name || code || "";
@@ -374,11 +374,10 @@ export default function SalesPage() {
                         if (st.key === "stock") return void checkStock();
                         if (st.key === "promo") return setPromoOpen(true);
                         if (st.key === "delivery") return setDeliveryOpen(true);
-                        // ด่าน "ชื่อ เบอร์ ที่อยู่" ขาดได้สองแบบ พาไปคนละที่:
+                        // ด่าน "ข้อมูลลูกค้า" ขาดได้สองแบบ พาไปคนละที่:
                         //   ยังไม่ผูกลูกค้า -> ไปช่องค้นหาลูกค้า (ชื่อ/เบอร์มาจากทะเบียนลูกค้า)
                         //   ผูกแล้วแต่ขาดที่อยู่ -> ไปบล็อกคิวจัดส่งซึ่งเป็นที่กรอกปลายทาง
-                        if (st.key === "profile" && cart.customer) return setDeliveryOpen(true);
-                        // ด่านลูกค้า: ช่องค้นหา/ผูกลูกค้าอยู่หัวหน้า เลื่อนไปให้เลย
+                        if (cart.customer) return setDeliveryOpen(true);
                         document.getElementById("sales-customer")?.scrollIntoView({ block: "center" });
                         document.querySelector<HTMLInputElement>("#sales-customer input")?.focus();
                       }}

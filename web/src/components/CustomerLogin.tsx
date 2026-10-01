@@ -46,7 +46,14 @@ const STAFF_DOOR = (import.meta.env.VITE_STAFF_DOOR || "SA-Sale").trim().toLower
  */
 type Mode = "password" | "otp" | "register" | "forgot";
 
-export default function CustomerLogin({ onDone, presetPhone }: { onDone?: (user: User, mode: Mode) => void; presetPhone?: string }) {
+export default function CustomerLogin({ onDone, presetPhone, allowSignup = true, allowOtp = true }:
+  { onDone?: (user: User, mode: Mode) => void; presetPhone?: string;
+    /** ช่วงทดสอบก่อนเปิดจริงตั้งเป็น false — ซ่อนทางสมัครสมาชิก
+     *  (หลังบ้านกันไว้อีกชั้นอยู่แล้ว ตรงนี้แค่ไม่ให้ชวนกดแล้วเจอ error) */
+    allowSignup?: boolean;
+    /** false = ระบบส่ง OTP ไม่ได้ (ยังไม่ได้ต่อ SMS) — ซ่อนทั้ง "เข้าด้วย OTP" และ "ลืมรหัสผ่าน"
+     *  เพราะทั้งสองทางจบที่หน้ากรอกรหัสที่ไม่มีวันส่งมาถึง */
+    allowOtp?: boolean }) {
   const auth = useAuth();
   const nav = useNavigate();
   const [mode, setMode] = useState<Mode>("password");
@@ -276,22 +283,28 @@ export default function CustomerLogin({ onDone, presetPhone }: { onDone?: (user:
 
       {!sent && (
         <>
-          {mode === "password" && (
+          {mode === "password" && allowOtp && (
             <div className="auth-links">
               <button type="button" className="link-btn small" onClick={() => go("otp")}>เข้าด้วยรหัส OTP</button>
               <button type="button" className="link-btn small" onClick={() => go("forgot")}>ลืมรหัสผ่าน?</button>
             </div>
           )}
+          {/* ยังต่อ SMS ไม่ได้ = เข้าได้ทางเดียวคือรหัสผ่าน บอกให้ชัดดีกว่าปล่อยให้งง */}
+          {mode === "password" && !allowOtp && (
+            <div className="note tiny" style={{ marginTop: 8 }}>
+              ช่วงทดสอบเข้าด้วยรหัสผ่านเท่านั้น — ลืมรหัสติดต่อผู้ดูแลระบบ
+            </div>
+          )}
 
           {/* ลูกค้าใหม่มองหาคำว่า "สมัครสมาชิก" — ของเดิมมีแต่ทาง OTP ซึ่งสมัครให้อยู่แล้ว
               แต่ไม่มีอะไรบอก คนเลยไม่รู้ว่าต้องกดตรงไหน */}
-          {mode !== "register" ? (
-            <div className="auth-or">ยังไม่มีบัญชี?</div>
-          ) : null}
-          {mode !== "register" ? (
-            <button type="button" className="btn block" onClick={() => go("register")}>
-              <Icon name="person_add" size={18} /> สมัครสมาชิกใหม่
-            </button>
+          {allowSignup && mode !== "register" ? (
+            <>
+              <div className="auth-or">ยังไม่มีบัญชี?</div>
+              <button type="button" className="btn block" onClick={() => go("register")}>
+                <Icon name="person_add" size={18} /> สมัครสมาชิกใหม่
+              </button>
+            </>
           ) : null}
         </>
       )}

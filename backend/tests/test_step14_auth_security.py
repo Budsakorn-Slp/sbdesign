@@ -352,3 +352,135 @@ def test_linking_a_member_skips_the_profile_step_entirely(client):
     hs = _otp_login(client, MEMBER_PHONE)
     assert client.post("/me/member/link", json={"sap_customer_no": MEMBER_NO}, headers=hs).status_code == 200
     assert client.get("/me", headers=hs).json()["needs_profile"] is False
+
+
+# ---------- ช่วงเปิดให้ทดสอบก่อนเปิดจริง (invite_only) ----------
+@pytest.fixture
+def invite_only(monkeypatch):
+    """เปิดโหมด invite_only ชั่วคราว — get_settings ถูก cache ไว้ ต้องล้างทั้งก่อนและหลัง"""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "invite_only", True)
+    yield
+    monkeypatch.setattr(s, "invite_only", False)
+
+
+def test_invite_only_ปิดการสมัครผ่าน_otp(client, invite_only):
+    """เบอร์ใหม่ยืนยัน OTP ถูกต้องก็ยังเข้าไม่ได้ — 'สมัคร' กับ 'ล็อกอิน' เป็นทางเดียวกัน"""
+    phone = "099-000-7788"
+    code = client.post("/auth/otp/request", json={"phone": phone}).json()["debug_code"]
+    r = client.post("/auth/otp/verify", json={"phone": phone, "code": code})
+    assert r.status_code == 403, r.text
+    assert "ยังไม่เปิดให้สมัคร" in r.json()["detail"]
+
+
+def test_invite_only_ปิดทางอ้อมผ่านลืมรหัสผ่าน(client, invite_only):
+    """ตั้งรหัสใหม่ให้เบอร์ที่ไม่มีบัญชีก็สร้างบัญชีได้เหมือนกัน ต้องปิดด้วย"""
+    phone = "099-000-7799"
+    # OTP เก็บเป็น hash ไม่ใช่ตัวเลขดิบ — อ่านรหัสจริงได้จาก debug_code (เปิดเฉพาะ dev/เทส)
+    code = client.post("/auth/password/forgot", json={"phone": phone}).json()["debug_code"]
+    r = client.post("/auth/password/reset", json={"phone": phone, "code": code, "new_password": "newpass123"})
+    assert r.status_code == 403, r.text
+
+
+def test_invite_only_คนที่มีบัญชีอยู่แล้วยังเข้าได้ปกติ(client, invite_only):
+    """ปิดแค่การ 'สร้างบัญชีใหม่' — คนที่เราแจกรหัสให้ต้องเข้าได้ ไม่งั้นปิดทั้งระบบ"""
+    r = client.post("/auth/login", json={"identifier": "SA-104", "password": "1122", "account_type": "staff"})
+    assert r.status_code == 200, r.text
+    assert client.post("/auth/login", json={"identifier": "094-916-4600", "password": "1122"}).status_code == 200
+
+
+def test_public_config_บอกหน้าเว็บว่าปิดอยู่(client, invite_only):
+    r = client.get("/public-config")
+    assert r.status_code == 200 and r.json()["invite_only"] is True
+    assert r.json()["coming_soon_title"]
+
+
+def test_public_config_ปกติเปิดสมัครได้(client):
+    assert client.get("/public-config").json()["invite_only"] is False
+
+
+def test_บัญชีผู้ทดสอบที่สร้างด้วย_cli_เข้าได้แม้เปิด_invite_only(client, invite_only):
+    """เส้นทางจริงของช่วง soft launch: แอดมินสร้างบัญชีให้ → ผู้ทดสอบเข้าด้วยเบอร์+รหัสผ่าน"""
+    from app.cli.testers import main as cli
+
+    phone = "0800000009"
+    assert cli(["add", phone, "--name", "ผู้ทดสอบ", "--password", "testpass1"]) == 0
+    r = client.post("/auth/login", json={"identifier": phone, "password": "testpass1"})
+    assert r.status_code == 200, r.text
+    assert r.json()["user"]["name"] == "ผู้ทดสอบ"
+    # ไม่ต้องผ่านหน้าตั้งค่าบัญชีครั้งแรก เข้าไปใช้งานได้เลย
+    assert r.json()["user"]["needs_profile"] is False
+
+    # ปิดแล้วต้องเข้าไม่ได้อีก
+    assert cli(["remove", phone]) == 0
+    assert client.post("/auth/login", json={"identifier": phone, "password": "testpass1"}).status_code == 401
+
+
+def test_public_config_บอกว่าotpใช้ไม่ได้ตอนยังไม่ต่อsms(client, monkeypatch):
+    """SMS เป็น mock + ปิด debug = ไม่มีทางได้รหัส หน้าเว็บต้องรู้เพื่อซ่อนปุ่ม"""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "sms_mode", "mock")
+    monkeypatch.setattr(s, "otp_debug", False)
+    assert client.get("/public-config").json()["otp_enabled"] is False
+    monkeypatch.setattr(s, "otp_debug", True)
+    assert client.get("/public-config").json()["otp_enabled"] is True
+
+
+def test_security_header_ติดมาทุก_response(client):
+    r = client.get("/healthz")
+    assert r.headers["X-Content-Type-Options"] == "nosniff"
+    assert r.headers["X-Frame-Options"] == "DENY"
+    assert r.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    # HSTS ต้องไม่ติดบน dev ไม่งั้นเบราว์เซอร์จำแล้วบังคับ https กับ localhost
+    assert "Strict-Transport-Security" not in r.headers
+
+
+def test_prod_ปิดหน้าเอกสาร_api():
+    """/docs กับ /openapi.json บอกทุก endpoint — บน prod ต้องไม่เปิด"""
+    from fastapi.testclient import TestClient
+
+    from app.core.config import get_settings
+    from app.main import create_app
+
+    s = get_settings()
+    old = s.app_env
+    try:
+        object.__setattr__(s, "app_env", "prod")
+        with TestClient(create_app()) as c:
+            assert c.get("/docs").status_code == 404
+            assert c.get("/openapi.json").status_code == 404
+            assert c.get("/healthz").headers.get("Strict-Transport-Security")
+    finally:
+        object.__setattr__(s, "app_env", old)
+
+
+def test_โชว์รหัสotpได้เฉพาะเบอร์ทดสอบที่อนุญาตไว้(client, monkeypatch):
+    """OTP_DEBUG เปล่าๆ = ใครก็ขอ OTP ของเบอร์คนอื่นแล้วอ่านรหัสยึดบัญชีได้
+
+    ใส่รายชื่อเบอร์ทดสอบไว้ ความเสี่ยงจึงเหลือเฉพาะบัญชีที่เราคุมเอง
+    """
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "otp_debug", True)
+    monkeypatch.setattr(s, "otp_debug_phones", "0949164600")
+
+    ok = client.post("/auth/otp/request", json={"phone": "0949164600"}).json()
+    assert ok.get("debug_code"), "เบอร์ทดสอบต้องเห็นรหัสบนจอ"
+
+    other = client.post("/auth/otp/request", json={"phone": "0812223333"}).json()
+    assert "debug_code" not in other, "เบอร์นอกรายการต้องไม่เห็นรหัส"
+    assert other["sent"] is True          # ตอบเหมือนกัน ไม่บอกว่าเบอร์ไหนอยู่ในรายการ
+
+
+def test_ไม่ใส่รายชื่อ_ถือว่าเครื่องdevโชว์ได้ทุกเบอร์(client, monkeypatch):
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "otp_debug", True)
+    monkeypatch.setattr(s, "otp_debug_phones", "")
+    assert client.post("/auth/otp/request", json={"phone": "0855557777"}).json().get("debug_code")

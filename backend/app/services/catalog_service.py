@@ -119,6 +119,25 @@ _CMP = select(MaterialPrice.matnr, MaterialPrice.price.label("compare_at")).wher
 # หน้าแรกจะเต็มไปด้วยกล่องเปล่า
 _NO_IMAGE = case((or_(Material.image_url.is_(None), Material.image_url == ""), 1), else_=0)
 
+# ของหมดไปอยู่ล่างสุดเสมอ ไม่ว่าจะเรียงแบบไหน
+#
+# สำคัญกับหน้าพนักงานเป็นพิเศษ: พนักงานเห็นของที่ซ่อนด้วย (include_hidden) ลิสต์จึงมีของหมด
+# ปนอยู่เต็มไปหมด ถ้าไม่ดันลงล่าง คนหน้าร้านต้องเลื่อนผ่านของที่ขายไม่ได้ก่อนจะเจอของที่ขายได้
+#
+# "หมด" = เคยเช็คกับ SAP แล้วเหลือ 0 ทั้งของพร้อมส่งและรอบที่จะเข้า และไม่ใช่สินค้าสั่งทำ
+# ตัวที่ยังไม่เคยเช็ค (ไม่มีแถวใน cache) ถือว่ายังไม่รู้ ไม่นับว่าหมด จึงไม่ถูกดันลง
+_SOLD_OUT = case(
+    (Material.matnr.in_(
+        select(ProductStock.matnr).where(
+            ProductStock.sap_known.is_(True),
+            ProductStock.ready_qty <= 0,
+            ProductStock.later_qty <= 0,
+            ProductStock.made_to_order.is_(False),
+        )
+    ), 1),
+    else_=0,
+)
+
 
 def _haystack():
     """กองข้อความที่ให้ค้น — รวมชื่อ รหัส รุ่น สเปก แบรนด์ และชื่อหมวดไว้ก้อนเดียว
@@ -223,8 +242,15 @@ def _filtered(db: Session, f: "SearchFilters"):
     a = analysis_of(db, f) if f.q else None
     # ของที่ข้อมูลไม่ครบ (ไม่มีรูป/ไม่มีราคา/ชื่อยังเป็นรหัสโรงงาน) หรือเช็คแล้วของหมด
     # ลูกค้าไม่ควรเห็น แต่เซลล์/แอดมินต้องค้นเจอทุกตัวเสมอ ไม่งั้นเช็คสต็อกให้ลูกค้าหน้าร้านไม่ได้
-    if not f.include_hidden:
+    # หมวด "สินค้าตัวโชว์" กรองเหมือนกันทั้งลูกค้าและพนักงาน — เอาเฉพาะที่พร้อมขายจริง
+    #
+    # พนักงานปกติเห็นของที่ซ่อนด้วย (include_hidden) แต่เฉพาะตอน "ค้นหา" เท่านั้น
+    # ตอนเปิดดูทั้งหมวดไม่ควรโหลดตัวโชว์มาทั้ง 3,400 ตัว เพราะส่วนใหญ่ยังไม่มีส่วนลดให้ขาย
+    # หน้าร้านจะช้าโดยไม่ได้อะไร · ของที่ซ่อนยังค้นด้วยชื่อ/รหัสเจอตามปกติ
+    browsing_display = f.group == "display" and not f.q
+    if not f.include_hidden or browsing_display:
         stmt = stmt.where(Material.is_public.is_(True))
+    if not f.include_hidden:
         # ตัวที่ "เคยเช็ค" กับ SAP แล้วเหลือ 0 ถึงตัดออก — ตัวที่ยังไม่เคยเช็คเลย (ไม่มีแถวใน cache)
         # ถือว่ายังไม่รู้ ไม่ซ่อน
         # ซ่อนเฉพาะตัวที่ "หมดสนิท" — ของหมดแต่มีรอบเข้า หรือสินค้าสั่งทำ ยังสั่งได้ ต้องโชว์
@@ -350,27 +376,30 @@ def _shuffle(seed: int):
 
 
 def _ordered(stmt, sort: str, a: sq.AnalyzedQuery | None = None, seed: int | None = None):
-    """matnr ต่อท้ายทุกแบบเพื่อให้ลำดับนิ่ง ไม่งั้นค่าซ้ำกันแล้วเลื่อนหน้าถัดไปสินค้าจะซ้ำ/หายเอง"""
+    """matnr ต่อท้ายทุกแบบเพื่อให้ลำดับนิ่ง ไม่งั้นค่าซ้ำกันแล้วเลื่อนหน้าถัดไปสินค้าจะซ้ำ/หายเอง
+
+    ของหมด (_SOLD_OUT) นำหน้าทุกแบบการเรียง — ของที่ซื้อไม่ได้ไม่ควรกินที่หน้าแรก
+    """
     if sort == "relevance" and a and not a.empty:
         # มีคำค้น = เรียงตามความตรงก่อน แล้วค่อยตัวมีรูป/ขายดี ไม่ใช่เรียงตามชื่อเฉยๆ
-        return stmt.order_by(_score(a).desc(), _NO_IMAGE, Material.sold_qty.desc(), Material.matnr)
+        return stmt.order_by(_SOLD_OUT, _score(a).desc(), _NO_IMAGE, Material.sold_qty.desc(), Material.matnr)
     if sort == "price_asc":
-        return stmt.order_by(_STD.c.price.asc(), Material.matnr)
+        return stmt.order_by(_SOLD_OUT, _STD.c.price.asc(), Material.matnr)
     if sort == "price_desc":
-        return stmt.order_by(_STD.c.price.desc(), Material.matnr)
+        return stmt.order_by(_SOLD_OUT, _STD.c.price.desc(), Material.matnr)
     if sort == "discount":
-        return stmt.order_by((_CMP.c.compare_at - _STD.c.price).desc().nullslast(), Material.matnr)
+        return stmt.order_by(_SOLD_OUT, (_CMP.c.compare_at - _STD.c.price).desc().nullslast(), Material.matnr)
     if sort == "new":
-        return stmt.order_by(Material.created_at.desc().nullslast(), Material.matnr)
+        return stmt.order_by(_SOLD_OUT, Material.created_at.desc().nullslast(), Material.matnr)
     if sort == "bestseller":
         # ชั้น Z (MAABC) ขึ้นก่อนเสมอ — เป็นการจัดชั้นจากยอดขายจริงทั้งบริษัท
         # sold_qty เป็นตัวรอง เพราะนับเฉพาะยอดที่สั่งผ่านเว็บ ของขายดีหน้าร้านจะได้ 0
-        return stmt.order_by(Material.is_bestseller.desc(), Material.sold_qty.desc(), _NO_IMAGE, Material.matnr)
+        return stmt.order_by(_SOLD_OUT, Material.is_bestseller.desc(), Material.sold_qty.desc(), _NO_IMAGE, Material.matnr)
     if seed:
         # เปิดดูเฉยๆ ไม่ได้ค้นอะไร: ชั้น Z (MAABC) ขึ้นก่อน ที่เหลือสลับลำดับใหม่ทุกครั้งที่เข้าหน้า
         # เรียงตามชื่อทำให้หน้าแรกเป็นของชุดเดิมตลอดไป ลูกค้าประจำจึงเห็นแต่ของซ้ำๆ
-        return stmt.order_by(Material.is_bestseller.desc(), _NO_IMAGE, _shuffle(seed), Material.matnr)
-    return stmt.order_by(_NO_IMAGE, Material.name_th, Material.matnr)
+        return stmt.order_by(_SOLD_OUT, Material.is_bestseller.desc(), _NO_IMAGE, _shuffle(seed), Material.matnr)
+    return stmt.order_by(_SOLD_OUT, _NO_IMAGE, Material.name_th, Material.matnr)
 
 
 def search(db: Session, f: SearchFilters, limit: int = 24, offset: int = 0) -> tuple[list[Material], int]:

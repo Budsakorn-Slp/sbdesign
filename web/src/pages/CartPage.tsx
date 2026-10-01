@@ -60,12 +60,12 @@ export default function CartPage() {
   }, [cart, wantPostcode, setShipTo]);
 
   const plantName = (code: string | null) => plants.find((p) => p.plant_code === code)?.name || code || "";
-  // ค่าบริการขนส่งที่พนักงานเปิดไว้ (A534/A761/A533) ไม่ใช่ "สินค้า" ที่ลูกค้าเลือก
+  // ค่าบริการขนส่งที่พนักงานเปิดไว้ ไม่ใช่ "สินค้า" ที่ลูกค้าเลือก
   // ฝั่งพนักงานต้องเห็นเลข MATNR ไว้คุยกับคลัง/SAP แต่ลูกค้าเห็นแล้วสับสนว่าซื้ออะไรไป
   // ยอดไปแสดงแยกบรรทัดในกล่องสรุปคำสั่งซื้อแทน
-  const SHIP_MATNRS = ["A534", "A761", "A533"];
-  const shipLines = (cart?.items || []).filter((it) => SHIP_MATNRS.includes(it.matnr) && it.selected);
-  const items = (cart?.items || []).filter((it) => !SHIP_MATNRS.includes(it.matnr));
+  // ธง is_charge มาจากไฟล์กฎฝั่งหลังบ้าน — เติมรหัสค่าบริการใหม่แล้วหน้านี้รู้เอง
+  const shipLines = (cart?.items || []).filter((it) => it.is_charge && it.selected);
+  const items = (cart?.items || []).filter((it) => !it.is_charge);
   const canPay = auth.role === "customer";
   // ของตัวโชว์/ฝากขาย (MATNR ขึ้นต้น 20 / 25) — ใส่ตะกร้าได้ แต่ยังจ่ายออนไลน์ไม่ได้
   // ต้องไปดูของจริงแล้วรับที่สาขา · วันที่เปิดขายออนไลน์ได้ หลังบ้านปลดล็อกแล้วธงนี้จะเป็น false เอง

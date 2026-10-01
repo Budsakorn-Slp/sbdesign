@@ -36,6 +36,11 @@ class CartItemOut(BaseModel):
     stock: ProductStockOut | None = None
     group: str | None = None      # regular | display | consign (จากตัวขึ้นต้น MATNR)
     pickup_only: bool = False     # ใส่ตะกร้าได้ แต่ยังชำระเงินออนไลน์ไม่ได้ ต้องรับที่สาขา
+    # บรรทัดค่าบริการขนส่งที่พนักงาน "เปิด Mat" ไว้ ไม่ใช่สินค้าที่ลูกค้าหยิบ
+    # หน้าเว็บใช้ธงนี้แยกออกจากลิสต์สินค้า แทนการถือรหัส A534/A761/... ไว้เอง
+    # (ถือเองแล้วเติมรหัสใหม่ในไฟล์กฎทีไร ลิสต์ก็ตกรุ่นทันที)
+    is_charge: bool = False
+    charge_role: str | None = None   # tier = ตามยอดบิล · extra = ค่าส่งเพิ่มจากปลายทาง
 
 
 class CartPersonOut(BaseModel):

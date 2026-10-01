@@ -187,6 +187,10 @@
 .ship-charge-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
 .ship-charge-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 10px; }
 .ship-charge-grid .span2 { grid-column: 1 / -1; }
+/* หนึ่งกล่องต่อค่าบริการหนึ่งบทบาท (ตามยอดบิล / เหมา / ค่าแพ็ค) — เปิดพร้อมกันได้ */
+.charge-block { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+.charge-block.on { border-color: var(--green); background: #f7fcfa; }
+.charge-block-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 599px) {
   .ship-charge-grid { grid-template-columns: 1fr; }
   .ship-charge-head { flex-wrap: wrap; row-gap: 2px; }

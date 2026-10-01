@@ -168,7 +168,8 @@ def issue_otp(db: Session, phone: str, purpose: str = "login", target: str | Non
     except SmsError:
         log.warning("ส่ง OTP ไม่สำเร็จ (%s) — ผู้ใช้ต้องกดส่งใหม่", mask_phone(digits))
     out = {"sent": True, "phone": mask_phone(digits), "expires_in": 300}
-    if get_settings().otp_debug:
+    # โชว์รหัสบนจอได้เฉพาะเบอร์ที่อนุญาตไว้ (OTP_DEBUG_PHONES) — ดูเหตุผลที่ config
+    if get_settings().otp_debug_for(digits):
         out["debug_code"] = code
     return out
 
@@ -204,12 +205,28 @@ def consume_otp(db: Session, phone: str, code: str, purpose: str = "login", targ
     return otp
 
 
+def _refuse_signup_if_invite_only() -> None:
+    """ช่วงทดสอบก่อนเปิดจริง: เข้าได้เฉพาะบัญชีที่มีอยู่แล้ว
+
+    เรียกตรงจุดที่กำลังจะ "สร้างบัญชีใหม่" เท่านั้น คนที่มีบัญชีอยู่แล้วไม่กระทบ
+
+    ข้อความบอกตรงๆ ว่ายังไม่เปิดสมัคร ไม่ได้ปิดบังว่าเบอร์นี้มีบัญชีหรือไม่ —
+    ตรงนี้ผู้ใช้ผ่าน OTP มาแล้ว แปลว่าถือเบอร์นั้นจริง จึงไม่ใช่ช่องไล่เช็คเบอร์คนอื่น
+    """
+    if get_settings().invite_only:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="ยังไม่เปิดให้สมัครสมาชิก — ช่วงนี้เข้าได้เฉพาะบัญชีที่ได้รับรหัสแล้ว",
+        )
+
+
 def otp_verify(db: Session, phone: str, code: str, name: str | None, request: Request | None) -> TokenPair:
     """ยืนยัน OTP = เข้าสู่ระบบ · เบอร์ที่ยังไม่มีบัญชีจะถูกสร้างให้เลย (สมัครกับล็อกอินทางเดียวกัน)"""
     digits = normalize_phone(phone)
     consume_otp(db, digits, code, purpose="login", request=request)
     user = db.scalar(select(User).where(User.phone == digits))
     if not user:
+        _refuse_signup_if_invite_only()
         user = User(role="customer", name=name or f"ลูกค้า {digits[-4:]}", phone=digits, is_guest=False)
         db.add(user)
     # ผ่าน OTP = พิสูจน์แล้วว่าถือเบอร์นี้จริง ซึ่งเป็นเงื่อนไขตั้งต้นของการผูกเลขสมาชิก
@@ -238,6 +255,8 @@ def password_reset(db: Session, phone: str, code: str, new_password: str, reques
     user = db.scalar(select(User).where(User.phone == digits, User.role == "customer"))
     if not user:
         # ถึงตรงนี้แปลว่าถือ OTP ของเบอร์นี้จริง แต่เบอร์ไม่มีบัญชี — สร้างให้แล้วตั้งรหัสเลย
+        # (ทางลัดสมัครสมาชิกอีกทางหนึ่ง ช่วง invite_only จึงต้องปิดด้วย ไม่งั้นอ้อมมาทางนี้ได้)
+        _refuse_signup_if_invite_only()
         user = User(role="customer", name=f"ลูกค้า {digits[-4:]}", phone=digits, is_guest=False)
         db.add(user)
     user.password_hash = hash_password(new_password)

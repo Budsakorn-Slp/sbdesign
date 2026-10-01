@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user_optional
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.cart import Cart, CartItem
 from app.models.user import User
 from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, PresoReadyOut, SelectIn, ShipToIn, UpdateItemIn
 from app.schemas.catalog import ProductStockOut
-from app.services import cart_service, catalog_service, product_stock_service
+from app.services import cart_service, catalog_service, product_stock_service, staff_shipping_service
 
 router = APIRouter(tags=["cart"])
 
@@ -20,6 +21,7 @@ def person(u: User | None) -> CartPersonOut | None:
 
 def item_out(it: CartItem, stock: dict | None = None) -> CartItemOut:
     u = it.added_by_user
+    charge = staff_shipping_service.is_charge_line(it)
     return CartItemOut(
         stock=ProductStockOut(**stock) if stock else None,
         group=catalog_service.group_of(it.matnr), pickup_only=catalog_service.pickup_only(it.matnr),
@@ -27,6 +29,7 @@ def item_out(it: CartItem, stock: dict | None = None) -> CartItemOut:
         qty=it.qty, unit_price=it.unit_price_snapshot, price_tier=it.price_tier, line_total=it.line_total, added_by=it.added_by, added_by_name=u.name if u else None,
         added_by_code=u.staff_code if u else None, added_at=it.added_at, pending_ack=it.pending_ack, supply_mode=it.supply_mode, plant_code=it.plant_code, atp_date=it.atp_date,
         requires_install=it.requires_install, note=it.note, selected=it.selected,
+        is_charge=charge, charge_role=staff_shipping_service.role_of(it.matnr) if charge else None,
     )
 
 
@@ -70,7 +73,9 @@ class CartCtx:
         self.anon = cart_service.anon_token_from(request)
         if user is None and not self.anon:
             self.anon = cart_service.new_anon_token()
-            response.set_cookie(cart_service.ANON_COOKIE, self.anon, max_age=60 * 60 * 24 * 90, samesite="lax", httponly=False)
+            # secure=True บน prod — ไม่งั้น cookie วิ่งผ่าน http ธรรมดาได้ ใครดักกลางทางก็สวมตะกร้าได้
+            response.set_cookie(cart_service.ANON_COOKIE, self.anon, max_age=60 * 60 * 24 * 90,
+                                samesite="lax", httponly=False, secure=get_settings().is_prod)
 
     def current(self) -> Cart:
         return cart_service.get_or_create_cart(self.db, self.user, self.anon)

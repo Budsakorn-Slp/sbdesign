@@ -3,10 +3,18 @@ import os
 os.environ["DATABASE_URL"] = "sqlite:///./test_sbdesign.db"
 os.environ["SAP_MODE"] = "mock"
 os.environ["OTP_DEBUG"] = "true"
+# ว่าง = โชว์รหัสได้ทุกเบอร์ · เครื่อง dev ที่ใส่รายชื่อเบอร์ทดสอบไว้ใน .env ต้องไม่มีผลกับเทส
+# (ไม่งั้นเทสที่ใช้เบอร์สมมุติจะไม่ได้ debug_code แล้วล้มทั้งแผง)
+os.environ["OTP_DEBUG_PHONES"] = ""
 # เครื่อง dev ที่ตั้ง SAP_AVAIL_URL/SAP_API_KEY ไว้ใน .env เทสต้องไม่วิ่งไปยิง SAP ของจริง
 os.environ["SAP_AVAIL_URL"] = ""
 os.environ["SAP_STOCK_URL"] = ""
 os.environ["SAP_API_KEY"] = ""
+os.environ["SAP_CATALOG_URL"] = ""
+# ค่าปกติของระบบคือ "เปิดให้สมัคร" — เทสต้องวัดจากค่านี้เสมอ ไม่ใช่ตามที่เครื่อง dev ตั้งไว้
+# (เครื่องที่เปิด INVITE_ONLY=true ไว้ทดลอง จะทำให้เทสล็อกอิน/สมัครล้มทั้งแผง)
+# เทสที่ต้องการโหมด invite_only เปิดเองเฉพาะกรณี ดู fixture invite_only
+os.environ["INVITE_ONLY"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

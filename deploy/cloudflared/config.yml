@@ -1,0 +1,41 @@
+# Cloudflare Tunnel — เปิด designdev.sbhapps.com ให้เข้าถึงเครื่องในออฟฟิศ
+#
+# ทำไมต้องใช้ tunnel ไม่ใช่เอาขึ้น Cloudflare ตรงๆ:
+#   backend ต้องคุยกับ SAP (192.168.7.110) และ Magento (10.9.x) ซึ่งเป็นเครือข่ายภายใน
+#   โค้ดที่รันอยู่บนเครื่องของ Cloudflare วิ่งไปถึงไม่ได้ · backend จึงต้องอยู่ที่นี่ต่อไป
+#   tunnel เปิดการเชื่อมต่อ "ออกจาก" เครื่องเราไปหา Cloudflare จึงไม่ต้องเปิดพอร์ตเข้าเครื่องเลย
+#
+# ทำไมชี้ไปที่ 4173 ตัวเดียว ไม่แยก /api:
+#   หน้าเว็บเรียก /api/... แล้ว vite preview เป็นคนตัดคำว่า /api ออกก่อนส่งต่อไป :8000
+#   cloudflared แยก path ได้ก็จริง แต่มัน "ไม่ตัด" path ให้ API จะได้ /api/products ซึ่งไม่มีจริง
+#   ยิงเข้า 4173 ที่เดียวจึงง่ายกว่า และได้ของแถมคือทุกอย่างอยู่ origin เดียว ไม่ต้องยุ่งกับ CORS
+#
+# ---------------------------------------------------------------------------
+# แก้ 2 บรรทัดนี้หลังสร้าง tunnel เสร็จ (คำสั่งอยู่ใน deploy/README.md)
+tunnel: PUT-TUNNEL-UUID-HERE
+credentials-file: C:\Users\Budsakorn.s\.cloudflared\PUT-TUNNEL-UUID-HERE.json
+# ---------------------------------------------------------------------------
+
+# ปิด metrics ออกสู่ภายนอก เปิดไว้เฉพาะ localhost ไว้ดูสถานะ
+metrics: 127.0.0.1:20241
+loglevel: info
+
+ingress:
+  # websocket ของตะกร้า (เซลล์แก้ของแล้วหน้าลูกค้าขยับทันที) — cloudflared ส่ง ws ให้อยู่แล้ว
+  # แต่ต้องเขียนไว้ก่อนกฎรวม ไม่งั้นมันไม่ได้ตั้ง timeout ยาวให้
+  - hostname: designdev.sbhapps.com
+    path: ^/ws
+    service: http://localhost:4173
+    originRequest:
+      noTLSVerify: false
+      connectTimeout: 30s
+
+  - hostname: designdev.sbhapps.com
+    service: http://localhost:4173
+    originRequest:
+      connectTimeout: 30s
+      # ขั้นเช็คสต็อก SAP ใช้เวลานานกว่าปกติ ถ้าตัดที่ค่า default จะพังกลางทาง
+      noHappyEyeballs: true
+
+  # ปลายทางสุดท้าย บังคับต้องมี — อะไรที่ไม่ตรงกฎข้างบนตอบ 404 ไม่ใช่หลุดเข้าเครื่อง
+  - service: http_status:404

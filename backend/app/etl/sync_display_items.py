@@ -7,7 +7,10 @@
 
 กติกา (ตามที่ตกลงไว้):
   รหัสขายปกติ 19xxxxxx  ->  ตัวโชว์ 20xxxxxx (เลขท้ายเหมือนกันทุกตัว)
-  ถาม ZAIBAPI_MATERIAL_STOCK ด้วยรหัส 20 · มีของ = โชว์บนเว็บ · ไม่มีของ = ซ่อน
+  ถาม ZAIBAPI_MATERIAL_STOCK ด้วยรหัส 20 เพื่อรู้ว่ามีของไหม
+  โชว์บนเว็บเมื่อ "มีของ" และ "มีส่วนลดตัวโชว์ (ZD06) ใน SAP" เท่านั้น ขาดข้อใดข้อหนึ่งก็ซ่อน
+    ZD06 มาจาก snapshot ราคา (python -m app.etl.sync_sap_prices) ไม่ได้ถามตรงนี้
+    ของที่ถูกซ่อน พนักงานยังค้นเจอได้ตามปกติ (include_hidden) แค่ไม่ขึ้นในหมวดตัวโชว์
   รันทุก 1 ชม. เท่ากับ refresh_stock (TTL เดียวกัน = stock_cache_ttl_minutes)
 
 ทำไมต้องปั้นแถวสินค้าขึ้นมาเอง:
@@ -15,8 +18,8 @@
   มันมีอยู่แค่ใน SAP ในฐานะ "ของที่ตั้งโชว์หน้าร้าน" ซึ่งตอบมาแต่จำนวน ไม่มีชื่อ/รูป/ราคา
   ชื่อ รูป ราคา หมวด จึงต้องก๊อปจากตัวปกติ (19) ที่เป็นสินค้ารุ่นเดียวกัน
 
-  ผลที่ตามมาที่ต้องรู้: ราคาตัวโชว์จะเท่าตัวปกติ เพราะไม่มีที่ไหนบอกราคาลดของตัวโชว์
-  ถ้าวันหลังมีราคาตัวโชว์จริง ให้แก้ที่ _clone_prices() ที่เดียว
+  ราคา: เดิมก๊อปราคาตัวปกติมาทั้งดุ้น ซึ่งผิด เพราะนั่นคือราคา "หลังลดของตัวปกติ"
+  ตอนนี้ใช้ราคาจาก snapshot แทน (ราคาป้ายของตัวโชว์ − ZD06) ถ้าไม่มี snapshot ค่อยถอยไปก๊อป
 
 ตัวเลขจากการยิงจริง (สุ่ม 120 รหัส): SAP รู้จัก 97% · มีของ 71% · จำนวนกลาง 5 ชิ้น
 ทดสอบรหัสมั่ว (20999999, 29027037) แล้ว SAP ตอบ "ไม่มีแถว" ไม่ได้มั่วตัวเลขให้
@@ -52,6 +55,26 @@ CLONE_FIELDS = (
 )
 
 
+def load_price_snapshot() -> dict[str, dict]:
+    """ราคา+ZD06 ของตัวโชว์จาก snapshot · ไม่มีไฟล์ = คืน dict ว่าง แล้วทำงานแบบเดิมต่อได้
+
+    ไม่ยิง SAP ตรงนี้เพราะงานราคาเป็นคนละรอบ (วันละครั้ง) ส่วนงานนี้รันทุกชั่วโมง
+    ถ้ายิงเองด้วยจะกวน SAP ซ้ำซ้อนโดยไม่ได้อะไรเพิ่ม
+    """
+    from app.etl.sync_sap_prices import SNAPSHOT
+
+    if not SNAPSHOT.exists():
+        print("  ! ยังไม่มี snapshot ราคา — รัน python -m app.etl.sync_sap_prices ก่อน")
+        print("    รอบนี้จะใช้ราคาตัวปกติไปก่อน และถือว่าทุกตัวยังไม่มี ZD06")
+        return {}
+    import json
+
+    snap = json.loads(SNAPSHOT.read_text(encoding="utf-8"))
+    print(f"  ราคาจาก snapshot {snap['fetched_at'][:10]} · ตัวโชว์ที่มี ZD06 "
+          f"{snap['stats'].get('display_sellable', 0):,} รหัส")
+    return snap.get("display") or {}
+
+
 def display_matnr(matnr: str) -> str:
     """19xxxxxx -> 20xxxxxx (เลขท้ายเหมือนเดิม)"""
     groups = matnr_groups()
@@ -59,14 +82,26 @@ def display_matnr(matnr: str) -> str:
     return dst + matnr[len(src):]
 
 
-def _clone_prices(db: Session, parent: Material, code: str) -> None:
-    """ราคาตัวโชว์ = ราคาตัวปกติ · ยังไม่มีแหล่งไหนบอกราคาลดของตัวโชว์ (ดูหัวไฟล์)"""
+def _set_prices(db: Session, parent: Material, code: str, snap: dict | None) -> None:
+    """ราคาตัวโชว์ — เอาจาก SAP ถ้ามี ไม่มีค่อยก๊อปจากตัวปกติ
+
+    ที่ต้องแยก: ราคาตัวปกติที่เก็บไว้คือราคา "หลังลดของตัวปกติ" (เช่น ลด 20%)
+    ส่วนตัวโชว์มีส่วนลดของตัวเอง (ZD06 = 30%) คิดจากราคาป้าย ไม่ใช่ลดซ้อนกัน
+    ก๊อปมาทั้งดุ้นแบบเดิมจึงได้ราคาที่ไม่ตรงกับที่ขายหน้าร้าน
+    """
     db.execute(MaterialPrice.__table__.delete().where(MaterialPrice.matnr == code))
+    if snap and snap.get("net"):
+        from decimal import Decimal
+
+        db.add(MaterialPrice(matnr=code, tier="standard", price=Decimal(snap["net"])))
+        if snap.get("list"):
+            db.add(MaterialPrice(matnr=code, tier="compare_at", price=Decimal(snap["list"])))
+        return
     for p in parent.prices:
         db.add(MaterialPrice(matnr=code, tier=p.tier, price=p.price, valid_from=p.valid_from, valid_to=p.valid_to))
 
 
-def _upsert(db: Session, parent: Material, code: str, in_stock: bool) -> None:
+def _upsert(db: Session, parent: Material, code: str, show: bool, snap: dict | None) -> None:
     row = db.get(Material, code)
     fields = {k: getattr(parent, k) for k in CLONE_FIELDS}
     # is_public คือธงเดียวที่ทุกหน้าใช้กรองอยู่แล้ว — ของหมดก็แค่ปิดธง ไม่ต้องลบแถวทิ้ง
@@ -75,13 +110,13 @@ def _upsert(db: Session, parent: Material, code: str, in_stock: bool) -> None:
     # ทั้งตะกร้า ใบเสนอราคา ใบสั่งซื้อ และ MCP ลูกค้าจะได้ไม่มีทางเข้าใจผิดว่าซื้อของใหม่
     # ก๊อปชื่อจากตัวปกติใหม่ทุกรอบแล้วค่อยต่อท้าย จึงไม่มีทางต่อซ้อนกันหลายรอบ
     fields["name_th"] = f"{parent.name_th} ({DISPLAY_LABEL})"
-    fields.update(sku=code, is_public=in_stock, is_new=False, is_bestseller=False, sold_qty=0, synced_at=utcnow())
+    fields.update(sku=code, is_public=show, is_new=False, is_bestseller=False, sold_qty=0, synced_at=utcnow())
     if row:
         for k, v in fields.items():
             setattr(row, k, v)
     else:
         db.add(Material(matnr=code, **fields))
-    _clone_prices(db, parent, code)
+    _set_prices(db, parent, code, snap)
 
 
 def sync(db: Session, *, refresh_all: bool, limit: int | None, mock: bool) -> tuple[int, int, int]:
@@ -113,16 +148,25 @@ def sync(db: Session, *, refresh_all: bool, limit: int | None, mock: bool) -> tu
     # ตัดสินว่าโชว์/ซ่อนจาก cache เสมอ ไม่ใช่จากผลที่เพิ่งยิง — ตัวที่ไม่ได้อยู่ในรอบนี้
     # (ยังไม่หมดอายุ) ก็ต้องถูกตัดสินด้วย ไม่งั้นของที่หมดไปแล้วจะค้างโชว์อยู่
     stock = {r.matnr: r for r in db.scalars(select(ProductStock).where(ProductStock.matnr.in_(codes))).all()}
-    shown = hidden = 0
+    prices = load_price_snapshot()
+    shown = hidden = no_zd06 = 0
     for code, parent in by_code.items():
         r = stock.get(code)
         # "มีของ" ของตัวโชว์ = มีของจริงอยู่ตอนนี้เท่านั้น
         # ไม่นับรอบที่จะเข้า (committed) และไม่นับสินค้าสั่งทำ เพราะตัวโชว์คือของที่ตั้งอยู่หน้าร้านจริง
         in_stock = bool(r and r.sap_known and r.ready_qty > 0)
-        _upsert(db, parent, code, in_stock)
-        shown += in_stock
-        hidden += not in_stock
+        snap = prices.get(code)
+        # ต้องมีส่วนลดตัวโชว์ใน SAP ด้วย — ของที่ตั้งโชว์แต่ยังไม่ตั้งส่วนลด ถือว่ายังไม่พร้อมขาย
+        # ไม่มี snapshot เลย (ยังไม่เคยรันงานราคา) ถือว่ายังไม่มีตัวไหนพร้อม จะได้ไม่เผลอเปิดทั้งชุด
+        sellable = bool(snap and snap.get("sellable"))
+        show = in_stock and sellable
+        _upsert(db, parent, code, show, snap)
+        shown += show
+        hidden += not show
+        no_zd06 += in_stock and not sellable
     db.commit()
+    if no_zd06:
+        print(f"  มีของแต่ยังไม่มีส่วนลดตัวโชว์ (ZD06) {no_zd06:,} รหัส — ซ่อนไว้ แต่พนักงานยังค้นเจอ")
     return len(todo), shown, hidden
 
 

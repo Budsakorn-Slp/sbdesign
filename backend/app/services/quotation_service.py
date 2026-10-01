@@ -65,11 +65,14 @@ def draft_of_cart(db: Session, cart: Cart) -> Preso | None:
 # ---------- ด่านก่อนบันทึกใบ PRE ----------
 # ลำดับตามผังงานของทีมขาย: ลูกค้า → ข้อมูลลูกค้า → เช็คสต็อก → เช็คโปรฯ → เช็คสต็อกซ้ำ + คิวส่ง
 # แต่ละด่านตอบเป็น (ผ่านไหม, บอกให้ทำอะไรต่อ) เพื่อให้หน้าเซลล์เอาไปทำเป็นเช็คลิสต์ได้ตรงๆ
-PRESO_STEPS = ("customer", "profile", "stock", "promo", "delivery")
+#
+# "ข้อมูลลูกค้า" เคยแยกเป็นสองด่าน (ผูกลูกค้า / ชื่อ-เบอร์-ที่อยู่) แต่บนจอมันคือเรื่องเดียวกัน
+# และด่านที่สองจะผ่านไม่ได้เลยถ้าด่านแรกยังไม่ผ่าน — พนักงานเห็นสองบรรทัดที่ขยับพร้อมกัน
+# เลยยุบเหลือด่านเดียว แล้วให้ข้อความบอกว่าตอนนี้ขาดอะไร (ยังไม่ผูก / ผูกแล้วแต่ขาดที่อยู่)
+PRESO_STEPS = ("customer", "stock", "promo", "delivery")
 
 STEP_TITLE = {
-    "customer": "ลูกค้า/เลขสมาชิก",
-    "profile": "ชื่อ เบอร์ ที่อยู่",
+    "customer": "ข้อมูลลูกค้า",
     "stock": "เช็คสต็อก",
     "promo": "เช็คโปรโมชั่น",
     "delivery": "คิวจัดส่ง",
@@ -82,15 +85,15 @@ def preso_steps(db: Session, cart: Cart) -> list[dict]:
     rev = cart.rev or 0
     checks: dict[str, tuple[bool, str]] = {}
 
-    checks["customer"] = (
-        (True, f"เลขลูกค้า {cust.sap_customer_no}") if cust and cust.sap_customer_no
-        else (False, "ผูกลูกค้ากับตะกร้าก่อน — ลูกค้าใหม่ต้องสมัครสมาชิกให้ได้เลขลูกค้าก่อน")
-    )
+    # ด่านเดียวแต่ขาดได้สองแบบ — ข้อความต้องบอกให้ตรงว่าต้องไปทำอะไร ไม่ใช่แค่ "ยังไม่ครบ"
     missing = [] if not cust else [w for w, ok in (("ชื่อ", bool(cust.name)), ("เบอร์โทร", bool(cust.phone)),
                                                    ("ที่อยู่จัดส่ง", bool(cart.ship_address or cart.ship_postcode))) if not ok]
-    checks["profile"] = (False, "ยังไม่มีลูกค้า") if not cust else (
-        (True, "ข้อมูลครบ") if not missing else (False, "ยังขาด " + " · ".join(missing))
-    )
+    if not (cust and cust.sap_customer_no):
+        checks["customer"] = (False, "ผูกลูกค้ากับตะกร้าก่อน — ลูกค้าใหม่ต้องสมัครสมาชิกให้ได้เลขลูกค้าก่อน")
+    elif missing:
+        checks["customer"] = (False, "ยังขาด " + " · ".join(missing))
+    else:
+        checks["customer"] = (True, f"เลขลูกค้า {cust.sap_customer_no} · ข้อมูลครบ")
     checks["stock"] = (
         (True, "ของครบตามที่เช็คไว้") if cart.stock_ok_rev == rev
         else (False, "เช็คสต็อกใหม่ — ตะกร้าเปลี่ยนหลังเช็คครั้งล่าสุด" if cart.stock_ok_rev is not None else "กดเช็คสต็อกก่อน")
