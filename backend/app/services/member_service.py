@@ -23,11 +23,32 @@ from sqlalchemy.orm import Session
 from app.integrations.sap import get_sap_client
 from app.integrations.sap.base import SapError
 from app.models.common import utcnow
-from app.models.user import User
+from app.models.user import MemberLinkEvent, User
 from app.services import audit_service, auth_service
 from app.services import rate_limit as rl
 
 log = logging.getLogger("sb.member")
+
+
+def _record(db: Session, user: User | None, kind: str, sap_customer_no: str | None,
+            via: str | None = None, phone: str | None = None,
+            request: Request | None = None, reason: str | None = None) -> None:
+    """ลงบันทึกการผูก/ถอด/ถูกปฏิเสธ — เขียนอย่างเดียว ไม่แก้ไม่ลบ
+
+    บันทึกครั้งที่ไม่ผ่านด้วย เพราะคนที่ไล่เดาเลขสมาชิกคนอื่นจะทิ้งรอยเป็นชุด
+    ถ้าเก็บแต่ครั้งที่สำเร็จ จะมองไม่เห็นความพยายามที่ระบบกันไว้ได้เลย
+    """
+    db.add(MemberLinkEvent(
+        user_id=user.id if user else None,
+        sap_customer_no=sap_customer_no or None,
+        kind=kind,
+        via=via,
+        # เก็บแบบปิดบัง — เบอร์เต็มมีอยู่ที่ users อยู่แล้ว เก็บซ้ำคือเพิ่มของที่ต้องปกป้อง
+        phone_masked=auth_service.mask_phone(phone) if phone else None,
+        ip=rl.client_ip(request),
+        device=(request.headers.get("user-agent", "")[:200] if request else None) or None,
+        reason=reason,
+    ))
 
 
 def _require_verified_customer(user: User) -> str:
@@ -135,6 +156,8 @@ def link(db: Session, user: User, sap_customer_no: str, otp_code: str | None, re
     c = _lookup(no)
     if not c or c.sap_customer_no != no or _taken_by_other(db, no, user):
         rl.record(db, "link_member", f"user:{user.id}", ok=False, request=request)
+        _record(db, user, "denied", no, phone=phone, request=request,
+                reason="ไม่พบเลขสมาชิก หรือถูกผูกกับบัญชีอื่นไปแล้ว")
         db.commit()
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ไม่พบเลขสมาชิกนี้ หรือถูกผูกกับบัญชีอื่นไปแล้ว")
 
@@ -143,6 +166,9 @@ def link(db: Session, user: User, sap_customer_no: str, otp_code: str | None, re
         if not member_phone:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="สมาชิกรายนี้ไม่มีเบอร์โทรในระบบ — ติดต่อพนักงานที่สาขาเพื่อผูกบัญชี")
         if not otp_code:
+            _record(db, user, "denied", no, phone=phone, request=request,
+                    reason="เบอร์ไม่ตรงทะเบียน ต้องยืนยัน OTP ที่เบอร์ในทะเบียนก่อน")
+            db.commit()
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ต้องยืนยัน OTP ที่เบอร์ของสมาชิกรายนี้ก่อน")
         # ตรวจกับ "เบอร์ในทะเบียน" + target ต้องตรงเลขสมาชิกใบนี้ ใบอื่นใช้ข้ามกันไม่ได้
         auth_service.consume_otp(db, member_phone, otp_code, purpose="link_member", target=no, request=request)
@@ -165,7 +191,9 @@ def link(db: Session, user: User, sap_customer_no: str, otp_code: str | None, re
     if not user.default_address and c.address:
         user.default_address, user.default_postcode = c.address, c.postcode
     rl.record(db, "link_member", f"user:{user.id}", ok=True, request=request)
-    audit_service.log(db, user, "member.linked", "user", user.id, {"sap_customer_no": no, "via": "phone_match" if member_phone == phone else "otp"})
+    via = "phone_match" if member_phone == phone else "otp"
+    audit_service.log(db, user, "member.linked", "user", user.id, {"sap_customer_no": no, "via": via})
+    _record(db, user, "linked", no, via=via, phone=member_phone or phone, request=request)
     db.commit()
     return {"sap_customer_no": no, "name": c.name, "points": user.points, "linked_at": utcnow().isoformat()}
 
@@ -175,6 +203,7 @@ def unlink(db: Session, user: User, request: Request | None = None) -> None:
     if not user.sap_customer_no:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="บัญชีนี้ยังไม่ได้ผูกเลขสมาชิก")
     audit_service.log(db, user, "member.unlinked", "user", user.id, {"sap_customer_no": user.sap_customer_no})
+    _record(db, user, "unlinked", user.sap_customer_no, phone=user.phone, request=request)
     user.sap_customer_no = None
     user.points = 0
     db.commit()

@@ -153,3 +153,35 @@ class AuthAttempt(Base):
     ok: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False, index=True)
+
+
+class MemberLinkEvent(Base):
+    """ประวัติการผูก/ถอด "เลขสมาชิก" เข้ากับบัญชีเว็บ — เขียนอย่างเดียว ไม่แก้ไม่ลบ
+
+    ทำไมต้องแยกจาก audit_logs:
+      การผูกเลขสมาชิกคือจุดที่ "บัญชีเว็บ" กับ "ตัวตนจริงในทะเบียนลูกค้า" มาเจอกัน
+      ผูกผิดคน = เห็นแต้ม ประวัติการซื้อ ที่อยู่ และเบอร์ของคนอื่นทันที
+      เวลามีข้อพิพาทว่า "ใครเอาบัญชีฉันไป" ต้องตอบได้ว่าใครผูกเมื่อไร ด้วยหลักฐานอะไร
+      ซึ่งใน audit_logs ปนกับเหตุการณ์อื่นทั้งระบบจนไล่ไม่ไหว
+
+    บันทึกครั้งที่ "ไม่ผ่าน" ด้วย — คนที่ไล่เดาเลขสมาชิกคนอื่นจะทิ้งรอยไว้เป็นชุด
+    ของสำเร็จอย่างเดียวมองไม่เห็นความพยายามที่ถูกกันไว้
+    """
+
+    __tablename__ = "member_link_events"
+    __table_args__ = (Index("ix_member_link_events_cust", "sap_customer_no", "created_at"),)
+
+    id: Mapped[str] = uuid_pk()
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True)
+    sap_customer_no: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # linked | unlinked | denied — denied คือพยายามผูกแล้วไม่ผ่าน
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    # phone_match = เบอร์ที่ยืนยันแล้วตรงกับทะเบียน · otp = ยืนยัน OTP ที่เบอร์ในทะเบียน
+    # staff = พนักงานผูกให้ · ว่าง = ไม่ผ่าน จึงยังไม่มีวิธีพิสูจน์
+    via: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # เบอร์ที่ใช้พิสูจน์ ปิดบังไว้ (094-xxx-4600) — เก็บเบอร์เต็มซ้ำไม่มีประโยชน์และเพิ่มของที่ต้องปกป้อง
+    phone_masked: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    device: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False, index=True)

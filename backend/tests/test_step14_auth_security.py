@@ -484,3 +484,56 @@ def test_ไม่ใส่รายชื่อ_ถือว่าเครื�
     monkeypatch.setattr(s, "otp_debug", True)
     monkeypatch.setattr(s, "otp_debug_phones", "")
     assert client.post("/auth/otp/request", json={"phone": "0855557777"}).json().get("debug_code")
+
+
+# ---------- ประวัติการผูกเลขสมาชิก (member_link_events) ----------
+def _link_events(sap_no: str):
+    from sqlalchemy import select
+
+    from app.db.session import SessionLocal
+    from app.models.user import MemberLinkEvent
+
+    with SessionLocal() as db:
+        return list(db.scalars(
+            select(MemberLinkEvent).where(MemberLinkEvent.sap_customer_no == sap_no)
+            .order_by(MemberLinkEvent.created_at)
+        ).all())
+
+
+def test_ผูกเลขสมาชิกแล้วต้องมีประวัติบอกว่าผูกด้วยหลักฐานอะไร(client):
+    """มีข้อพิพาทว่า "ใครเอาบัญชีฉันไป" ต้องตอบได้ว่าใครผูกเมื่อไร ผ่านทางไหน"""
+    _unlink_all(MEMBER_NO)
+    before = len(_link_events(MEMBER_NO))
+    h = _otp_login(client, MEMBER_PHONE)
+    assert client.post("/me/member/link", json={"sap_customer_no": MEMBER_NO}, headers=h).status_code == 200
+
+    rows = _link_events(MEMBER_NO)
+    assert len(rows) == before + 1
+    e = rows[-1]
+    assert e.kind == "linked"
+    assert e.via == "phone_match"          # เบอร์ที่ยืนยันแล้วตรงกับทะเบียน
+    assert e.user_id
+    # เบอร์ต้องปิดบัง — เบอร์เต็มมีอยู่ที่ users แล้ว เก็บซ้ำคือเพิ่มของที่ต้องปกป้อง
+    assert e.phone_masked and MEMBER_PHONE.replace("-", "") not in e.phone_masked
+
+
+def test_ถอดการผูกก็ต้องมีประวัติ(client):
+    _unlink_all(MEMBER_NO)
+    h = _otp_login(client, MEMBER_PHONE)
+    client.post("/me/member/link", json={"sap_customer_no": MEMBER_NO}, headers=h)
+    assert client.request("DELETE", "/me/member/link", headers=h).status_code in (200, 204)
+    assert _link_events(MEMBER_NO)[-1].kind == "unlinked"
+
+
+def test_พยายามผูกเลขของคนอื่นแล้วไม่ผ่านต้องทิ้งรอยไว้(client):
+    """คนที่ไล่เดาเลขสมาชิกคนอื่นจะทิ้งรอยเป็นชุด — เก็บแต่ครั้งที่สำเร็จจะมองไม่เห็นเลย"""
+    _unlink_all(MEMBER_NO)
+    # ล็อกอินด้วยเบอร์อื่น แล้วลองผูกเลขสมาชิกที่ไม่ใช่ของตัวเอง
+    h = _otp_login(client, "094-916-4600")
+    r = client.post("/me/member/link", json={"sap_customer_no": MEMBER_NO}, headers=h)
+    assert r.status_code in (401, 404), r.text
+
+    e = _link_events(MEMBER_NO)[-1]
+    assert e.kind == "denied"
+    assert e.via is None                   # ยังไม่ผ่าน จึงยังไม่มีวิธีพิสูจน์
+    assert e.reason

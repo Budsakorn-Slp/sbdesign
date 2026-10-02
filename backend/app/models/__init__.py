@@ -13,4 +13,4 @@ from app.models.quotation import Preso, Quotation, QuotationLine  # noqa: F401
 from app.models.relationship import CustomerSalesEvent, CustomerSalesLink  # noqa: F401
 from app.models.geo import ThaiGeo  # noqa: F401
 from app.models.shipping import ShipArea, ShipAreaPostcode, ShipProductAttr, ShipRate, ShipRule  # noqa: F401
-from app.models.user import OtpCode, User, UserSession  # noqa: F401
+from app.models.user import MemberLinkEvent, OtpCode, User, UserSession  # noqa: F401
