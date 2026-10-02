@@ -14,13 +14,14 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
+from app.integrations.sap.base import SapError
 from app.models.cart import Cart
 from app.models.common import utcnow
 from app.models.delivery import DeliverySlot
 from app.models.promo import AppliedDiscount
 from app.models.quotation import Preso, Quotation, QuotationLine
 from app.models.user import User
-from app.services import audit_service, cart_service, catalog_service, delivery_service, promo_service, stock_service
+from app.services import audit_service, availability_service, cart_service, catalog_service, delivery_service, promo_service
 from app.services import relationship_service
 
 log = logging.getLogger("sb.quotation")
@@ -210,16 +211,51 @@ def reopen_preso(db: Session, sales: User, preso: Preso) -> Cart:
 
 # ---------- Quotation ----------
 def live_stock_check(db: Session, cart: Cart, actor: User | None) -> list[dict]:
-    """ยิง SAP สดทุกบรรทัด — คืนรายการที่ของไม่พอ"""
+    """ยิง SAP สดทุกบรรทัดที่ติ๊กไว้ — คืนรายการที่ของไม่พอ
+
+    ใช้ availability_service ตัวเดียวกับปุ่ม "เช็คสต็อก" ของเซลล์ · เดิมด่านนี้เรียก
+    stock_service ซึ่งวิ่งไปหา SAP client อีกตัวที่ยังเป็น mock อยู่ ด่านจึงตอบว่าของครบ
+    ทุกครั้งโดยไม่ได้ถามใครจริง — มีด่านแต่ไม่กันอะไรเลย
+
+    ยิงครั้งเดียวทั้งชุด ห้ามวนยิงทีละบรรทัด เพราะ SAP จำลองให้ทั้งใบ ของชิ้นเดียวจะถูก
+    นับซ้ำให้ทุกบรรทัด = ขายเกิน (ดู integrations/sap/availability.py)
+
+    หมายเหตุเรื่องสาขา: API นี้ไม่บอกสาขา ตัวเลขที่ได้คือทั้งบริษัท ของรับเองหน้าร้าน
+    (takeaway/pickup) จึงยังต้องให้คนเช็คสาขาเองอีกชั้น — plant_code ติดไปในคำตอบด้วย
+    """
+    items = [it for it in cart.selected_items if it.qty > 0]
+    if not items:
+        return []
+    try:
+        res = availability_service.check_lines(
+            db, [(it.matnr, it.qty) for it in items], actor,
+            customer_no=availability_service.customer_no_for(cart),
+        )
+    except SapError as e:
+        # SAP ล่ม = ไม่รู้ว่าของพอหรือไม่พอ ซึ่งไม่ใช่ "พอ" — คืนเป็นรายการไม่ผ่านไว้
+        # ให้ติด 409 เซลล์จะได้เห็นเหตุผลจริง แล้วตัดสินใจเองว่าจะ force ออกใบไหม
+        # (ถ้าปล่อยให้ error ทะลุขึ้นไปเป็น 503 ตอน SAP ล่มจะออกใบไม่ได้เลยทั้งวัน)
+        log.warning("เช็คสต็อกสดก่อนออกใบไม่สำเร็จ: %s", e)
+        return [{"matnr": None, "name": "เช็คสต็อกกับ SAP ไม่สำเร็จ", "need": 0, "available": 0,
+                 "plant_code": None, "stale": True, "supply_mode": None,
+                 "status": "unknown", "label": "เช็คสต็อกกับ SAP ไม่สำเร็จ", "sap_error": str(e)}]
+
     shortages: list[dict] = []
-    for it in cart.selected_items:
-        res = stock_service.check_stock(db, actor, it.matnr)
-        rows = [r for r in res.rows if (not it.plant_code) or r.plant_code == it.plant_code] if it.supply_mode in ("takeaway", "pickup") else res.rows
-        avail = sum(r.available for r in rows)
-        if avail < it.qty:
-            shortages.append({"matnr": it.matnr, "name": it.name_snapshot, "need": it.qty, "available": avail, "plant_code": it.plant_code, "stale": res.stale, "supply_mode": it.supply_mode})
+    for it, av in zip(items, res.items):
+        ok = av.status in ("full", "split")
+        if not ok:
+            shortages.append({
+                "matnr": it.matnr, "name": it.name_snapshot, "need": it.qty,
+                "available": av.ready_qty + av.later_qty, "plant_code": it.plant_code,
+                # mock = ตัวเลขไม่ได้มาจาก SAP จริง ติดธงไว้ให้คนอ่านรู้ว่าอย่าเชื่อ
+                "stale": res.source != "sap", "supply_mode": it.supply_mode,
+                "status": av.status, "label": av.label,
+                "ready_qty": av.ready_qty, "ready_date": av.ready_date.isoformat() if av.ready_date else None,
+                "later_qty": av.later_qty, "later_date": av.later_date.isoformat() if av.later_date else None,
+            })
         elif it.supply_mode in ("ship", "install"):
-            it.atp_date = stock_service.earliest_atp(res.rows, it.qty) or it.atp_date
+            # วันที่ของครบจริง — ของที่แบ่งส่งต้องรอรอบหลัง (later_date) ไม่ใช่รอบแรก
+            it.atp_date = av.later_date or av.ready_date or it.atp_date
     db.commit()
     return shortages
 
@@ -249,7 +285,10 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
         raise HTTPException(status_code=409, detail="มีส่วนลดที่รอผู้จัดการอนุมัติ — รอผลอนุมัติหรือยกเลิกส่วนลดก่อน")
     shortages = live_stock_check(db, cart, actor)
     if shortages and not force:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"message": "สต็อกไม่พอบางรายการ ตรวจสอบก่อนออกเอกสาร (ส่ง force=true เพื่อออกทั้งที่ของไม่พอ)", "shortages": shortages})
+        msg = ("เช็คสต็อกกับ SAP ไม่สำเร็จ ยังไม่รู้ว่าของพอหรือไม่ (ส่ง force=true เพื่อออกใบโดยไม่เช็ค)"
+               if any(s.get("sap_error") for s in shortages)
+               else "สต็อกไม่พอบางรายการ ตรวจสอบก่อนออกเอกสาร (ส่ง force=true เพื่อออกทั้งที่ของไม่พอ)")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={"message": msg, "shortages": shortages})
 
     t = promo_service.compute_totals(db, cart)
     slot = delivery_service.slot_of_cart(db, cart)

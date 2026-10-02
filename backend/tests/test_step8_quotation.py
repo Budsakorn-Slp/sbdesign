@@ -4,6 +4,7 @@ import pytest
 
 from app.db.session import SessionLocal
 from app.integrations.sap import get_sap_client
+from app.integrations.sap.base import SapError
 from app.seed import seed_catalog
 from tests.helpers import auth_headers, ensure_seed, login
 
@@ -173,6 +174,20 @@ def test_preso_blocked_until_every_step_done(client):
     again = save()
     assert again.status_code == 201 and again.json()["preso_no"] == p["preso_no"]
 
-    # SAP ล่มตอนเช็คสต็อกของใบเสนอราคา → fallback cache ยังออกใบได้
-    get_sap_client().fail_next(2)
-    assert client.post(f"/presos/{p['preso_no']}/quotation", json={}, headers=hs).status_code == 201
+    # SAP ล่มตอนเช็คสต็อกของใบเสนอราคา → ตีกลับ 409 (ไม่รู้ว่าของพอ ≠ ของพอ) แต่ force ได้
+    # เดิมเทสนี้คาด 201 เพราะด่านถาม stock_service ที่มี cache เก่าสำรองไว้ · ตอนนี้ด่านถาม
+    # SAP จริงตัวเดียวกับปุ่มเช็คสต็อกของเซลล์ ซึ่งไม่มี cache ให้ตกลงไป — ดู live_stock_check
+    from app.services import availability_service
+
+    def _ล่ม(*a, **k):
+        raise SapError("SAP mock: simulated outage")
+
+    real = availability_service.get_availability_client
+    availability_service.get_availability_client = lambda: type("X", (), {"check": staticmethod(_ล่ม)})()
+    try:
+        down = client.post(f"/presos/{p['preso_no']}/quotation", json={}, headers=hs)
+        assert down.status_code == 409 and "ไม่สำเร็จ" in down.json()["detail"]["message"], down.text
+        forced = client.post(f"/presos/{p['preso_no']}/quotation", json={"force": True}, headers=hs)
+        assert forced.status_code == 201, forced.text
+    finally:
+        availability_service.get_availability_client = real

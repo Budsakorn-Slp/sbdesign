@@ -473,7 +473,14 @@ export type QuotationLine = {
   requires_install: boolean;
 };
 
-export type StockShortage = { matnr: string; name: string; need: number; available: number; plant_code: string | null; stale: boolean; supply_mode: string };
+// matnr/supply_mode เป็น null ได้ตอน SAP ล่ม — ตอนนั้นไม่ได้ขาดสินค้าตัวไหนเป็นตัวๆ
+// แต่เป็น "เช็คไม่ได้ทั้งใบ" ซึ่งก็ต้องไม่นับว่าของพอ (ดู live_stock_check ฝั่ง backend)
+export type StockShortage = {
+  matnr: string | null; name: string; need: number; available: number;
+  plant_code: string | null; stale: boolean; supply_mode: string | null;
+  status?: "short" | "none" | "unknown"; label?: string; sap_error?: string;
+  ready_qty?: number; ready_date?: string | null; later_qty?: number; later_date?: string | null;
+};
 
 export type Quotation = {
   id: string;

@@ -86,7 +86,10 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
           </div>
 
           {q.stock_warnings && q.stock_warnings.length > 0 && (
-            <div className="note warn" style={{ marginTop: 10 }}>ออกเอกสารทั้งที่สต็อกไม่พอ: {q.stock_warnings.map((s) => `${s.name} (ต้องการ ${s.need} มี ${s.available})`).join(", ")}</div>
+            <div className="note warn" style={{ marginTop: 10 }}>
+              {q.stock_warnings.some((s) => s.sap_error) ? "ออกเอกสารโดยไม่ได้เช็คสต็อก" : "ออกเอกสารทั้งที่สต็อกไม่พอ"}:{" "}
+              {q.stock_warnings.map((s) => (s.sap_error ? s.name : `${s.name} (ต้องการ ${s.need} มี ${s.available})`)).join(", ")}
+            </div>
           )}
 
           <table className="tbl" style={{ marginTop: 14 }}>

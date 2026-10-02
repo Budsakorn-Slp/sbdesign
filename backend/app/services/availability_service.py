@@ -114,14 +114,26 @@ def _summarize(items: list[ItemAvailability]) -> tuple[bool, str]:
     return True, "ของครบทุกรายการ" if all(o.status == "full" for o in items) else "ของครบ แต่บางรายการต้องแบ่งส่ง"
 
 
+def customer_no_for(cart: Cart) -> str:
+    """เลขลูกค้าที่จะส่งให้ SAP ตอนเช็คสต็อกตะกร้านี้
+
+    แยกออกมาเป็นฟังก์ชันเพราะมีสองทางที่ต้องถามด้วยเลขเดียวกัน — ปุ่ม "เช็คสต็อก" ของเซลล์
+    กับด่านเช็คสดตอนออกใบเสนอราคา · ถ้าสองทางถามด้วยเลขต่างกัน ATP จะออกมาไม่เท่ากัน
+    แล้วเซลล์เห็นของครบแต่กดออกใบไม่ได้ (หรือแย่กว่า: กลับกัน)
+    """
+    s = get_settings()
+    # เช็คสต็อกส่งไปแต่รหัสสินค้า — เลขลูกค้ายังไม่ส่ง (รอ API ฝั่ง SAP ที่รับข้อมูลลูกค้าทั้งชุด)
+    # ดู sap_avail_send_customer_no ใน core/config.py · เลขลูกค้าจริงยังบันทึกลง audit ไว้ตรวจได้
+    member_no = cart.customer.sap_customer_no if cart.customer else None
+    return (member_no or s.sap_walkin_customer) if s.sap_avail_send_customer_no else s.sap_walkin_customer
+
+
 def check_cart(db: Session, cart: Cart, actor: User | None) -> CartAvailability:
     """ยิงทั้งตะกร้าครั้งเดียว — ยิงทีละชิ้นจะเห็นของซ้ำแล้วขายเกิน"""
     s = get_settings()
     items = [it for it in cart.items if it.qty > 0]
-    # เช็คสต็อกส่งไปแต่รหัสสินค้า — เลขลูกค้ายังไม่ส่ง (รอ API ฝั่ง SAP ที่รับข้อมูลลูกค้าทั้งชุด)
-    # ดู sap_avail_send_customer_no ใน core/config.py · เลขลูกค้าจริงยังบันทึกลง audit ไว้ตรวจได้
     member_no = cart.customer.sap_customer_no if cart.customer else None
-    customer_no = (member_no or s.sap_walkin_customer) if s.sap_avail_send_customer_no else s.sap_walkin_customer
+    customer_no = customer_no_for(cart)
     req = req_date_for()
     asks = [AvailAsk(matnr=it.matnr, qty=it.qty) for it in items]
     client = get_availability_client()
@@ -198,4 +210,4 @@ def check_one(db: Session, matnr: str, qty: int, name: str, actor: User | None, 
     return res
 
 
-__all__ = ["CartAvailability", "ItemAvailability", "SapError", "check_cart", "check_lines", "check_one", "req_date_for"]
+__all__ = ["CartAvailability", "ItemAvailability", "SapError", "check_cart", "check_lines", "check_one", "customer_no_for", "req_date_for"]
