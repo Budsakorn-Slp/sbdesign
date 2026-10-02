@@ -38,3 +38,6 @@ Thumbs.db
 
 # snapshot ราคาจาก SAP — ไฟล์ที่ job สร้างเอง ไม่ต้องเก็บใน git
 backend/data/
+
+# รหัสผ่านชุดใหม่ที่ app.cli.secure rotate สร้าง — ห้ามขึ้น git เด็ดขาด
+backend/secrets/
