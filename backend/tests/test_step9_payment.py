@@ -201,3 +201,35 @@ def test_http_adapter_rejects_a_200_without_an_so_number(monkeypatch):
 
     res = c.create_sales_order_doc(Doc())
     assert res.ok is False and res.sap_so_no is None and "เครดิต" in res.message
+
+
+def test_ปุ่มจำลองจ่ายเงินต้องปิดบน_prod():
+    """ของเดิมผูกกับ OTP_DEBUG ซึ่งเป็นคนละเรื่อง — พอเปิด OTP_DEBUG ไว้ให้ผู้ทดสอบ
+    ดูรหัสบนจอ ปุ่ม "จ่ายเงินสำเร็จ" ก็เปิดตามไปด้วยโดยไม่มีใครตั้งใจ
+    (ตรวจบนเว็บทดสอบจริงแล้วว่าเปิดอยู่จริง)
+
+    APP_ENV เป็นธงเดียวที่แปลว่า "นี่ของจริงแล้ว" จึงต้องผูกกับตัวนี้
+    """
+    from fastapi.testclient import TestClient
+
+    from app.core.config import get_settings
+    from app.main import create_app
+
+    s = get_settings()
+    old_env, old_dbg = s.app_env, s.otp_debug
+    try:
+        # prod + เปิด OTP debug ไว้ (สภาพเดียวกับเว็บทดสอบ) -> ต้องปิด
+        object.__setattr__(s, "app_env", "prod")
+        object.__setattr__(s, "otp_debug", True)
+        with TestClient(create_app()) as c:
+            r = c.post("/payments/ANY/mock-confirm")
+            assert r.status_code == 404 and "production" in r.json()["detail"]
+
+        # dev -> ยังใช้ได้ (ไม่งั้นทดสอบการจ่ายเงินในเครื่องไม่ได้)
+        object.__setattr__(s, "app_env", "dev")
+        with TestClient(create_app()) as c:
+            r = c.post("/payments/ANY/mock-confirm")
+            assert r.status_code == 404 and "ไม่พบรายการชำระเงิน" in r.json()["detail"]
+    finally:
+        object.__setattr__(s, "app_env", old_env)
+        object.__setattr__(s, "otp_debug", old_dbg)

@@ -82,8 +82,13 @@ async def payment_webhook(request: Request, x_signature: str | None = Header(def
 
 @router.post("/payments/{payment_no}/mock-confirm", response_model=PaymentOut)
 def mock_confirm(payment_no: str, t: str | None = Query(default=None), db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
-    """โหมด dev เท่านั้น: จำลองว่าลูกค้าสแกนจ่ายแล้ว → เซ็น payload เองแล้วยิงเข้า webhook ปกติ"""
-    if not get_settings().otp_debug:
+    """โหมด dev เท่านั้น: จำลองว่าลูกค้าสแกนจ่ายแล้ว → เซ็น payload เองแล้วยิงเข้า webhook ปกติ
+
+    ปิดด้วย APP_ENV ไม่ใช่ OTP_DEBUG — ของเดิมผูกกับ OTP_DEBUG ซึ่งเป็นคนละเรื่องกัน
+    พอเปิด OTP_DEBUG ไว้ให้ผู้ทดสอบดูรหัสบนจอ ปุ่ม "จ่ายเงินสำเร็จ" ก็เปิดตามไปด้วย
+    (ตรวจบนเว็บทดสอบจริงแล้วว่าเปิดอยู่) · APP_ENV เป็นธงเดียวที่บอกว่า "นี่ของจริงแล้ว"
+    """
+    if get_settings().is_prod:
         raise HTTPException(status_code=404, detail="ปิดใช้งานในโหมด production")
     p = payment_service.get_payment(db, payment_no)
     quotation_service.check_access(p.quotation, user, t)
