@@ -26,8 +26,29 @@ _ESCAPED_SCRIPT = re.compile(r"&lt;script\b.*?&lt;/script&gt;", re.I | re.S)
 # มันคือ markup ที่พังตั้งแต่ต้นทาง ปล่อยไว้จะเห็นเป็นโค้ดดิบกลางหน้า จึงตัดทิ้ง
 _ESCAPED_TAG = re.compile(r"&lt;/?[a-zA-Z][^&]{0,400}?&gt;")
 _WIDGET = re.compile(r"\{\{[^}]*\}\}")  # directive ของ Magento ({{media url=...}}) แปลไม่ได้นอกระบบมัน
-_ON_ATTR = re.compile(r"""\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)""", re.I)
-_JS_URL = re.compile(r"""\s(href|src)\s*=\s*(["'])\s*javascript:[^"']*\2""", re.I)
+# [\s/] ไม่ใช่แค่ \s — <svg/onload=alert(1)> ใช้ "/" คั่นแทนเว้นวรรค ซึ่งเบราว์เซอร์ยอมรับ
+# ถ้าจับเฉพาะเว้นวรรคจะมองไม่เห็น แล้ว event handler รอดออกไปทั้งตัว (เจอตอนทดสอบยิงจริง)
+_ON_ATTR = re.compile(r"""[\s/]on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)""", re.I)
+_JS_URL = re.compile(r"""[\s/](href|src)\s*=\s*(["'])\s*javascript:[^"']*\2""", re.I)
+
+# ตรวจ scheme ตอนประกอบแท็กใหม่ ดีกว่าไล่ลบทีละรูปแบบ — การไล่ลบต้องนึกให้ครบทุกแบบที่
+# เบราว์เซอร์ยอมรับ (javascript: · vbscript: · data:text/html · แทรก tab กลางคำ)
+# พลาดแบบเดียวก็หลุด · เปลี่ยนเป็นตรวจว่า "เป็นแบบที่อนุญาต" อะไรที่ไม่รู้จักทิ้งหมด
+_SAFE_SCHEMES = {"http", "https", "mailto", "tel"}
+_SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*):")
+
+
+def _safe_url(val: str) -> bool:
+    """ค่า href/src นี้ปลอดภัยไหม — รับ http(s)/mailto/tel และ path ภายใน ที่เหลือทิ้ง"""
+    v = val.strip().strip("\"'")
+    # ตัดช่องว่างกับอักขระควบคุมทิ้งก่อนตรวจ — เบราว์เซอร์มองข้ามมัน (java<tab>script: ยังรัน)
+    # แต่ regex ไม่มองข้ามให้ ถ้าไม่ตัดก่อนจะโดนหลอกด้วยการแทรกอักขระกลางคำ
+    v = re.sub(r"[\s\x00-\x1f]", "", v)
+    if not v:
+        return False
+    m = _SCHEME.match(v)
+    # ไม่มี scheme = path ภายใน (/page, ./x, #top) ปลอดภัย
+    return m.group(1).lower() in _SAFE_SCHEMES if m else True
 
 # ---------- เหลือไว้ ----------
 # แท็กที่เล่าเนื้อหาได้ครบโดยไม่พาสไตล์ของเว็บอื่นติดมา
@@ -40,7 +61,9 @@ KEEP_TAGS = {
 KEEP_ATTRS = {"a": {"href", "target", "rel"}, "img": {"src", "alt"}}
 
 _TAG = re.compile(
-    r"""<(/?)([a-zA-Z][\w-]*)((?:\s+[^\s=/>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(/?)>"""
+    # [\s/]+ คั่น attribute ได้ ไม่ใช่แค่เว้นวรรค — ไม่งั้น <svg/onload=...> ไม่แมตช์เลย
+    # แล้วแท็กที่ไม่อยู่ใน allowlist จะรอดออกไปทั้งก้อนแทนที่จะถูกถอดทิ้ง
+    r"""<(/?)([a-zA-Z][\w-]*)((?:[\s/]+[^\s=/>]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)[\s/]*(/?)>"""
 )
 _ATTR = re.compile(r"""([^\s=/>]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?""")
 
@@ -58,8 +81,12 @@ def _rewrite_tag(m: re.Match) -> str:
     if keep:
         for am in _ATTR.finditer(attrs or ""):
             name, val = am.group(1).lower(), am.group(2)
-            if name in keep and val:
-                out.append(f"{name}={val}")
+            if name not in keep or not val:
+                continue
+            # href/src ต้องผ่านด่าน scheme — ที่เหลือ (alt, target, rel) เป็นข้อความธรรมดา
+            if name in ("href", "src") and not _safe_url(val):
+                continue
+            out.append(f"{name}={val}")
     body = (" " + " ".join(out)) if out else ""
     return f"<{tag}{body}{' /' if selfclose else ''}>"
 
@@ -93,7 +120,7 @@ def clean(raw: str, base_url: str = "") -> str:
         h = re.sub(r'href="/(?!/)', f'href="{base_url}', h)
     h = _TAG.sub(_rewrite_tag, h)
     # รูปที่ src ว่าง — มาจาก {{media url=...}} ที่เพิ่งตัดทิ้ง เหลือไว้จะเป็นไอคอนรูปแตก
-    h = re.sub(r"<img(?![^>]*src=\"[^\"]+\")[^>]*>", "", h, flags=re.I)
+    h = re.sub(r"<img(?![^>]*src=\"[^\"]+\")[^>]*>", "", h, flags=re.I)
     # h1 ในเนื้อหาจะไปซ้ำกับหัวข้อหน้าที่เราวาดเอง — ลดชั้นลงมาเป็น h2
     h = re.sub(r"<(/?)h1>", r"<\g<1>h2>", h, flags=re.I)
     h = re.sub(r"(<p>\s*</p>\s*)+", "", h)
