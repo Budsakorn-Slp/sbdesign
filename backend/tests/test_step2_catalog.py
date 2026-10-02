@@ -296,3 +296,44 @@ def test_หน้าแรกใช้แคชแต่ของเปลี�
         db.commit()
     assert client.get("/home").status_code == 200
     assert cat._home_cache["data"] is not cached, "ข้อมูลเปลี่ยนแล้วต้องไม่ใช้ของเก่า"
+
+
+# ---------- สลับลำดับหน้าเว็บ (ต้องทำงานได้ทั้ง SQLite และ PostgreSQL) ----------
+def _seeded(client, seed, offset=0, limit=8):
+    r = client.get("/materials/search", params={"seed": seed, "offset": offset, "limit": limit})
+    assert r.status_code == 200, r.text
+    return [i["matnr"] for i in r.json()["items"]]
+
+
+def test_สลับลำดับนิ่งภายในseedเดียวกัน(client):
+    """เลื่อนหน้าถัดไปแล้วของต้องไม่ซ้ำไม่หาย — คนละคำขอกันแต่ต้องได้ลำดับชุดเดียวกัน"""
+    assert _seeded(client, 111) == _seeded(client, 111)
+    pages = _seeded(client, 111, 0) + _seeded(client, 111, 8) + _seeded(client, 111, 16)
+    assert len(pages) == len(set(pages)), "เลื่อนหน้าแล้วมีของซ้ำ"
+
+
+def test_seedต่างกันได้ลำดับต่างกัน(client):
+    assert _seeded(client, 111) != _seeded(client, 999)
+
+
+def test_รหัสสินค้าที่เป็นตัวอักษรต้องไม่ทำให้พัง(client):
+    """เคยสลับลำดับด้วย CAST(matnr AS BIGINT) ซึ่งพังบน PostgreSQL เพราะมีรหัสอย่าง A534
+
+    SQLite แปลงแล้วได้ 0 เงียบๆ จึงไม่มีใครเห็นปัญหาตอน dev — ตอนนี้ใช้ shuffle_key
+    ที่คิดไว้ตั้งแต่ตอน import จึงไม่ต้องแปลงอะไรตอน query
+    """
+    from sqlalchemy import select
+
+    from app.db.session import SessionLocal
+    from app.models.catalog import Material, shuffle_key_for
+
+    with SessionLocal() as db:
+        rows = db.scalars(select(Material).limit(50)).all()
+        assert rows, "ฐานทดสอบไม่มีสินค้า"
+        # ทุกแถวต้องมีค่า และต้องตรงกับสูตร (รหัสเดิมได้เลขเดิมเสมอ)
+        for m in rows:
+            assert m.shuffle_key == shuffle_key_for(m.matnr)
+            assert m.shuffle_key > 0
+
+    # รหัสตัวอักษรต้องค้นได้ไม่ error
+    assert client.get("/materials/search", params={"seed": 7, "limit": 5}).status_code == 200

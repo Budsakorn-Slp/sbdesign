@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
-from app.models.catalog import Brand, Category, Material, MaterialPrice
+from app.models.catalog import Brand, Category, Material, MaterialPrice, shuffle_key_for
 from app.etl.html_clean import clean
 from app.services.catalog_service import is_web_visible
 
@@ -222,6 +222,9 @@ def upsert_materials(db: Session, rows: list[dict]) -> int:
                 requires_install=bool(r.get("needs_assembly")),
                 is_takeaway_ok=bool(r.get("is_flatpack")),
                 tags=[t for t in (r.get("spart_text"), "luxury" if r.get("is_luxury") else None) if t],
+                # เลขประจำตัวสำหรับสลับลำดับหน้าเว็บ — คิดจากรหัส จึงได้ค่าเดิมทุกรอบ
+                # ตั้งทุกครั้งที่ import เผื่อแถวเก่าที่ยังเป็น 0 จากตอนเพิ่มคอลัมน์
+                shuffle_key=shuffle_key_for(r["matnr"]),
                 synced_at=now,
             )
             if r["matnr"] in have:

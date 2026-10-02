@@ -459,17 +459,19 @@ def _best_category(db: Session, label: str) -> str | None:
     ลำดับการเลือก: ชื่อตรงเป๊ะ (ชุดเว็บก่อน) -> ชื่อที่ครอบกันได้ (ป้ายอยู่ในชื่อหมวด หรือกลับกัน)
     เอาหมวดที่มีของเยอะสุด เพราะการ์ดหน้าแรกควรพาไปที่กว้างไว้ก่อน ไม่ใช่หมวดย่อยแคบๆ
     """
+    # ใช้ TRUE ไม่ใช่ 1 — PostgreSQL ไม่ยอมเทียบคอลัมน์ boolean กับตัวเลข
+    # (SQLite เก็บ boolean เป็น 0/1 จึงผ่านทั้งสองแบบ ความต่างเลยไม่โผล่ตอน dev)
     rows = db.execute(text("""
         SELECT c.id, c.name_th, c.source, COUNT(DISTINCT mc.matnr) AS n
         FROM categories c
         LEFT JOIN material_categories mc ON mc.category_id = c.id
-        LEFT JOIN materials m ON m.matnr = mc.matnr AND m.is_public = 1
+        LEFT JOIN materials m ON m.matnr = mc.matnr AND m.is_public = TRUE
         GROUP BY c.id, c.name_th, c.source
     """)).all()
     # หมวดชุด SAP ผูกสินค้าไว้ที่ materials.category_id ไม่ใช่ตารางเชื่อม ต้องนับแยก
     sap = dict(db.execute(text("""
         SELECT category_id, COUNT(*) FROM materials
-        WHERE is_public = 1 AND category_id IS NOT NULL GROUP BY category_id
+        WHERE is_public = TRUE AND category_id IS NOT NULL GROUP BY category_id
     """)).all())
 
     def count(cid: str, n: int) -> int:

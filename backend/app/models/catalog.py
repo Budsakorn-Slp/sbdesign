@@ -97,6 +97,18 @@ class Material(Base):
     # ขายดีจริงตามที่บริษัทจัดชั้น = MAABC 'Z' · เชื่อถือได้กว่า sold_qty ซึ่งนับเฉพาะยอดบนเว็บ
     # (วัดกับ sb_product_signals: ชั้น Z เฉลี่ย 3.5 ชิ้น/ตัว · ชั้นอื่นไม่เกิน 1.1)
     is_bestseller: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    # เลขประจำตัวสำหรับสลับลำดับหน้าเว็บ — คิดจากรหัสสินค้าครั้งเดียวตอน import
+    #
+    # เดิมสลับด้วยการ CAST(matnr AS BIGINT) แล้วคูณ seed ซึ่งพังบน PostgreSQL เพราะในฐาน
+    # มีรหัสที่ไม่ใช่ตัวเลข 491 รหัส (A017, A534 ...) — SQLite แปลงได้ 0 เงียบๆ แต่ PostgreSQL
+    # ตีกลับทั้ง query · เก็บเป็นคอลัมน์ int ไว้เลยจึงพ้นปัญหาและเรียงเร็วกว่าด้วย
+    # default คิดจาก matnr ของแถวที่กำลังจะ insert — ใครสร้าง Material ด้วยวิธีไหนก็ได้ค่าถูก
+    # โดยไม่ต้องจำ (ETL, seed, เทส) · ตั้งเป็น 0 เฉยๆ แล้วทุกแถวจะกองอยู่ที่เดียวกัน
+    # ลำดับหน้าเว็บจะไม่สลับเลยและไม่มีอะไรฟ้อง
+    shuffle_key: Mapped[int] = mapped_column(
+        Integer, nullable=False, index=True,
+        default=lambda ctx: shuffle_key_for(str(ctx.get_current_parameters().get("matnr") or "")),
+    )
     synced_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
     category: Mapped[Category | None] = relationship()
@@ -198,3 +210,14 @@ class StockCheck(Base):
     atp_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     source: Mapped[str] = mapped_column(String(8), nullable=False)  # sap | cache
     checked_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+def shuffle_key_for(matnr: str) -> int:
+    """เลขประจำตัวคงที่ของสินค้าหนึ่งตัว — รหัสเดิมได้เลขเดิมเสมอ ทุกเครื่อง ทุกครั้ง
+
+    ใช้ crc32 เพราะมีในไลบรารีมาตรฐาน ไม่ต้องลงอะไรเพิ่ม และกระจายตัวดีพอสำหรับการสลับลำดับ
+    (ไม่ได้ใช้เพื่อความปลอดภัย จึงไม่ต้องใช้ hash เข้ารหัส)
+    """
+    import zlib
+
+    return zlib.crc32(matnr.encode("utf-8")) % 2147483647

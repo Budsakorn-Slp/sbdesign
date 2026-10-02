@@ -4,7 +4,7 @@ from decimal import Decimal
 from functools import reduce
 from urllib.parse import quote
 
-from sqlalchemy import BigInteger, String, and_, case, cast, func, or_, select
+from sqlalchemy import String, Text, and_, case, cast, func, or_, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
@@ -304,7 +304,9 @@ def _filtered(db: Session, f: "SearchFilters"):
     if f.tag == "new":
         stmt = stmt.where(Material.is_new.is_(True))
     elif f.tag:
-        stmt = stmt.where(cast(Material.tags, String).like(f'%"{f.tag}"%'))  # JSON text match - พอสำหรับ seed 20 ตัว
+        # cast เป็น Text ไม่ใช่ String — PostgreSQL มี cast json->text แต่ไม่มี json->varchar
+        # (SQLite เก็บ JSON เป็นข้อความอยู่แล้วจึงผ่านทั้งสองแบบ ความต่างเลยไม่โผล่ตอน dev)
+        stmt = stmt.where(cast(Material.tags, Text).like(f'%"{f.tag}"%'))
     if f.min_price is not None:
         stmt = stmt.where(_STD.c.price >= f.min_price)
     if f.max_price is not None:
@@ -366,13 +368,18 @@ def _shuffle(seed: int):
     แทนที่จะสุ่ม เราคำนวณเลขประจำตัวสินค้าจาก (รหัสสินค้า × seed) — seed เดียวกันได้ลำดับเดิมเป๊ะ
     ทุกหน้า พอรีเฟรชหน้าเว็บก็ได้ seed ใหม่ ลำดับทั้งชุดจึงเปลี่ยนไปเลย
 
-    ที่ต้องยกกำลังสองก่อนคูณ: ถ้าใช้ (รหัส × seed) เฉยๆ รหัสที่ติดกันจะได้ผลลัพธ์ห่างกัน
-    เท่ากับ seed พอดีทุกคู่ เรียงออกมาแล้วรหัสติดกันจึงยังเกาะกลุ่มกันอยู่ — หน้าเว็บกลายเป็น
-    สินค้ารุ่นเดียวกันเรียงติดกันยาวๆ เหมือนไม่ได้สลับเลย · ยกกำลังสองทำให้ความห่างไม่คงที่
-    (mod ก่อนคูณเพื่อไม่ให้เลขล้น 64 บิต)
+    วิธีทำ: ทุกสินค้ามีเลขประจำตัวคงที่ (materials.shuffle_key คิดจากรหัสด้วย crc32 ตอน import)
+    เอามาคูณ seed แล้ว mod — seed เดียวกันได้ลำดับเดิมเป๊ะทุกหน้า, seed ใหม่ได้ลำดับใหม่ทั้งชุด
+
+    ทำไมไม่แปลงรหัสสินค้าเป็นตัวเลขสดๆ อย่างที่เคยทำ: ในฐานมีรหัสที่ไม่ใช่ตัวเลข 491 รหัส
+    (A017, A534, A761 ...) · SQLite แปลงแล้วได้ 0 เงียบๆ แต่ PostgreSQL ตีกลับทั้ง query
+    ด้วย invalid input syntax for type bigint — หน้าแรกจะพังทั้งหน้าทันทีที่ย้ายฐาน
+    เก็บเป็นคอลัมน์ int ไว้ก่อนจึงพ้นปัญหา และเรียงเร็วกว่าเพราะมี index
+
+    mod ก่อนคูณเพื่อไม่ให้เลขล้น 64 บิต
     """
-    n = cast(Material.matnr, BigInteger)
-    return (((n * n) % 2147483647) * seed) % 2147483647
+    k = Material.shuffle_key
+    return ((k % 2147483647) * seed) % 2147483647
 
 
 def _ordered(stmt, sort: str, a: sq.AnalyzedQuery | None = None, seed: int | None = None):
