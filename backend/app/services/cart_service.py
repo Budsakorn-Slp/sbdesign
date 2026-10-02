@@ -254,7 +254,7 @@ def add_item(db: Session, cart: Cart, actor: User | None, matnr: str, qty: int, 
         cart.items.append(item)
         _history(db, cart, matnr, "add", 0, qty, actor)
     cart.updated_at = utcnow()
-    bump_rev(cart)
+    bump_rev(cart, "เพิ่มของเข้าตะกร้าหลังเช็ค")
     audit_service.log(db, actor, "cart.item_add", "cart", cart.id, {"matnr": matnr, "qty": qty, "supply_mode": mode, "plant_code": plant_code, "unit_price": str(price)})
     from app.services import analytics_service  # import ตรงนี้กัน circular import
 
@@ -290,7 +290,7 @@ def update_item(db: Session, cart: Cart, actor: User | None, item_id: str, qty: 
         item.note = note
     _history(db, cart, item.matnr, "update", before, item.qty, actor)
     cart.updated_at = utcnow()
-    bump_rev(cart)
+    bump_rev(cart, "แก้จำนวน/วิธีรับของหลังเช็ค")
     audit_service.log(db, actor, "cart.item_update", "cart", cart.id, {"item_id": item.id, "matnr": item.matnr, "qty_before": before, "qty_after": item.qty, "supply_mode": item.supply_mode})
     db.commit()
     db.refresh(item)
@@ -306,18 +306,22 @@ def remove_item(db: Session, cart: Cart, actor: User | None, item_id: str) -> No
     cart.items.remove(item)
     db.delete(item)
     cart.updated_at = utcnow()
-    bump_rev(cart)
+    bump_rev(cart, "ลบของออกจากตะกร้าหลังเช็ค")
     db.commit()
     emit(cart, "item_removed", payload)
 
 
-def bump_rev(cart: Cart) -> None:
-    """ของในตะกร้าเปลี่ยน → เดินเลขรุ่นขึ้นหนึ่ง ผลเช็คสต็อก/เช็คโปรฯ รอบก่อนถือว่าหมดอายุทันที
+def bump_rev(cart: Cart, note: str = "") -> None:
+    """ของ/ราคาในตะกร้าเปลี่ยน → เดินเลขรุ่นขึ้นหนึ่ง ผลเช็คสต็อก/เช็คโปรฯ รอบก่อนหมดอายุทันที
 
     ผังงานใบ PRE บังคับว่าแก้ตะกร้าแล้วต้องวนกลับไปเช็คสต็อกใหม่ ถ้าไม่มีเลขรุ่น
     เซลล์เพิ่มของหลังเช็คแล้วกด Save ได้เลย ทั้งที่ของชิ้นใหม่ยังไม่เคยถาม SAP
+
+    note = เหตุผลที่จะไปโผล่ในด่านที่หมดอายุ · ใส่ให้ทุกที่ที่เรียก เพราะ "ผลเช็คหายไป
+    เฉยๆ" คือสิ่งที่ทำให้เซลล์คิดว่าระบบพัง แล้วไล่หาสาเหตุไม่ได้
     """
     cart.rev = (cart.rev or 0) + 1
+    cart.rev_note = note or None
 
 
 def ack_item(db: Session, cart: Cart, actor: User | None, item_id: str) -> CartItem:
@@ -358,7 +362,7 @@ def merge_carts(db: Session, source: Cart, target: Cart, actor: User | None) -> 
     # ราคา snapshot ของ guest เป็นราคาปกติ → คิดใหม่ตาม tier ลูกค้าเจ้าของตะกร้าปลายทาง
     reprice(db, target)
     if moved:
-        bump_rev(target)
+        bump_rev(target, f"ยกของจากตะกร้าลูกค้าเข้ามา {moved} รายการ")
     source.status = "merged"
     source.merged_into_cart_id = target.id
     source.closed_at = utcnow()
@@ -436,7 +440,7 @@ def set_selected(db: Session, cart: Cart, actor: User | None, item_ids: list[str
         it.selected = selected
     if changed:
         cart.updated_at = utcnow()
-        bump_rev(cart)
+        bump_rev(cart, "ติ๊ก/ไม่ติ๊กรายการหลังเช็ค")
         audit_service.log(db, actor, "cart.item_select", "cart", cart.id, {"item_ids": changed, "selected": selected})
         db.commit()
         emit(cart, "items_selected", {"item_ids": changed, "selected": selected})

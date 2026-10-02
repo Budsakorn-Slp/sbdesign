@@ -1,4 +1,6 @@
 """โหมดเซลล์: ถือหลายตะกร้า · ค้นหา/ผูกลูกค้า · merge ตะกร้าออนไลน์ของลูกค้าเข้าใบที่ถือ"""
+import logging
+
 from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
@@ -10,6 +12,31 @@ from app.models.common import utcnow
 from app.models.user import User
 from app.services import audit_service, cart_service, relationship_service
 from app.services.auth_service import normalize_phone
+
+log = logging.getLogger("sb.sales")
+
+
+def _stock_was_ok(cart: Cart) -> bool:
+    return cart.stock_ok_rev is not None and cart.stock_ok_rev == (cart.rev or 0)
+
+
+def _recheck_stock(db: Session, cart: Cart, sales: User) -> None:
+    """เช็คสต็อกให้ใหม่เองหลังผูก/ถอดลูกค้า — เฉพาะตะกร้าที่เพิ่งเช็คผ่านไปแล้ว
+
+    เซลล์เช็คไปรอบหนึ่งแล้วผลหายเพราะผูกลูกค้าทีหลัง (ราคาคิดใหม่ตามสิทธิสมาชิก และของ
+    ในตะกร้าออนไลน์ของลูกค้าไหลเข้ามา) — การบังคับให้กดใหม่คือให้คนทำงานซ้ำในเรื่องที่
+    ระบบถามเองได้ · เป็นคำถามเดียวกับปุ่มเช็คสต็อกเป๊ะๆ (query เฉยๆ ไม่ได้ไปจองของ)
+    ของยังครบด่านก็กลับมาเขียวเอง ของไม่ครบก็แดงพร้อมเหตุผลจริง ไม่ได้ปล่อยผ่านให้ฟรี
+
+    ตะกร้าที่ยังไม่เคยเช็คไม่ยิงให้ — คนยังไม่ได้ขอ อย่าไปกวน SAP แทนเขา
+    SAP ล่มก็ปล่อยให้ด่านแดงไว้ ห้ามให้ "ผูกลูกค้า" พังเพราะ SAP ล่ม
+    """
+    from app.services import availability_service
+
+    try:
+        availability_service.check_cart(db, cart, sales)
+    except SapError as e:
+        log.warning("เช็คสต็อกซ้ำหลังผูก/ถอดลูกค้าไม่สำเร็จ (ปล่อยให้ด่านแดงไว้): %s", e)
 
 
 def list_my_carts(db: Session, sales: User) -> list[Cart]:
@@ -132,6 +159,7 @@ def resolve_customer(db: Session, key: str) -> User:
 
 def attach_customer(db: Session, sales: User, cart: Cart, customer_key: str) -> tuple[Cart, dict]:
     customer = resolve_customer(db, customer_key)
+    was_ok = _stock_was_ok(cart)  # ต้องอ่านก่อนแตะตะกร้า
     if cart.customer_user_id and cart.customer_user_id != customer.id:
         raise HTTPException(status_code=409, detail="ตะกร้านี้ผูกลูกค้าคนอื่นอยู่แล้ว — ตัดการเชื่อมต่อก่อน")
     other = db.scalar(select(Cart).where(Cart.customer_user_id == customer.id, Cart.status == "open", Cart.owner_sales_id.is_not(None), Cart.owner_sales_id != sales.id, Cart.id != cart.id))
@@ -158,10 +186,19 @@ def attach_customer(db: Session, sales: User, cart: Cart, customer_key: str) -> 
         moved = sum(it.qty for it in online.items)
         merged_from = online.id
         cart_service.merge_carts(db, online, cart, sales)
+    # ราคาเพิ่งคิดใหม่ตามสิทธิสมาชิก → ผลเช็คโปรฯ รอบก่อนคิดจากราคาที่ไม่ใช่ราคาจริงของ
+    # ลูกค้าคนนี้ ต้องหมดอายุด้วย ไม่ใช่แค่ตอนมีของยกเข้ามา (merge_carts เดินเลขให้แล้ว
+    # ตอนมีของเข้า — ตรงนี้จึงเดินเฉพาะตอนที่มันไม่ได้เดิน แค่เปลี่ยนคำอธิบายให้ตรงเรื่อง)
+    if moved:
+        cart.rev_note = f"ผูกลูกค้าแล้วยกของจากตะกร้าลูกค้าเข้ามา {moved} รายการ"
+    else:
+        cart_service.bump_rev(cart, "ผูกลูกค้า — ราคาคิดใหม่ตามสิทธิสมาชิก")
     audit_service.log(db, sales, "sales.attach_customer", "cart", cart.id, {"customer_id": customer.id, "merged_from": merged_from, "moved": moved})
     # จดว่าใครดูแลใคร — ลูกค้าที่เคยซื้อกับพนักงานคนไหน ครั้งหน้าควรได้คนเดิม
     rel = relationship_service.record_attach(db, customer.id, sales, cart_id=cart.id)
     db.commit()
+    if was_ok:
+        _recheck_stock(db, cart, sales)
     cart = cart_service.load_cart(db, cart.id)
     touch(db, cart)
     cart_service.emit(cart, "customer_attached", {"customer_name": customer.name, "sales_name": sales.name, "moved": moved})
@@ -172,6 +209,7 @@ def detach_customer(db: Session, sales: User, cart: Cart) -> Cart:
     """ตัดการเชื่อมต่อ: ของที่ลูกค้าใส่เองย้ายกลับไปตะกร้าออนไลน์ของลูกค้า · ของที่เซลล์ใส่อยู่ต่อในใบเซลล์"""
     if not cart.customer_user_id:
         return cart
+    was_ok = _stock_was_ok(cart)
     customer_id = cart.customer_user_id
     mine = [it for it in cart.items if it.added_by == "customer"]
     if mine:
@@ -186,9 +224,13 @@ def detach_customer(db: Session, sales: User, cart: Cart) -> Cart:
     for it in cart.items:
         it.pending_ack = False
     cart_service.reprice(db, cart)
+    # ถอดลูกค้า = ราคากลับไปเป็นราคาปกติ และของที่ลูกค้าใส่เองย้ายออกไป — เช็คใหม่ทั้งคู่
+    cart_service.bump_rev(cart, f"ถอดลูกค้าออก — ราคากลับเป็นราคาปกติ{f' · ของลูกค้าย้ายออก {len(mine)} รายการ' if mine else ''}")
     audit_service.log(db, sales, "sales.detach_customer", "cart", cart.id, {"customer_id": customer_id, "returned_items": len(mine)})
     relationship_service.record_release(db, customer_id, sales.id, "detach", cart_id=cart.id)
     db.commit()
+    if was_ok:
+        _recheck_stock(db, cart, sales)
     cart = cart_service.load_cart(db, cart.id)
     cart_service.emit(cart, "customer_detached", {"customer_id": customer_id})
     return cart

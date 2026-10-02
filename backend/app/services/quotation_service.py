@@ -95,13 +95,14 @@ def preso_steps(db: Session, cart: Cart) -> list[dict]:
         checks["customer"] = (False, "ยังขาด " + " · ".join(missing))
     else:
         checks["customer"] = (True, f"เลขลูกค้า {cust.sap_customer_no} · ข้อมูลครบ")
+    why = cart.rev_note or "ตะกร้าเปลี่ยนหลังเช็คครั้งล่าสุด"
     checks["stock"] = (
         (True, "ของครบตามที่เช็คไว้") if cart.stock_ok_rev == rev
-        else (False, "เช็คสต็อกใหม่ — ตะกร้าเปลี่ยนหลังเช็คครั้งล่าสุด" if cart.stock_ok_rev is not None else "กดเช็คสต็อกก่อน")
+        else (False, f"เช็คสต็อกใหม่ — {why}" if cart.stock_ok_rev is not None else "กดเช็คสต็อกก่อน")
     )
     checks["promo"] = (
         (True, "เช็คโปรฯ แล้ว") if cart.promo_rev == rev
-        else (False, "เช็คโปรฯ ใหม่ — ตะกร้าเปลี่ยนหลังเช็คครั้งล่าสุด" if cart.promo_rev is not None else "กดเช็คโปรโมชั่น 1 รอบก่อน (ไม่มีโปรฯ ก็ถือว่าผ่าน)")
+        else (False, f"เช็คโปรฯ ใหม่ — {why}" if cart.promo_rev is not None else "กดเช็คโปรโมชั่น 1 รอบก่อน (ไม่มีโปรฯ ก็ถือว่าผ่าน)")
     )
     slot = db.get(DeliverySlot, cart.slot_id) if cart.slot_id else None
     checks["delivery"] = (

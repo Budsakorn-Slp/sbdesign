@@ -43,6 +43,10 @@ class Cart(Base, TimestampMixin):
     rev: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     stock_ok_rev: Mapped[int | None] = mapped_column(Integer, nullable=True)
     promo_rev: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # เลขรุ่นเดินเพราะอะไร — ด่านที่หมดอายุจะได้บอกเหตุผลจริง ไม่ใช่ "ตะกร้าเปลี่ยน" เฉยๆ
+    # เซลล์เจอผลเช็คหายไปโดยไม่รู้ว่าเพราะอะไรแล้วคิดว่าระบบพัง (เคสที่เจอ: ผูกลูกค้า
+    # ทีหลังแล้วของในตะกร้าออนไลน์ของลูกค้าไหลเข้ามา)
+    rev_note: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     items: Mapped[list["CartItem"]] = relationship(back_populates="cart", cascade="all, delete-orphan", order_by="CartItem.added_at")
     customer = relationship("User", foreign_keys=[customer_user_id])
