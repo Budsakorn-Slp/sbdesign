@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.integrations.sap import SapError, get_sap_client
 from app.models.common import utcnow
-from app.core.config import get_settings
 from app.integrations.sap.sales_order import SalesOrderDTO, SoAmounts, SoLine
 from app.models.payment import Payment, SapSyncJob
 from app.models.quotation import Quotation
@@ -52,6 +51,10 @@ def create_intent(db: Session, q: Quotation, actor: User | None, method: str, ki
         raise HTTPException(status_code=422, detail=f"ช่องทางชำระเงินไม่ถูกต้อง (ใช้ได้: {', '.join(METHODS)})")
     if kind not in ("full", "deposit"):
         raise HTTPException(status_code=422, detail="kind ต้องเป็น full หรือ deposit")
+    # ด่านนี้ต้องอยู่ฝั่งหลังบ้าน ไม่ใช่แค่ซ่อนปุ่ม — ลิงก์จ่ายเงินที่เคยส่งให้ลูกค้าไปแล้ว
+    # ยังมี ?deposit=1 ติดอยู่ และใครก็ยิง API ตรงได้ ถ้ากันแค่หน้าจอก็เก็บเงินไม่ครบจริง
+    if kind == "deposit" and not get_settings().deposit_enabled:
+        raise HTTPException(status_code=400, detail="ตอนนี้รับชำระเต็มจำนวนอย่างเดียว ยังไม่เปิดรับมัดจำ")
     if q.status != "issued":
         raise HTTPException(status_code=400, detail=f"ใบเสนอราคานี้ชำระเงินไม่ได้ (สถานะ {q.status})")
     if q.valid_until < utcnow().date():

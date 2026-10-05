@@ -10,6 +10,8 @@ export type PublicConfig = {
   invite_only: boolean;
   /** false = ระบบส่ง OTP ไม่ได้ (ยังไม่ได้ต่อ SMS) — ต้องซ่อนปุ่ม OTP ไม่งั้นกดแล้วตัน */
   otp_enabled: boolean;
+  /** false = รับชำระเต็มจำนวนอย่างเดียว — ต้องซ่อนปุ่มมัดจำ หลังบ้านตีกลับอยู่แล้ว */
+  deposit_enabled: boolean;
   coming_soon_title: string;
   coming_soon_text: string;
 };
@@ -24,6 +26,7 @@ export function loadPublicConfig(): Promise<PublicConfig> {
       // (ถึงเปิดหน้าฟอร์มได้ หลังบ้านก็ยังกันการสมัครอยู่ดี ตรงนี้แค่ให้หน้าจอไม่หลอกตา)
       invite_only: true,
       otp_enabled: false,
+      deposit_enabled: false,
       coming_soon_title: "เร็ว ๆ นี้",
       coming_soon_text: "เรากำลังเตรียมร้านค้าออนไลน์ให้พร้อมที่สุด อีกไม่นานเจอกันแน่นอน",
     }));

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.cart import CartCtx, cart_out
 from app.api.deps import get_current_user, get_current_user_optional, require_role
+from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.promo import AppliedDiscount
 from app.models.quotation import Preso, Quotation
@@ -145,6 +146,11 @@ def render_document(db: Session, q: Quotation) -> str:
     disc_rows = "".join(f"<tr><td colspan='4' class='r'>{e(d.title or d.promo_code or d.kind)}</td><td class='r'>-{_money(d.amount)}</td><td></td></tr>" for d in discs)
     slot = f"{q.slot_date.strftime('%d/%m/%Y')} {'รอบเช้า' if q.slot_period == 'am' else 'รอบบ่าย'}" if q.slot_date else "-"
     status_txt = {"issued": "ออกแล้ว · รอชำระ", "paid": "ชำระแล้ว", "converted": "สร้าง SO แล้ว", "cancelled": "ยกเลิก", "expired": "หมดอายุ"}.get(q.status, q.status)
+    # แถวมัดจำขึ้นเฉพาะตอนเปิดรับมัดจำ — ไม่งั้นเอกสารที่ส่งถึงมือลูกค้าบอกเงื่อนไขที่
+    # ระบบไม่รับจริง แล้วลูกค้าโอนมา 20% ตามที่อ่านในใบ
+    dep_row = (f'<tr><td colspan="4" class="r muted">มัดจำ 20% วันนี้ · ที่เหลือชำระวันส่ง</td>'
+               f'<td class="r muted">{_money(q.deposit_amount)}</td><td></td></tr>'
+               if get_settings().deposit_enabled else "")
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:820px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.tot td{{font-weight:700;border-top:2px solid #111}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}@media print{{body{{margin:0}}}}</style></head>
@@ -156,6 +162,6 @@ def render_document(db: Session, q: Quotation) -> str:
 <tr><td colspan="4" class="r">รวมสินค้า</td><td class="r">{_money(q.subtotal)}</td><td></td></tr>{disc_rows}
 <tr><td colspan="4" class="r">ค่าขนส่ง{' + ติดตั้ง' if float(q.install_fee) else ''}</td><td class="r">{_money(float(q.shipping_fee) + float(q.install_fee) - float(q.shipping_discount))}</td><td></td></tr>
 <tr class="tot"><td colspan="4" class="r">รวมสุทธิ (รวม VAT 7% = {_money(q.vat)})</td><td class="r">{_money(q.grand_total)}</td><td></td></tr>
-<tr><td colspan="4" class="r muted">มัดจำ 20% วันนี้ · ที่เหลือชำระวันส่ง</td><td class="r muted">{_money(q.deposit_amount)}</td><td></td></tr></tbody></table>
+{dep_row}</tbody></table>
 <p class="muted">เอกสารนี้สร้างจากระบบ SB Sales App (mock PDF) · ราคาและโปรโมชั่นถูกล็อกไว้จนถึงวันยืนราคา · เมื่อชำระเงินสำเร็จ ระบบจะส่งใบเสนอราคาไป convert เป็น Sales Order ใน SAP{(' · SO ' + e(q.sap_so_no)) if q.sap_so_no else ''}</p>
 </body></html>"""

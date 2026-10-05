@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon";
 import { apiGet, apiPost, errorMessage } from "../lib/api";
+import { usePublicConfig } from "../lib/publicConfig";
 import { useAuth } from "../lib/auth";
 import { bahtWord, thDate } from "../lib/format";
 import type { Payment, PaymentMethod, Quotation } from "../lib/types";
@@ -35,16 +36,23 @@ export default function PayPage() {
   const { no = "" } = useParams();
   const [params] = useSearchParams();
   const token = params.get("t");
-  const wantDeposit = params.get("deposit") === "1";
+  const cfg = usePublicConfig();
+  // ลิงก์เก่าที่ส่งให้ลูกค้าไปแล้วยังมี ?deposit=1 ติดอยู่ — ถ้าปิดรับมัดจำแล้วต้องไม่ยอมตาม
+  // ไม่งั้นลูกค้าเปิดลิงก์เดิมมาเจอยอดมัดจำ กดจ่ายแล้วหลังบ้านตีกลับ งงทั้งคู่
+  const wantDeposit = params.get("deposit") === "1" && cfg?.deposit_enabled === true;
   const auth = useAuth();
   const [q, setQ] = useState<Quotation | null>(null);
   const [pay, setPay] = useState<Payment | null>(null);
   const [method, setMethod] = useState<PaymentMethod>("qr_promptpay");
-  const [kind, setKind] = useState<"full" | "deposit">(wantDeposit ? "deposit" : "full");
+  const [kind, setKind] = useState<"full" | "deposit">("full");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const timer = useRef<number | null>(null);
   const qs = token ? `?t=${encodeURIComponent(token)}` : "";
+
+  useEffect(() => {
+    if (wantDeposit) setKind("deposit");
+  }, [wantDeposit]);
 
   useEffect(() => {
     if (auth.ready) apiGet<Quotation>(`/quotations/${no}${qs}`).then(setQ).catch((e) => setErr(errorMessage(e)));
@@ -129,10 +137,12 @@ export default function PayPage() {
           {pay?.status === "failed" && <div className="note err">ชำระเงินไม่สำเร็จ กรุณาลองใหม่หรือเปลี่ยนช่องทาง</div>}
           {pay?.status === "expired" && <div className="note warn">รายการหมดอายุ (15 นาที) กรุณากดสร้างรายการใหม่</div>}
 
-          <div className="seg" style={{ maxWidth: 420 }}>
-            <button className={"seg-btn" + (kind === "full" ? " on" : "")} onClick={() => { setKind("full"); setPay(null); }}>เต็มจำนวน {bahtWord(q.grand_total)}</button>
-            <button className={"seg-btn" + (kind === "deposit" ? " on" : "")} onClick={() => { setKind("deposit"); setPay(null); }}>มัดจำ 20% {bahtWord(q.deposit_amount)}</button>
-          </div>
+          {cfg?.deposit_enabled && (
+            <div className="seg" style={{ maxWidth: 420 }}>
+              <button className={"seg-btn" + (kind === "full" ? " on" : "")} onClick={() => { setKind("full"); setPay(null); }}>เต็มจำนวน {bahtWord(q.grand_total)}</button>
+              <button className={"seg-btn" + (kind === "deposit" ? " on" : "")} onClick={() => { setKind("deposit"); setPay(null); }}>มัดจำ 20% {bahtWord(q.deposit_amount)}</button>
+            </div>
+          )}
 
           <div className="pay-methods">
             {METHODS.map((m) => (
@@ -174,7 +184,10 @@ export default function PayPage() {
             ))}
             <div className="sum-row"><span>ค่าขนส่ง{Number(q.install_fee) > 0 ? " + ติดตั้ง" : ""}</span><b>{bahtWord(Number(q.shipping_fee) + Number(q.install_fee) - Number(q.shipping_discount))}</b></div>
             <div className="sum-total"><span>รวมสุทธิ (รวม VAT 7%)</span><b>{bahtWord(q.grand_total)}</b></div>
-            <div className="tiny muted">ยืนราคาถึง {thDate(q.valid_until, true)} · ชำระมัดจำ 20% ({bahtWord(q.deposit_amount)}) แล้วจ่ายส่วนที่เหลือวันส่งได้</div>
+            <div className="tiny muted">
+              ยืนราคาถึง {thDate(q.valid_until, true)}
+              {cfg?.deposit_enabled && ` · ชำระมัดจำ 20% (${bahtWord(q.deposit_amount)}) แล้วจ่ายส่วนที่เหลือวันส่งได้`}
+            </div>
           </div>
         </aside>
       </div>

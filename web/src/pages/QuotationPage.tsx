@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon";
 import { API_BASE, apiGet, apiPost, errorMessage } from "../lib/api";
+import { usePublicConfig } from "../lib/publicConfig";
 import { useAuth } from "../lib/auth";
 import { SUPPLY_LABEL } from "../lib/cart";
 import { bahtWord, thDate, thTime } from "../lib/format";
@@ -10,6 +11,7 @@ import { QSTATUS } from "./PresosPage";
 
 /** S6 (เซลล์) + C2 (ลูกค้าเปิดจากลิงก์ SMS/อีเมล ?t=token) · ใบเสนอราคา + ไปจ่ายเงิน */
 export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) {
+  const cfg = usePublicConfig();
   const { no = "" } = useParams();
   const [params] = useSearchParams();
   const token = params.get("t");
@@ -124,13 +126,13 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
             ))}
             <div className="sum-row"><span>ค่าขนส่ง{Number(q.install_fee) > 0 ? " + ติดตั้ง" : ""}{q.slot_date ? ` (${thDate(q.slot_date)} ${q.slot_period === "am" ? "เช้า" : "บ่าย"})` : ""}</span><b>{bahtWord(feeTotal)}</b></div>
             <div className="sum-total"><span>รวมสุทธิ (รวม VAT 7%)</span><b>{bahtWord(q.grand_total)}</b></div>
-            <div className="tiny muted">VAT ที่รวมอยู่ {bahtWord(q.vat)} · มัดจำ 20% = {bahtWord(q.deposit_amount)}</div>
+            <div className="tiny muted">VAT ที่รวมอยู่ {bahtWord(q.vat)}{cfg?.deposit_enabled ? ` · มัดจำ 20% = ${bahtWord(q.deposit_amount)}` : ""}</div>
             {q.sap_so_no && <div className="note ok" style={{ marginTop: 10 }}>SO {q.sap_so_no} · sync {q.sap_sync_status}</div>}
             {q.status === "issued" ? (
               <div className="col" style={{ marginTop: 12 }}>
                 <Link to={payHref} className="btn primary lg block">{isStaff ? "ไปหน้าชำระเงิน" : "ชำระเงินทั้งจำนวน"}</Link>
-                {!isStaff && <Link to={payHref + (token ? "&" : "?") + "deposit=1"} className="btn block">จ่ายมัดจำ 20% ({bahtWord(q.deposit_amount)})</Link>}
-                <p className="tiny muted" style={{ margin: 0 }}>{isStaff ? "QR PromptPay ที่แท็บเล็ต · ส่งลิงก์จ่ายเข้ามือถือ · บัตร/ผ่อนที่แคชเชียร์ · มัดจำ 20%" : "ชำระผ่าน QR PromptPay / บัตร / ผ่อน 0% · เมื่อจ่ายสำเร็จจะได้เลข SO ทันที"}</p>
+                {!isStaff && cfg?.deposit_enabled && <Link to={payHref + (token ? "&" : "?") + "deposit=1"} className="btn block">จ่ายมัดจำ 20% ({bahtWord(q.deposit_amount)})</Link>}
+                <p className="tiny muted" style={{ margin: 0 }}>{isStaff ? `QR PromptPay ที่แท็บเล็ต · ส่งลิงก์จ่ายเข้ามือถือ · บัตร/ผ่อนที่แคชเชียร์${cfg?.deposit_enabled ? " · มัดจำ 20%" : ""}` : "ชำระผ่าน QR PromptPay / บัตร / ผ่อน 0% · เมื่อจ่ายสำเร็จจะได้เลข SO ทันที"}</p>
               </div>
             ) : q.status === "paid" || q.status === "converted" ? (
               <div className="note ok" style={{ marginTop: 12 }}>{q.sap_so_no ? <>ชำระเงินแล้ว · คำสั่งซื้อ <b className="mono">SO {q.sap_so_no}</b></> : "ชำระเงินแล้ว · กำลังส่งคำสั่งซื้อเข้าระบบ SAP"}</div>

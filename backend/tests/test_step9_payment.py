@@ -66,12 +66,42 @@ def test_pay_full_then_sap_so_created(client):
     assert dup["duplicate"] and dup["sap_so_no"] == done["sap_so_no"]
 
 
-def test_deposit_20_percent_and_no_cash_channel(client):
+@pytest.fixture
+def deposit_on(monkeypatch):
+    """เปิดรับมัดจำชั่วคราว — ของจริงปิดอยู่ แต่ทางเดินยังอยู่ในโค้ดรอวันเปิด
+    ถ้าไม่มีเทสคลุมไว้ วันที่เปิดใช้จริงจะเพิ่งมารู้ว่ามันพังไปนานแล้ว"""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "deposit_enabled", True)
+    yield
+    monkeypatch.setattr(s, "deposit_enabled", False)
+
+
+def test_ปิดรับมัดจำ_ต้องตีกลับถึงยิง_api_ตรง(client):
+    """ซ่อนปุ่มอย่างเดียวไม่พอ — ลิงก์จ่ายเงินที่ส่งให้ลูกค้าไปแล้วยังมี ?deposit=1 ติดอยู่"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    r = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "link", "kind": "deposit"}, headers=hs)
+    assert r.status_code == 400 and "เต็มจำนวน" in r.json()["detail"]
+    # ใบเสนอราคาที่ออกไปต้องไม่เขียนเงื่อนไขมัดจำที่ระบบไม่รับจริง
+    doc = client.get(f"/quotations/{q['quotation_no']}/document", headers=hs).text
+    assert "มัดจำ" not in doc
+
+
+def test_ตั้งค่ารับมัดจำแล้วคิดยอด_20_เปอร์เซ็นต์ถูก(client, deposit_on):
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "link", "kind": "deposit"}, headers=hs).json()
+    assert float(pay["amount"]) == float(q["deposit_amount"]) == round(float(q["grand_total"]) * 0.2)
+
+
+def test_full_payment_and_no_cash_channel(client):
     hs = auth_headers(client, "SA-104", "staff")
     q = _quotation(client, hs)
     assert client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "cash", "kind": "full"}, headers=hs).status_code == 400
-    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "link", "kind": "deposit"}, headers=hs).json()
-    assert float(pay["amount"]) == float(q["deposit_amount"]) == round(float(q["grand_total"]) * 0.2)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "link", "kind": "full"}, headers=hs).json()
+    assert float(pay["amount"]) == float(q["grand_total"])
     _webhook(client, pay["payment_no"])
     view = client.get(f"/quotations/{q['quotation_no']}", headers=hs).json()
     assert view["status"] == "converted" and view["sap_so_no"]
@@ -112,7 +142,7 @@ def test_customer_online_checkout_then_pay(client):
     assert r.status_code == 201, r.text
     quote = r.json()
     assert quote["channel"] == "online" and quote["sales_name"] is None and quote["link_token"] is None
-    pay = client.post(f"/quotations/{quote['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "deposit"}, headers=hs).json()
+    pay = client.post(f"/quotations/{quote['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs).json()
     assert _webhook(client, pay["payment_no"]).json()["sap_so_no"]
     assert client.get(f"/quotations/{quote['quotation_no']}", headers=hs).json()["status"] == "converted"
 

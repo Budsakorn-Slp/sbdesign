@@ -19,6 +19,9 @@ os.environ["INVITE_ONLY"] = "false"
 # ซึ่งใช้ได้เฉพาะ https คุกกี้จึงไม่ถูกเก็บ แล้วเทสของ guest/websocket จะค้างรอตลอดไป
 # เครื่องที่ตั้ง prod ไว้เพื่อ deploy ต้องไม่ลากเทสไปด้วย
 os.environ["APP_ENV"] = "dev"
+# ธุรกิจรับชำระเต็มจำนวนอย่างเดียว — เทสต้องวัดจากค่านี้ ไม่ใช่ตามที่เครื่อง dev ตั้งไว้
+# เทสที่ต้องการทดสอบทางมัดจำเปิดเองเฉพาะกรณี ดู fixture deposit_on ใน test_step9_payment
+os.environ["DEPOSIT_ENABLED"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

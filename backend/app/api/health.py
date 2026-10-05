@@ -27,6 +27,8 @@ def public_config():
         "invite_only": s.invite_only,
         # OTP ใช้ได้จริงไหม — ถ้าไม่ หน้าเว็บต้องซ่อนปุ่ม ไม่ใช่ให้กดแล้วรอรหัสที่ไม่มีวันมา
         "otp_enabled": s.otp_enabled,
+        # รับมัดจำไหม — ถ้าไม่ หน้าจ่ายเงินต้องไม่โชว์ปุ่มมัดจำ ไม่ใช่โชว์แล้วกดไม่ผ่าน
+        "deposit_enabled": s.deposit_enabled,
         "coming_soon_title": s.coming_soon_title,
         "coming_soon_text": s.coming_soon_text,
     }
