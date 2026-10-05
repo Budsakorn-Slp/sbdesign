@@ -101,7 +101,12 @@ def mock_confirm(
     พอเปิด OTP_DEBUG ไว้ให้ผู้ทดสอบดูรหัสบนจอ ปุ่ม "จ่ายเงินสำเร็จ" ก็เปิดตามไปด้วย
     (ตรวจบนเว็บทดสอบจริงแล้วว่าเปิดอยู่) · APP_ENV เป็นธงเดียวที่บอกว่า "นี่ของจริงแล้ว"
     """
-    if get_settings().is_prod:
+    s = get_settings()
+    # ต่อ gateway จริงแล้วห้ามใช้เด็ดขาด ไม่ว่าตั้งธงอะไรไว้ — ปลอมว่าจ่ายแล้วทั้งที่เงินไม่เข้า
+    # จะไหลต่อไปเป็น SO ใน SAP แล้วตามเก็บเงินทีหลังไม่ได้
+    if s.payment_provider != "mock":
+        raise HTTPException(status_code=404, detail="ต่อช่องทางชำระเงินจริงอยู่ — จำลองผลไม่ได้")
+    if s.is_prod and not s.mock_payment_enabled:
         raise HTTPException(status_code=404, detail="ปิดใช้งานในโหมด production")
     p = payment_service.get_payment(db, payment_no)
     quotation_service.check_access(p.quotation, user, t)

@@ -129,6 +129,12 @@ class Settings(BaseSettings):
     # kbank = K-Payment Gateway ของกสิกร — ยังต่อไม่ได้ รอคีย์กับเอกสาร API
     #         ตั้งเป็น kbank โดยไม่ใส่คีย์ ระบบจะตีกลับพร้อมบอกว่าขาดอะไร ไม่ปล่อยเงียบ
     payment_provider: str = "mock"
+    # เปิดปุ่ม "จ่ายสำเร็จ/ปฏิเสธ/ยกเลิก" ของหน้าธนาคารจำลองบนเครื่องที่ตั้ง APP_ENV=prod
+    # มีไว้ให้ทีมลองจ่ายเงินบนเว็บทดสอบที่เปิดสู่อินเทอร์เน็ตได้ โดยด่านอื่นของ prod ยังอยู่ครบ
+    #
+    # ใช้ได้เฉพาะตอน payment_provider=mock เท่านั้น — ต่อ gateway จริงแล้วเปิดตัวนี้
+    # เท่ากับปลอมสถานะว่าจ่ายแล้วทั้งที่เงินไม่เข้า ซึ่งจะไปโผล่เป็น SO ใน SAP
+    mock_payment_enabled: bool = False
     kbank_base_url: str = ""       # sandbox: https://dev-kpaymentgateway.kasikornbank.com
     kbank_merchant_id: str = ""
     kbank_public_key: str = ""     # ใช้กับ kpayment.js บนหน้าเว็บ (ไม่ลับ)

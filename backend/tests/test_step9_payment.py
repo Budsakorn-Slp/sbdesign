@@ -333,3 +333,46 @@ def test_กสิกรปฏิเสธ_webhook_ที่ยังยืน�
 
     gw = KBankGateway("https://x", "secret", "M1")
     assert gw.verify_webhook(b'{"event":"paid"}', {"x-signature": "อะไรก็ได้"}) is False
+
+
+@pytest.fixture
+def prod_mode(monkeypatch):
+    """จำลองเครื่องที่ตั้ง APP_ENV=prod โดยไม่ต้องรีสตาร์ท"""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "app_env", "prod")
+    yield s
+    monkeypatch.setattr(s, "app_env", "dev")
+
+
+def test_prod_ปิดปุ่มจ่ายเงินปลอมไว้ก่อน(client, prod_mode):
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    assert client.post(f"/payments/{pay['payment_no']}/mock-confirm", headers=hs).status_code == 404
+
+
+def test_เปิดสวิตช์แล้วใช้ได้บนเว็บทดสอบที่เป็น_prod(client, prod_mode, monkeypatch):
+    """เว็บทดสอบตั้ง APP_ENV=prod ไว้เพื่อปิด /docs และบังคับ cookie secure
+    แต่ยังต้องให้ทีมลองจ่ายเงินได้ จึงต้องมีสวิตช์แยก ไม่ใช่ปลดธง prod ทิ้ง"""
+    monkeypatch.setattr(prod_mode, "mock_payment_enabled", True)
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    r = client.post(f"/payments/{pay['payment_no']}/mock-confirm", headers=hs)
+    assert r.status_code == 200 and r.json()["status"] == "paid"
+
+
+def test_ต่อ_gateway_จริงแล้วห้ามจำลองผลเด็ดขาด(client, monkeypatch):
+    """ปลอมว่าจ่ายแล้วทั้งที่เงินไม่เข้า จะไหลต่อไปเป็น SO ใน SAP แล้วตามเก็บเงินทีหลังไม่ได้"""
+    from app.core.config import get_settings
+
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    s = get_settings()
+    monkeypatch.setattr(s, "payment_provider", "kbank")
+    monkeypatch.setattr(s, "mock_payment_enabled", True)   # เปิดสวิตช์ไว้ก็ต้องไม่ช่วย
+    r = client.post(f"/payments/{pay['payment_no']}/mock-confirm", headers=hs)
+    assert r.status_code == 404 and "จำลองผลไม่ได้" in r.json()["detail"]

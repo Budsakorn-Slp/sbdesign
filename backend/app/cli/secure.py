@@ -57,6 +57,9 @@ def cmd_audit(_args) -> int:
         ("JWT_SECRET ตั้งเองแล้ว", s.jwt_secret != "change-me-please-32-chars-minimum-secret" and len(s.jwt_secret) >= 32),
         ("OTP_DEBUG ปิด หรือจำกัดเบอร์แล้ว", (not s.otp_debug) or bool(s.otp_debug_phones.strip())),
         ("ไม่ได้เปิด SAP โหมดเขียนจริงโดยไม่ตั้งใจ", s.sap_mode == "mock" or bool(s.sap_so_url)),
+        # ธงประเภท "เปิดไว้ชั่วคราวตอนทดสอบ" คือธงที่ลืมปิด — ต้องมีคนทักทุกครั้งที่ตรวจ
+        ("MOCK_PAYMENT_ENABLED ปิดแล้ว (ปุ่มจ่ายเงินปลอม)", not s.mock_payment_enabled),
+        ("ไม่ได้เปิดปุ่มจ่ายเงินปลอมคู่กับ gateway จริง", s.payment_provider == "mock" or not s.mock_payment_enabled),
     ]
     bad = 0
     for label, ok in checks:
