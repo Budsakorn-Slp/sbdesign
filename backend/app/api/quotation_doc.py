@@ -140,6 +140,13 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
     bill_addr = bill_addr or ship_addr or "<i>ไม่มีข้อมูล</i>"
     ship_addr = ship_addr or "<i>ยังไม่ได้ระบุ</i>"
 
+    # สาขาที่ออกใบ = สาขาที่พนักงานขายคนนั้นสังกัด (ตั้งด้วย cli.secure set-branch)
+    # ใบรับคำสั่งซื้อของระบบเดิมพิมพ์ "319-DS. บางแค" ไว้มุมขวาบน ลูกค้าจะได้รู้ว่าติดต่อร้านไหน
+    br = ""
+    if q.sales and q.sales.branch_name:
+        code = (q.sales.branch_id or "").lstrip("S")   # ของเดิมพิมพ์ 319 ไม่ใช่ S319
+        br = f"<div class='muted'>สาขา {e(code)} · {e(q.sales.branch_name)}</div>"
+
     note = (q.preso.note if q.preso and q.preso.note else "").strip()
     note_block = (f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note)}</div></div>" if note
                   else "<div class='note-box'><b>หมายเหตุ</b><div class='blank'></div></div>")
@@ -155,7 +162,7 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
 <style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}{img_css}@media print{{body{{margin:0}}}}</style></head>
 <body><div class="box"><div><h1>ใบเสนอราคา / Quotation</h1>
 <div class="muted">{e(s.company_name_th)} · {e(s.company_name_en)}<br>{e(s.company_address_th)}<br>เลขประจำตัวผู้เสียภาษี {e(s.company_tax_id)}</div></div>
-<div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div></div></div>
+<div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div>{br}</div></div>
 <div class="box three">
 <div><b>ชื่อ-ที่อยู่ลูกค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{bill_addr}</span><br><span class="muted">{e(c.get('phone') or '')}{(' · ' + e(c.get('email'))) if c.get('email') else ''}</span></div>
 <div><b>ชื่อ-สถานที่ส่งสินค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{ship_addr}</span></div>

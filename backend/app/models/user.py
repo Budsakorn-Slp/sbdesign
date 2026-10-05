@@ -23,7 +23,14 @@ class User(Base, TimestampMixin):
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
     sap_customer_no: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
     staff_code: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
+    # รหัสสาขาฝั่ง SAP (S319, S108, ...) — ค่าเดิมเป็นสาขาจำลองของเรา (BKN) จนกว่าจะตั้งใหม่
     branch_id: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # ชื่อสาขาที่เอาไปพิมพ์บนเอกสาร เช่น "DS-บางแค"
+    #
+    # เก็บคู่กับรหัสแทนที่จะไป join เอา เพราะยังไม่มีทะเบียนสาขาฝั่ง SAP ในฐานเรา —
+    # ตาราง plants เป็นสาขาจำลอง 4 แห่ง ส่วน product_stock_sites มีชื่อก็จริงแต่โผล่เฉพาะ
+    # สาขาที่บังเอิญมีของอยู่ตอนนั้น จะหายไปเมื่อของหมด แล้วหัวเอกสารจะกลายเป็นว่างเปล่า
+    branch_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     # แต้มสะสม — SAP เป็นเจ้าของตัวเลขจริง ฝั่งนี้เก็บไว้โชว์เฉยๆ อัปเดตตอน login/ผูกลูกค้า
     points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_guest: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

@@ -233,3 +233,33 @@ def test_ไม่มีเส้นลอยคั่นระหว่าง�
     assert "tbody tr:last-child td{border-bottom:none}" in doc
     assert ".terms{margin-top:18px;font-size:12px}" in doc
     assert ".tot td{font-weight:700;border-top:2px solid #111}" in doc
+
+
+def test_หัวใบบอกสาขาที่ออกใบ(client):
+    """ใบเดิมพิมพ์ "319-DS. บางแค" ไว้มุมขวาบน ลูกค้าจะได้รู้ว่าติดต่อร้านไหน"""
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.staff_code == "SA-104"))
+        u.branch_id, u.branch_name = "S319", "DS-บางแค"
+        db.commit()
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    assert "สาขา 319 · DS-บางแค" in doc, "ต้องตัด S ออกเหมือนใบเดิม"
+
+
+def test_พนักงานยังไม่ผูกสาขา_ต้องไม่พิมพ์บรรทัดว่าง(client):
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.staff_code == "SA-104"))
+        u.branch_id, u.branch_name = None, None
+        db.commit()
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    assert "สาขา" not in _doc(client, hs, q["quotation_no"]).split("<table>")[0]

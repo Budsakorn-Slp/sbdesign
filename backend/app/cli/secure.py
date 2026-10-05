@@ -165,6 +165,56 @@ def cmd_set_phone(args) -> int:
     return 0
 
 
+def cmd_branches(_args) -> int:
+    """รายชื่อสาขาที่ SAP เคยตอบมา — ไว้ดูว่ามีรหัสอะไรให้เลือกบ้าง
+
+    อ่านจาก product_stock_sites ซึ่งเติมโดย etl.refresh_stock · สาขาจะโผล่ก็ต่อเมื่อ
+    เคยมีของอยู่สักรหัสหนึ่ง ถ้ารายชื่อไม่ครบให้รัน refresh_stock ก่อน
+    """
+    from app.models.catalog import ProductStockSite
+
+    with SessionLocal() as db:
+        rows = db.execute(
+            select(ProductStockSite.plant_code, ProductStockSite.name)
+            .where(ProductStockSite.name != "")
+            .distinct().order_by(ProductStockSite.plant_code)
+        ).all()
+    if not rows:
+        print("ยังไม่มีข้อมูลสาขา — รัน python -m app.etl.refresh_stock ก่อน")
+        return 1
+    print(f"สาขาที่รู้จัก {len(rows)} แห่ง\n")
+    for code, name in rows:
+        print(f"  {code:6s} {name}")
+    return 0
+
+
+def cmd_set_branch(args) -> int:
+    """ผูกสาขาให้พนักงาน — ไปโผล่บนหัวใบเสนอราคาที่คนนั้นออก
+
+    ชื่อสาขาดึงจากที่ SAP ตอบมาให้เอง ไม่ต้องพิมพ์ (พิมพ์เองได้ด้วย --name ถ้ายังไม่มีในฐาน)
+    """
+    from app.models.catalog import ProductStockSite
+
+    code = args.plant_code.strip().upper()
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.staff_code == args.staff_code))
+        if not u:
+            print(f"! ไม่พบพนักงานรหัส {args.staff_code}")
+            return 1
+        name = args.name
+        if not name:
+            name = db.scalar(
+                select(ProductStockSite.name).where(ProductStockSite.plant_code == code, ProductStockSite.name != "")
+            )
+        if not name:
+            print(f"! ไม่รู้จักสาขา {code} — ดูรายชื่อด้วย 'branches' หรือระบุชื่อเองด้วย --name")
+            return 1
+        u.branch_id, u.branch_name, u.updated_at = code, name, utcnow()
+        db.commit()
+        print(f"ผูกสาขาให้ {u.staff_code} ({u.name}) = {code} · {name}")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m app.cli.secure", description="ตรวจความปลอดภัยและตั้งรหัสใหม่")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -179,6 +229,12 @@ def main(argv=None) -> int:
     sp.add_argument("staff_code", help="รหัสพนักงาน เช่น SA-104")
     sp.add_argument("phone", help="เบอร์โทร 9-10 หลัก")
     sp.set_defaults(fn=cmd_set_phone)
+    sub.add_parser("branches", help="รายชื่อสาขาที่ SAP เคยตอบมา").set_defaults(fn=cmd_branches)
+    sb = sub.add_parser("set-branch", help="ผูกสาขาให้พนักงาน (ขึ้นบนหัวใบเสนอราคา)")
+    sb.add_argument("staff_code", help="รหัสพนักงาน เช่น SA-104")
+    sb.add_argument("plant_code", help="รหัสสาขาฝั่ง SAP เช่น S319")
+    sb.add_argument("--name", default=None, help="ชื่อสาขา (ปกติดึงจาก SAP ให้เอง)")
+    sb.set_defaults(fn=cmd_set_branch)
 
     args = ap.parse_args(argv)
     return args.fn(args)
