@@ -22,6 +22,8 @@ os.environ["APP_ENV"] = "dev"
 # ธุรกิจรับชำระเต็มจำนวนอย่างเดียว — เทสต้องวัดจากค่านี้ ไม่ใช่ตามที่เครื่อง dev ตั้งไว้
 # เทสที่ต้องการทดสอบทางมัดจำเปิดเองเฉพาะกรณี ดู fixture deposit_on ใน test_step9_payment
 os.environ["DEPOSIT_ENABLED"] = "false"
+# ส่วนลดพนักงานปิดแล้วเช่นกัน — เทสที่ยังทดสอบกลไกนี้เปิดเองผ่าน fixture staff_discount_on
+os.environ["STAFF_DISCOUNT_ENABLED"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

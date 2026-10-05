@@ -29,6 +29,8 @@ def public_config():
         "otp_enabled": s.otp_enabled,
         # รับมัดจำไหม — ถ้าไม่ หน้าจ่ายเงินต้องไม่โชว์ปุ่มมัดจำ ไม่ใช่โชว์แล้วกดไม่ผ่าน
         "deposit_enabled": s.deposit_enabled,
+        # เซลล์กดลดราคาเองได้ไหม — หน้าจอต้องไม่โชว์ช่องที่หลังบ้านตีกลับอยู่ดี
+        "staff_discount_enabled": s.staff_discount_enabled,
         "coming_soon_title": s.coming_soon_title,
         "coming_soon_text": s.coming_soon_text,
     }

@@ -193,9 +193,14 @@ def apply_promotion(db: Session, cart: Cart, actor: User | None, code: str) -> A
 
 
 def apply_staff_discount(db: Session, cart: Cart, actor: User, percent: Decimal, reason: str | None) -> AppliedDiscount:
-    quota = Decimal(str(get_settings().staff_discount_quota_percent))
+    s = get_settings()
+    quota = Decimal(str(s.staff_discount_quota_percent))
     if percent < 0 or percent > 50:
         raise HTTPException(status_code=422, detail="เปอร์เซ็นต์ส่วนลดไม่ถูกต้อง")
+    # ปิดอยู่ = ใส่ส่วนลดใหม่ไม่ได้ แต่ "ถอดของเดิมออก" (percent=0) ยังต้องทำได้เสมอ
+    # ไม่งั้นตะกร้าที่ติดส่วนลดไว้ตั้งแต่ก่อนปิดจะค้างอยู่อย่างนั้นโดยไม่มีทางเอาออก
+    if percent > 0 and not s.staff_discount_enabled:
+        raise HTTPException(status_code=400, detail="ไม่เปิดให้ใช้ส่วนลดพนักงาน — ส่วนลดต้องมาจากโปรโมชั่นที่ตั้งไว้")
     for d in active_discounts(db, cart):
         if d.kind == "staff_manual":
             d.status = "removed"

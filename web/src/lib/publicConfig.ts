@@ -12,6 +12,8 @@ export type PublicConfig = {
   otp_enabled: boolean;
   /** false = รับชำระเต็มจำนวนอย่างเดียว — ต้องซ่อนปุ่มมัดจำ หลังบ้านตีกลับอยู่แล้ว */
   deposit_enabled: boolean;
+  /** false = เซลล์กดลดราคาเองไม่ได้ ส่วนลดต้องมาจากโปรโมชั่นที่ตั้งไว้เท่านั้น */
+  staff_discount_enabled: boolean;
   coming_soon_title: string;
   coming_soon_text: string;
 };
@@ -27,6 +29,7 @@ export function loadPublicConfig(): Promise<PublicConfig> {
       invite_only: true,
       otp_enabled: false,
       deposit_enabled: false,
+      staff_discount_enabled: false,
       coming_soon_title: "เร็ว ๆ นี้",
       coming_soon_text: "เรากำลังเตรียมร้านค้าออนไลน์ให้พร้อมที่สุด อีกไม่นานเจอกันแน่นอน",
     }));

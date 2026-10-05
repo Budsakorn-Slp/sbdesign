@@ -37,7 +37,42 @@ def test_evaluate_returns_eligible_and_ineligible_with_reasons(client):
     assert float(body["totals"]["subtotal"]) == 33800 and float(body["totals"]["discount_total"]) == 0
 
 
-def test_apply_promo_and_staff_discount_totals_match_everywhere(client):
+@pytest.fixture
+def staff_discount_on(monkeypatch):
+    """เปิดส่วนลดพนักงานชั่วคราว — ของจริงปิดแล้ว แต่กลไก (โควตา/ด่านอนุมัติผู้จัดการ)
+    ยังอยู่ครบรอวันที่นโยบายเปลี่ยน ถ้าไม่มีเทสคลุมไว้ วันเปิดใช้จะเพิ่งรู้ว่าพังไปนานแล้ว"""
+    from app.core.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "staff_discount_enabled", True)
+    yield
+    monkeypatch.setattr(s, "staff_discount_enabled", False)
+
+
+def test_ปิดส่วนลดพนักงาน_เซลล์กดลดเองไม่ได้(client):
+    """ส่วนลดทั้งหมดต้องมาจากโปรโมชั่นที่ตั้งไว้ ไม่ใช่ดุลพินิจหน้าร้าน"""
+    hs = auth_headers(client, "SA-104", "staff")
+    cart = _sales_cart_with_customer(client, hs, [("10023841", 1)])
+    r = client.post(f"/cart/{cart['id']}/discounts", json={"kind": "staff_manual", "percent": 2}, headers=hs)
+    assert r.status_code == 400 and "ไม่เปิดให้ใช้ส่วนลดพนักงาน" in r.json()["detail"]
+    assert float(client.get(f"/sales/carts/{cart['id']}", headers=hs).json()["totals"]["discount_total"]) == 0
+
+
+def test_ปิดแล้วยังถอดส่วนลดเดิมออกได้(client, staff_discount_on):
+    """ตะกร้าที่ติดส่วนลดไว้ตั้งแต่ก่อนปิด ต้องมีทางเอาออก ไม่งั้นค้างอยู่อย่างนั้นตลอดไป"""
+    from app.core.config import get_settings
+
+    hs = auth_headers(client, "SA-104", "staff")
+    cart = _sales_cart_with_customer(client, hs, [("10023841", 1)])
+    client.post(f"/cart/{cart['id']}/discounts", json={"kind": "staff_manual", "percent": 2}, headers=hs)
+    assert float(client.get(f"/sales/carts/{cart['id']}", headers=hs).json()["totals"]["discount_total"]) > 0
+    get_settings().staff_discount_enabled = False            # นโยบายเปลี่ยนตอนตะกร้ายังเปิดอยู่
+    r = client.post(f"/cart/{cart['id']}/discounts", json={"kind": "staff_manual", "percent": 0}, headers=hs)
+    assert r.status_code == 201, r.text
+    assert float(r.json()["totals"]["discount_total"]) == 0
+
+
+def test_apply_promo_and_staff_discount_totals_match_everywhere(client, staff_discount_on):
     hs = auth_headers(client, "SA-104", "staff")
     cart = _sales_cart_with_customer(client, hs, [("10023841", 1), ("10052277", 1)])
     r = client.post(f"/cart/{cart['id']}/discounts", json={"kind": "promotion", "promo_code": "SAVE20"}, headers=hs)
@@ -60,7 +95,7 @@ def test_apply_promo_and_staff_discount_totals_match_everywhere(client):
     assert any("SAVE20" in w for w in after["warnings"])
 
 
-def test_apply_ineligible_promo_400_and_discount_is_per_cart(client):
+def test_apply_ineligible_promo_400_and_discount_is_per_cart(client, staff_discount_on):
     hs = auth_headers(client, "SA-104", "staff")
     a = _sales_cart_with_customer(client, hs, [("10052277", 1)])   # 8,900 — ต่ำกว่าขั้น 15,000
     r = client.post(f"/cart/{a['id']}/discounts", json={"kind": "promotion", "promo_code": "SAVE20"}, headers=hs)
@@ -74,7 +109,7 @@ def test_apply_ineligible_promo_400_and_discount_is_per_cart(client):
     assert client.post(f"/cart/{a['id']}/discounts", json={"kind": "promotion", "promo_code": "SAVE20"}, headers=auth_headers(client, "081-222-3333")).status_code == 403
 
 
-def test_over_quota_needs_manager_approval(client):
+def test_over_quota_needs_manager_approval(client, staff_discount_on):
     hs = auth_headers(client, "SA-104", "staff")
     hm = auth_headers(client, "MG-001", "staff")
     cart = _sales_cart_with_customer(client, hs, [("10025117", 1)])  # 45,900
