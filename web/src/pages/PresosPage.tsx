@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
-import { apiGet, apiPost, errorMessage } from "../lib/api";
+import { API_BASE, apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { bahtWord, relTime } from "../lib/format";
 import { useSales } from "../lib/sales";
 import type { PresoSummary, Quotation } from "../lib/types";
 
 /** S5 · Preso ที่เซฟไว้ — ดึงกลับมาทำต่อ / สร้าง Quotation / ดูใบเสนอราคาที่ออกแล้ว */
+/** ลิงก์เอกสาร — เปิดแท็บใหม่จึงต้องพ่วง token มาเอง (แท็บใหม่ไม่มี Authorization header) */
+function docUrl(p: PresoSummary, withImages: boolean): string {
+  const qs = new URLSearchParams();
+  if (p.quotation_token) qs.set("t", p.quotation_token);
+  if (withImages) qs.set("images", "1");
+  return `${API_BASE}/quotations/${p.quotation_no}/document?${qs.toString()}`;
+}
+
 export default function PresosPage() {
   const auth = useAuth();
   const sales = useSales();
@@ -108,7 +116,8 @@ export default function PresosPage() {
                         </>
                       ) : (
                         <>
-                          {p.quotation_no && <Link to={`/sales/quotations/${p.quotation_no}`} className="btn sm">ดู PDF</Link>}
+                          {p.quotation_no && <a href={docUrl(p, true)} target="_blank" rel="noreferrer" className="btn sm" title="ใบเสนอราคาพร้อมรูปสินค้า — ใช้คุยกับลูกค้า">PDF มีรูป</a>}
+                          {p.quotation_no && <a href={docUrl(p, false)} target="_blank" rel="noreferrer" className="btn sm" title="ไม่มีรูปสินค้า — แนบอีเมล/ปรินต์ ไฟล์เล็กกว่า">PDF ไม่มีรูป</a>}
                           {p.quotation_no && p.quotation_status === "issued" && <Link to={`/sales/quotations/${p.quotation_no}`} className="btn primary sm">ไปจ่ายเงิน</Link>}
                         </>
                       )}

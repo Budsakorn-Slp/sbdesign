@@ -451,6 +451,8 @@ export type PresoSummary = {
   note: string | null;
   quotation_no: string | null;
   quotation_status: string | null;
+  /** token เปิดเอกสารในแท็บใหม่ (แท็บใหม่ไม่มี header ของหน้าเว็บติดไปด้วย) · พนักงานเท่านั้น */
+  quotation_token: string | null;
   updated_at: string;
   created_at: string;
 };

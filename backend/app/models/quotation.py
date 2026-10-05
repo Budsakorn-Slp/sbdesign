@@ -84,7 +84,10 @@ class QuotationLine(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     variant: Mapped[str | None] = mapped_column(String(200), nullable=True)
     qty: Mapped[int] = mapped_column(Integer, nullable=False)
-    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)   # ราคาที่ลูกค้าจ่ายจริงต่อหน่วย
+    # ราคาตั้ง (ป้าย) ณ วันออกใบ — ต้องเก็บไว้ ไม่ใช่ไปถามแคตตาล็อกตอนพิมพ์เอกสาร
+    # เพราะราคาตั้งเปลี่ยนได้ทุกวันจาก ETL แล้วใบเก่าจะโชว์ส่วนลดที่ไม่ตรงกับที่ตกลงกันไว้
+    list_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     line_discount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     line_total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     supply_mode: Mapped[str] = mapped_column(String(16), nullable=False)

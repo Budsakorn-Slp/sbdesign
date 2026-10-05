@@ -119,6 +119,16 @@ class Settings(BaseSettings):
     # ไม่ได้ลบทิ้งเพราะยอดมัดจำยังคิดและเก็บไว้ในใบเสนอราคาอยู่ (deposit_amount) พร้อมเปิดใช้
     # วันที่ตกลงเงื่อนไขกันได้ · เปิดแล้วทั้งปุ่มหน้าเว็บและ API จะกลับมาพร้อมกัน ไม่ต้องแก้โค้ด
     deposit_enabled: bool = False
+
+    # ---------- ท้ายใบเสนอราคา ----------
+    # เงื่อนไขการชำระเงิน + บัญชีบริษัท · เป็นข้อความที่ลูกค้าใช้โอนเงินจริง จึงไม่ฝังในโค้ด
+    # ใส่ใน .env แล้วแก้ได้โดยไม่ต้อง deploy · เว้นว่าง = ไม่พิมพ์ส่วนนั้นในเอกสาร
+    # (ดีกว่าพิมพ์เลขบัญชีตัวอย่างค้างไว้แล้วมีคนโอนเงินไปผิดที่)
+    quotation_payment_terms: str = ""
+    company_bank_name: str = ""
+    company_bank_account_name: str = ""
+    company_bank_account_no: str = ""
+    company_bank_branch: str = ""
     invite_only: bool = False
     # dev | prod — prod จะปิดหน้าเอกสาร API, บังคับ cookie secure และใส่ security header
     # แยกจาก invite_only เพราะคนละเรื่อง: อันนั้นคือ "ใครสมัครได้" อันนี้คือ "เปิดสู่เน็ตจริงหรือยัง"

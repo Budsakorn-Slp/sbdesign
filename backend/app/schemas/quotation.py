@@ -23,6 +23,9 @@ class PresoSummaryOut(BaseModel):
     note: str | None = None
     quotation_no: str | None = None
     quotation_status: str | None = None
+    # token สำหรับเปิดเอกสารในแท็บใหม่ — แท็บใหม่ไม่มี Authorization header ของหน้าเว็บติดไปด้วย
+    # (token เก็บไว้ใน JS ไม่ใช่คุกกี้) ถ้าไม่ส่งมาด้วย กดปุ่มดู PDF จะได้ 401
+    quotation_token: str | None = None
     updated_at: datetime
     created_at: datetime
 
