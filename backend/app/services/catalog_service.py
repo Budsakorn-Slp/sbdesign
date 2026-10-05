@@ -126,17 +126,18 @@ _NO_IMAGE = case((or_(Material.image_url.is_(None), Material.image_url == ""), 1
 #
 # "หมด" = เคยเช็คกับ SAP แล้วเหลือ 0 ทั้งของพร้อมส่งและรอบที่จะเข้า และไม่ใช่สินค้าสั่งทำ
 # ตัวที่ยังไม่เคยเช็ค (ไม่มีแถวใน cache) ถือว่ายังไม่รู้ ไม่นับว่าหมด จึงไม่ถูกดันลง
-_SOLD_OUT = case(
-    (Material.matnr.in_(
-        select(ProductStock.matnr).where(
-            ProductStock.sap_known.is_(True),
-            ProductStock.ready_qty <= 0,
-            ProductStock.later_qty <= 0,
-            ProductStock.made_to_order.is_(False),
-        )
-    ), 1),
-    else_=0,
-)
+def _sold_out_matnrs():
+    """รหัสของที่หมดจริง — นิยามเดียวที่ใช้ทั้งการดันลงล่างและตัวกรอง "เฉพาะของหมด"
+    แยกนิยามกันเมื่อไรจะมีวันที่สองที่ให้คำตอบไม่ตรงกันโดยไม่มีใครรู้"""
+    return select(ProductStock.matnr).where(
+        ProductStock.sap_known.is_(True),
+        ProductStock.ready_qty <= 0,
+        ProductStock.later_qty <= 0,
+        ProductStock.made_to_order.is_(False),
+    )
+
+
+_SOLD_OUT = case((Material.matnr.in_(_sold_out_matnrs()), 1), else_=0)
 
 
 def _haystack():
@@ -317,6 +318,13 @@ def _filtered(db: Session, f: "SearchFilters"):
         stmt = stmt.where(Material.image_url.isnot(None), Material.image_url != "")
     if f.abc:
         stmt = stmt.where(Material.abc_class == f.abc)
+    if f.sold_out:
+        # เฉพาะของที่หมดจริง (เงื่อนไขเดียวกับ _SOLD_OUT ที่ใช้ดันลงล่าง)
+        #
+        # มีไว้เพราะ "ดันลงล่าง" อย่างเดียวไม่พอสำหรับหน้าพนักงาน — ลิสต์พนักงานมี 28,918 ตัว
+        # (ลูกค้าเห็น 3,722) ของหมด 974 ตัวจึงไปกองอยู่ท้ายสุด ซึ่งต้องเลื่อนผ่านของอีกสองหมื่น
+        # กว่าตัวถึงจะถึง = เห็นไม่ได้จริงในทางปฏิบัติ
+        stmt = stmt.where(Material.matnr.in_(_sold_out_matnrs()))
     if f.in_stock:
         # ต้องอ่านจากตารางเดียวกับที่การ์ดใช้โชว์ "มีของ N ชิ้น" (product_stock) — ของเดิมอ่าน
         # stock_cache ซึ่งเป็นยอดรายสาขาของ ZAIBAPI ตัวเก่าที่มีข้อมูลอยู่แค่ 80 รหัส ผลคือกด
@@ -330,9 +338,9 @@ class SearchFilters:
     """พารามิเตอร์ค้นหาชุดเดียว ส่งต่อระหว่าง API / ผลลัพธ์ / facet โดยไม่ต้องไล่ส่งทีละตัว"""
 
     __slots__ = ("q", "category", "room", "tag", "brands", "min_price", "max_price", "discount_only", "in_stock", "has_image",
-                 "sort", "loose", "include_hidden", "analysis", "corrected", "color", "mode", "understood", "effective", "group", "seed", "abc")
+                 "sold_out", "sort", "loose", "include_hidden", "analysis", "corrected", "color", "mode", "understood", "effective", "group", "seed", "abc")
 
-    def __init__(self, q=None, category=None, room=None, tag=None, brands=None, min_price=None, max_price=None, discount_only=False, in_stock=False, has_image=False, sort="relevance", include_hidden=False, color=None, mode="auto", group=None, seed=None, abc=None):
+    def __init__(self, q=None, category=None, room=None, tag=None, brands=None, min_price=None, max_price=None, discount_only=False, in_stock=False, sold_out=False, has_image=False, sort="relevance", include_hidden=False, color=None, mode="auto", group=None, seed=None, abc=None):
         self.q, self.category, self.room, self.tag = q, category, room, tag
         self.color = color  # ชื่อสีแบบไม่ต้องตรงเป๊ะ ("ขาว" เข้าได้ทั้ง "สีขาว" และ "ขาว-แดง")
         self.mode = mode if mode in MODES else "auto"
@@ -343,6 +351,7 @@ class SearchFilters:
         self.brands = [b for b in (brands or []) if b]
         self.min_price, self.max_price = min_price, max_price
         self.discount_only, self.in_stock, self.has_image = discount_only, in_stock, has_image
+        self.sold_out = sold_out
         self.sort = sort if sort in SORTS else "relevance"
         # เลขสุ่มประจำการเปิดหน้าหนึ่งครั้ง — ใช้สลับลำดับสินค้าตอนเปิดดูเฉยๆ (ไม่ได้ค้นอะไร)
         self.seed = seed
@@ -458,7 +467,7 @@ def _interpreted(db: Session, f: SearchFilters, limit: int, offset: int) -> tupl
             category=f.category or ip.category_id, room=f.room, tag=f.tag, brands=f.brands, group=f.group,
             min_price=f.min_price if f.min_price is not None else ip.min_price,
             max_price=f.max_price if f.max_price is not None else ip.max_price,
-            discount_only=f.discount_only, in_stock=f.in_stock, has_image=f.has_image, sort=f.sort,
+            discount_only=f.discount_only, in_stock=f.in_stock, sold_out=f.sold_out, has_image=f.has_image, sort=f.sort,
             include_hidden=f.include_hidden, color=f.color or (None if "color" in drop else ip.color), mode="keyword",
         )
         rows, total = _run(db, g, limit, offset)

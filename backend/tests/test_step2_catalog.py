@@ -337,3 +337,28 @@ def test_รหัสสินค้าที่เป็นตัวอัก�
 
     # รหัสตัวอักษรต้องค้นได้ไม่ error
     assert client.get("/materials/search", params={"seed": 7, "limit": 5}).status_code == 200
+
+
+def test_พนักงานกรองเฉพาะของหมดได้(client):
+    """ลิสต์พนักงานมีของเป็นหมื่นตัว ของหมดถูกดันไปท้ายสุดจนเลื่อนหาไม่เจอจริง
+    ต้องเรียกดูตรงๆ ได้ · ลูกค้าไม่ต้องมีเพราะของหมดถูกซ่อนจากลิสต์ลูกค้าอยู่แล้ว"""
+    from app.db.session import SessionLocal
+    from app.models.catalog import Material
+    from app.services import catalog_service
+
+    hs = auth_headers(client, "SA-104", "staff")
+    # ทำให้มีของหมดจริงในฐานเทส — ข้ามเทสเมื่อไม่มีข้อมูลเท่ากับไม่ได้ทดสอบอะไรเลย
+    with SessionLocal() as db:
+        target = db.scalars(select(Material.matnr)).first()
+        row = db.get(ProductStock, target)
+        if row is None:
+            row = ProductStock(matnr=target)
+            db.add(row)
+        row.ready_qty, row.later_qty, row.sap_known, row.made_to_order = 0, 0, True, False
+        db.commit()
+    got = client.get("/materials/search", params={"sold_out": "1", "limit": 100}, headers=hs).json()
+    assert got["total"] > 0
+    assert any(m["matnr"] == target for m in got["items"])
+    # ทุกตัวที่ได้ต้องหมดจริง ไม่ใช่กรองไม่ติดแล้วคืนทั้งลิสต์
+    allrows = client.get("/materials/search", params={"limit": 1}, headers=hs).json()
+    assert got["total"] < allrows["total"]

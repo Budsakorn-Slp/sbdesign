@@ -5,6 +5,7 @@ import ProductCard from "../components/ProductCard";
 import { ProductCardSkeletonGrid } from "../components/ProductCardSkeleton";
 import SuggestFeed from "../components/SuggestFeed";
 import { apiGet, errorMessage } from "../lib/api";
+import { useAuth } from "../lib/auth";
 import { useContent } from "../lib/content";
 import type { Category, MaterialCard, SearchOut } from "../lib/types";
 
@@ -36,13 +37,18 @@ const QUICK: { key: string; label: string }[] = [
 ];
 
 /** ตัวเลือกแบบติ๊กเปิด/ปิด ที่เก็บค่าเป็น "1" ใน query string */
-const SWITCHES: { key: string; label: string }[] = [
+const SWITCHES: { key: string; label: string; staffOnly?: boolean }[] = [
   { key: "discount_only", label: "ลดราคา" },
   { key: "in_stock", label: "พร้อมส่ง" },
   { key: "has_image", label: "มีรูปสินค้า" },
+  // ลิสต์ฝั่งพนักงานมีสินค้าสองหมื่นกว่าตัว (ลูกค้าเห็นสามพันกว่า) ของหมดถูกดันไปท้ายสุด
+  // ซึ่งแปลว่าเลื่อนหาไม่เจอจริงๆ — ต้องมีตัวกรองให้เรียกดูตรงๆ
+  // ลูกค้าไม่ต้องมีเพราะของหมดถูกซ่อนจากลิสต์ลูกค้าอยู่แล้ว ติ๊กไปก็ได้ศูนย์รายการ
+  { key: "sold_out", label: "เฉพาะของหมด", staffOnly: true },
 ];
 
 export default function SearchPage() {
+  const isStaff = !!useAuth().user?.is_staff;
   const [params, setParams] = useSearchParams();
   const { content } = useContent();
   const q = params.get("q") || "";
@@ -188,7 +194,7 @@ export default function SearchPage() {
     ...(room ? [{ key: "room", label: ROOM_LABEL[room] || room, clear: () => set("room", "") }] : []),
     ...(tag ? [{ key: "tag", label: TAG_LABEL[tag] || tag, clear: () => set("tag", "") }] : []),
     ...brands.map((b) => ({ key: `brand-${b}`, label: brandName(b), clear: () => toggleBrand(b) })),
-    ...SWITCHES.filter((s) => params.get(s.key)).map((s) => ({ key: s.key, label: s.label, clear: () => set(s.key, "") })),
+    ...SWITCHES.filter((s) => params.get(s.key) && (!s.staffOnly || isStaff)).map((s) => ({ key: s.key, label: s.label, clear: () => set(s.key, "") })),
   ];
 
   // q / group / abc คือ "หัวข้อของหน้า" ไม่ใช่ตัวกรอง — ล้างตัวกรองแล้วต้องยังอยู่หน้าเดิม
@@ -236,7 +242,7 @@ export default function SearchPage() {
       <div className="facet">
         <h4>ตัวเลือกเพิ่มเติม</h4>
         <ul className="checks">
-          {SWITCHES.map((s) => (
+          {SWITCHES.filter((s) => !s.staffOnly || isStaff).map((s) => (
             <li key={s.key}>
               <label>
                 <input type="checkbox" checked={!!params.get(s.key)} onChange={() => set(s.key, params.get(s.key) ? "" : "1")} />

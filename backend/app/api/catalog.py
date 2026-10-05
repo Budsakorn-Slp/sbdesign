@@ -261,6 +261,7 @@ def search(
     max_price: float | None = Query(default=None, ge=0),
     discount_only: bool = False,
     in_stock: bool = False,
+    sold_out: bool = Query(default=False, description="เฉพาะของที่หมด — สำหรับพนักงานตามเช็คของที่ขายไม่ได้ (ลูกค้าไม่เห็นของพวกนี้อยู่แล้ว)"),
     has_image: bool = False,
     color: str | None = Query(default=None, description="ชื่อสีแบบไม่ต้องตรงเป๊ะ เช่น ขาว"),
     group: str | None = Query(default=None, description="กลุ่มสินค้าตามตัวขึ้นต้น MATNR — display = สินค้าตัวโชว์"),
@@ -278,7 +279,7 @@ def search(
 ):
     f = catalog_service.SearchFilters(
         q=q, category=category, room=room, tag=tag, brands=brand, min_price=min_price, max_price=max_price,
-        discount_only=discount_only, in_stock=in_stock, has_image=has_image, sort=sort, color=color, mode=mode, group=group,
+        discount_only=discount_only, in_stock=in_stock, sold_out=sold_out, has_image=has_image, sort=sort, color=color, mode=mode, group=group,
         seed=seed, abc=abc, include_hidden=bool(user and user.is_staff),
     )
     rows, total = catalog_service.search(db, f, limit, offset)
