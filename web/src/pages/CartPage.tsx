@@ -9,7 +9,7 @@ import { shipNeedsReview, useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { bahtWord, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
-import type { CartItem } from "../lib/types";
+import type { Cart, CartItem } from "../lib/types";
 
 const LOGIN_NOTE_MS = 60_000;          // 1 นาที
 const LOGIN_NOTE_KEY = "sb_login_note";  // ต่อหนึ่งแท็บ/หนึ่งการเข้าใช้งาน

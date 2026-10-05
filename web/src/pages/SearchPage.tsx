@@ -48,7 +48,9 @@ const SWITCHES: { key: string; label: string; staffOnly?: boolean }[] = [
 ];
 
 export default function SearchPage() {
-  const isStaff = !!useAuth().user?.is_staff;
+  // User ฝั่งหน้าเว็บไม่มีฟิลด์ is_staff — ดูจาก role เหมือนหน้าอื่น
+  const role = useAuth().user?.role;
+  const isStaff = role === "sales" || role === "manager" || role === "admin";
   const [params, setParams] = useSearchParams();
   const { content, plant, setPlantCode } = useContent();
   const q = params.get("q") || "";

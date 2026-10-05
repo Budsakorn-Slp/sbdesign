@@ -11,7 +11,7 @@ import { useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { baht, num, realSpec, thDate } from "../lib/format";
 import { useSales } from "../lib/sales";
-import type { MaterialCard, MaterialDetail, SearchOut, StockOut, SupplyMode } from "../lib/types";
+import type { MaterialCard, MaterialDetail, SearchOut, SupplyMode } from "../lib/types";
 
 const FEED_PAGE = 24;
 /** จำนวนแหล่งที่ยอมไล่ต่อการโหลดหนึ่งครั้ง — กันกรณีแหล่งต้นๆ คืนแต่ของซ้ำจนต้องข้ามยาว */
@@ -58,7 +58,13 @@ export default function ProductPage() {
   const { plant } = useContent();
   const [item, setItem] = useState<MaterialDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [stock, setStock] = useState<StockOut | null>(null);
+  /* สต็อกมากับข้อมูลสินค้าแล้ว ไม่ต้องยิงเพิ่ม
+   *
+   * ของเดิมเปิดหน้าสินค้าทีหนึ่ง = ยิง SAP หนึ่งครั้ง (ผ่าน /materials/{id}/stock)
+   * คนเดินดูสิบหน้าก็สิบครั้ง ทั้งที่ ETL ดึงมาเก็บไว้ให้ทุกชั่วโมงอยู่แล้ว
+   * ตัวเลขชุดเดียวกับที่การ์ดในหน้ารายการและตะกร้าใช้ จึงไม่มีทางขัดกันเองด้วย
+   * (ยอดสดจริงยืนยันอีกทีตอนเช็คทั้งบิลก่อนออกใบเสนอราคา ซึ่งเป็นจังหวะที่สำคัญจริง)
+   */
   const [qty, setQty] = useState(1);
   const [shot, setShot] = useState(0);  // รูปที่กำลังดูอยู่ในแกลเลอรี
   const stripRef = useRef<HTMLDivElement | null>(null);
@@ -102,7 +108,6 @@ export default function ProductPage() {
 
   useEffect(() => {
     setItem(null);
-    setStock(null);
     setError(null);
     setQty(1);
     setLiked([]);
@@ -253,19 +258,6 @@ export default function ProductPage() {
     }
   };
 
-  // ดึงสต็อกให้เลยตอนเปิดหน้า แล้วโชว์เป็นบรรทัดสถานะใต้ราคา (ลูกค้าไม่ต้องกดเอง)
-  useEffect(() => {
-    if (!matnr) return;
-    let alive = true;
-    const qs = plant ? `?plant=${plant.plant_code}` : "";
-    apiGet<StockOut>(`/materials/${matnr}/stock${qs}`)
-      .then((s) => alive && setStock(s))
-      .catch(() => {}); // เช็คไม่ได้ก็แค่ไม่โชว์บรรทัดสถานะ ไม่ต้องขึ้น error ทั้งหน้า
-    return () => {
-      alive = false;
-    };
-  }, [matnr, plant?.plant_code]);
-
   // ลงตะกร้าได้ทุกตัวเสมอ — ถ้าวิธีที่ค้างไว้ใช้กับสินค้านี้ไม่ได้ (ยังไม่ได้เลือกสาขา / ตัวนี้ต้องให้ช่างติดตั้ง)
   // ก็ตกไปใช้วิธีที่ใช้ได้แทน แทนที่จะปิดปุ่มจนลูกค้าซื้อไม่ได้ · "จัดส่ง + ติดตั้ง" ใช้ได้กับทุกตัว
   const fit = (m: MaterialDetail, want: SupplyMode): SupplyMode => {
@@ -293,7 +285,7 @@ export default function ProductPage() {
   if (!item) return <main className="container sec"><div className="ph" style={{ height: 420 }}>กำลังโหลดสินค้า…</div></main>;
 
   // rows ของลูกค้าถูกกรองเหลือเฉพาะสาขาที่เลือกมาแล้วจากฝั่ง API
-  const inStoreQty = stock?.rows.reduce((n, r) => n + r.available, 0) ?? 0;
+  const inStoreQty = plant ? (item?.stock_sites || []).find((s) => s.plant_code === plant.plant_code)?.qty ?? 0 : 0;
   // สถานะของจาก product_stock — กติกาเดียวกับการ์ดในหน้ารายการสินค้า
   const stChecked = !!item?.stock;
   const stReady = item?.stock?.ready_qty ?? 0;
@@ -411,8 +403,8 @@ export default function ProductPage() {
               ) : (
                 <b>มีสต็อก - ชิ้น</b>
               )}
-              {stock?.available && <><span className="sep">|</span><span><Icon name="local_shipping" size={16} /> พร้อมจัดส่ง</span></>}
-              {stock?.earliest_atp && <><span className="sep">|</span><span>ส่งได้เร็วสุด {thDate(stock.earliest_atp)}</span></>}
+              {stReady > 0 && <><span className="sep">|</span><span><Icon name="local_shipping" size={16} /> พร้อมจัดส่ง</span></>}
+              {item.stock?.later_date && <><span className="sep">|</span><span>ของเข้าเพิ่ม {thDate(item.stock.later_date)}</span></>}
               {inStoreQty > 0 && plant && <><span className="sep">|</span><span><Icon name="storefront" size={16} /> {plant.name} มี {inStoreQty} ชิ้น</span></>}
             </div>
           )}
@@ -552,7 +544,7 @@ export default function ProductPage() {
                 <li>{item.is_takeaway_ok ? "ยกกลับเองได้จากสาขาที่มีของ — ไม่มีค่าจัดส่ง" : "สินค้าชิ้นนี้จัดส่งจากคลังเท่านั้น ยกกลับจากสาขาไม่ได้"}</li>
                 <li>ค่าจัดส่งคิดตามเขตพื้นที่ปลายทาง ระบบจะคำนวณให้ตอนกรอกที่อยู่ในหน้าชำระเงิน</li>
                 <li>{item.requires_install ? "ต้องติดตั้งโดยช่าง — ทีมงานจะติดต่อนัดวันติดตั้งหลังยืนยันคำสั่งซื้อ" : "ไม่ต้องใช้ช่างติดตั้ง เลือกให้ช่างประกอบเพิ่มได้ (มีค่าบริการ)"}</li>
-                {stock?.earliest_atp && <li>รอบส่งเร็วสุดจากข้อมูลสต็อกล่าสุด: {thDate(stock.earliest_atp)}</li>}
+                {item.stock?.later_date && <li>รอบของเข้าเพิ่มจากข้อมูลล่าสุด: {thDate(item.stock.later_date)}</li>}
                 <li>เลือกวันและช่วงเวลาจัดส่งได้ในหน้าชำระเงิน</li>
               </ul>
             </Acc>
