@@ -95,9 +95,24 @@ def test_อ่านชื่อสาขาจากคำตอบ_sap_ได
         {"MATERIAL": "000000000020000158", "PLANT": "S318", "NAME": "DS-พระราม 2", "AVAILABLE_QTY": 1.0},
         {"MATERIAL": "000000000020000158", "PLANT": "1000", "NAME": "", "AVAILABLE_QTY": 7.0},
     ]}}
+    # 1000 = S.B. Furniture (บริษัทผลิต) SAP ส่งชื่อว่างมา เราเติมให้เอง
     c = HttpMaterialStockClient.__new__(HttpMaterialStockClient)
     c._post = lambda body, fresh: payload
     line = c.check(["20000158"], date(2026, 10, 5))["20000158"]
     assert line.available == 11
     # เก็บเฉพาะสาขาที่มีของ (9000 เป็น 0 จึงตัดออก) เรียงมากไปน้อย
-    assert [(s.plant_code, s.name, s.available) for s in line.sites] == [("1000", "", 7), ("S318", "DS-พระราม 2", 1)]
+    assert [(s.plant_code, s.name, s.available) for s in line.sites] == [
+        ("1000", "S.B. Furniture", 7), ("S318", "DS-พระราม 2", 1)]
+
+
+def test_ระดับบริษัทไม่โผล่ให้ลูกค้าถึงจะมีชื่อแล้ว(client):
+    """เติมชื่อให้ 1000 แล้วก็ยังต้องไม่อยู่ในรายการ "มีของที่สาขา" — เป็นบริษัทผลิต
+    ไม่ใช่หน้าร้านที่ลูกค้าเดินเข้าไปดูของได้"""
+    m = _any_matnr()
+    with SessionLocal() as db:
+        db.query(ProductStockSite).filter(ProductStockSite.matnr == m).delete()
+        db.add(ProductStockSite(matnr=m, plant_code="1000", name="S.B. Furniture", available_qty=404, fetched_at=utcnow()))
+        db.add(ProductStockSite(matnr=m, plant_code="S319", name="DS-บางแค", available_qty=2, fetched_at=utcnow()))
+        db.commit()
+    got = client.get(f"/materials/{m}").json()["stock_sites"]
+    assert [(x["plant_code"], x["qty"]) for x in got] == [("S319", 2)]

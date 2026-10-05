@@ -32,6 +32,10 @@ log = logging.getLogger("sb.sap.stock")
 # ค่าที่ SAP ใช้บอกว่า "สินค้าตัวนี้ไม่คุมสต็อก" — ดูคอมเมนต์หัวไฟล์
 NOT_STOCKED_QTY = 999
 
+# SAP ส่งฟิลด์ NAME ว่างมาสำหรับบางรหัส เติมชื่อที่ทีม SAP ยืนยันมาให้แทน
+# ปล่อยว่างไว้จะกลายเป็นแถว "มีของที่ (ว่าง) 404 ชิ้น" ที่ไม่มีใครรู้ว่าหมายถึงที่ไหน
+PLANT_NAMES = {"1000": "S.B. Furniture"}
+
 
 @dataclass
 class SiteStock:
@@ -136,7 +140,8 @@ class HttpMaterialStockClient:
             if qty <= 0 or qty >= NOT_STOCKED_QTY:
                 continue
             by_matnr.setdefault(_matnr(srow.get("MATERIAL", "")), []).append(
-                SiteStock(plant_code=(srow.get("PLANT") or "").strip(), name=(srow.get("NAME") or "").strip(), available=qty)
+                SiteStock(plant_code=(code := (srow.get("PLANT") or "").strip()),
+                          name=(srow.get("NAME") or "").strip() or PLANT_NAMES.get(code, ""), available=qty)
             )
         out: dict[str, StockLine] = {}
         for r in data.get("STOCK_REQUIREMENTS") or []:
