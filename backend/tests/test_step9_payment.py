@@ -376,3 +376,75 @@ def test_ต่อ_gateway_จริงแล้วห้ามจำลอง�
     monkeypatch.setattr(s, "mock_payment_enabled", True)   # เปิดสวิตช์ไว้ก็ต้องไม่ช่วย
     r = client.post(f"/payments/{pay['payment_no']}/mock-confirm", headers=hs)
     assert r.status_code == 404 and "จำลองผลไม่ได้" in r.json()["detail"]
+
+
+MEMBER = "0949164600"   # สมาชิกใน seed ที่มีรหัสผ่าน ล็อกอินได้จริง
+
+
+def _quotation_for_member(client, hs):
+    """ใบเสนอราคาที่ผูกกับสมาชิกซึ่งล็อกอินได้ — ใช้เทสหน้าฝั่งลูกค้า"""
+    cart = client.post("/sales/carts", json={}, headers=hs).json()
+    client.post(f"/sales/carts/{cart['id']}/items", json={"matnr": "10023841", "qty": 1, "supply_mode": "ship"}, headers=hs)
+    client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": MEMBER}, headers=hs)
+    dq = client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10310"}, headers=hs).json()
+    slot = next(s for s in dq["slots"] if s["remaining"] > 0)
+    client.post(f"/delivery/slots/{slot['id']}/hold", json={"cart_id": cart["id"]}, headers=hs)
+    client.post("/promotions/evaluate", json={"cart_id": cart["id"]}, headers=hs)
+    client.post(f"/sales/carts/{cart['id']}/availability", headers=hs)
+    preso = client.post("/presos", json={"cart_id": cart["id"]}, headers=hs).json()
+    return client.post(f"/presos/{preso['preso_no']}/quotation", json={"force": True}, headers=hs).json()
+
+
+def test_แท็บรอชำระ_โชว์ใบที่ยังไม่จ่าย(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation_for_member(client, hs)
+    hc = auth_headers(client, MEMBER)
+    rows = client.get("/me/pending-payments", headers=hc).json()
+    row = next(r for r in rows if r["quotation_no"] == q["quotation_no"])
+    assert row["item_count"] > 0 and row["first_item"]
+    # ยังไม่เคยกดจ่าย = ยังไม่มี QR แต่ต้องเห็นในรายการ ไม่งั้นหายไปจนหมดอายุ
+    assert row["payment_no"] is None
+
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs).json()
+    rows = client.get("/me/pending-payments", headers=hc).json()
+    row = next(r for r in rows if r["quotation_no"] == q["quotation_no"])
+    assert row["payment_no"] == pay["payment_no"] and row["seconds_left"] > 0
+
+
+def test_จ่ายแล้วต้องหายจากแท็บรอชำระ(client):
+    """ช้อปปี้ก็ทำแบบนี้ — จ่ายเสร็จย้ายไปอยู่ประวัติ ไม่ค้างในรายการที่ต้องจัดการ"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation_for_member(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    client.post(f"/payments/{pay['payment_no']}/mock-confirm", params={"outcome": "paid"}, headers=hs)
+    hc = auth_headers(client, MEMBER)
+    assert not any(r["quotation_no"] == q["quotation_no"] for r in client.get("/me/pending-payments", headers=hc).json())
+
+
+def test_ไม่จ่ายใน24ชม_ใบถูกยกเลิกอัตโนมัติ(client):
+    """คนที่ไม่จ่ายคือคนที่ไม่กลับมาเปิดอีก ถ้าไม่มี job กวาด ใบจะค้างเป็น "รอชำระ"
+    ตลอดกาลและคิวจัดส่งที่กันไว้ก็กินที่ของคนอื่น"""
+    from datetime import timedelta
+
+    from sqlalchemy import select
+
+    from app.db.session import SessionLocal
+    from app.models.common import utcnow
+    from app.models.payment import Payment
+    from app.services import payment_service
+
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation_for_member(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs).json()
+
+    with SessionLocal() as db:   # ย้อนเวลาให้หมดอายุ
+        row = db.scalar(select(Payment).where(Payment.payment_no == pay["payment_no"]))
+        row.expires_at = utcnow() - timedelta(minutes=1)
+        db.commit()
+        assert payment_service.sweep_expired(db) >= 1
+
+    assert client.get(f"/payments/{pay['payment_no']}", headers=hs).json()["status"] == "expired"
+    view = client.get(f"/quotations/{q['quotation_no']}", headers=hs).json()
+    assert view["status"] == "cancelled" and "24" in (view["cancel_reason"] or "")
+    hc = auth_headers(client, MEMBER)
+    assert not any(r["quotation_no"] == q["quotation_no"] for r in client.get("/me/pending-payments", headers=hc).json())

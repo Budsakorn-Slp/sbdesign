@@ -378,7 +378,8 @@ def send_link(db: Session, q: Quotation, actor: User, channel: str) -> dict:
     return {"sent": True, "channel": channel, "to": to, "link": link}
 
 
-def cancel_quotation(db: Session, q: Quotation, actor: User, reason: str | None) -> Quotation:
+def cancel_quotation(db: Session, q: Quotation, actor: User | None, reason: str | None) -> Quotation:
+    """actor=None = ระบบยกเลิกเอง (เช่นหมดเวลาชำระเงิน) — ไม่มีเซลล์มารับตะกร้าคืน"""
     if q.status not in ("issued",):
         raise HTTPException(status_code=400, detail=f"ใบเสนอราคาสถานะ {q.status} ยกเลิกไม่ได้")
     q.status = "cancelled"
@@ -392,7 +393,7 @@ def cancel_quotation(db: Session, q: Quotation, actor: User, reason: str | None)
     if cart:
         cart.status = "open"
         cart.closed_at = None
-        if actor.is_staff:
+        if actor is not None and actor.is_staff:
             cart.owner_sales_id = actor.id
             cart.owner_sales = actor
             cart.expires_at = utcnow() + cart_service.sales_cart_ttl()

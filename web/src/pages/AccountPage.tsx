@@ -8,9 +8,12 @@ import { apiGet, apiPatch, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useWishlist } from "../lib/wishlist";
 import { baht } from "../lib/format";
+import { timeLeftText, usePendingPayments } from "../lib/pending";
 import type { MaterialCard, OrderHistory } from "../lib/types";
 
 const TABS = [
+  // ของที่ "ต้องทำอะไรต่อ" มาก่อนของที่ดูย้อนหลัง · ซ่อนเองเมื่อไม่มีรายการค้าง
+  { key: "pending", label: "รอชำระเงิน", icon: "pending_actions" },
   { key: "orders", label: "ประวัติการสั่งซื้อ", icon: "receipt_long" },
   { key: "profile", label: "ข้อมูลส่วนตัว", icon: "person" },
   { key: "addresses", label: "ที่อยู่จัดส่ง", icon: "location_on" },
@@ -367,6 +370,40 @@ function PrivacyPanel() {
   );
 }
 
+function PendingPanel() {
+  const { rows, reload } = usePendingPayments();
+  if (rows.length === 0) {
+    return <p className="muted">ไม่มีคำสั่งซื้อที่รอชำระเงิน — จ่ายครบแล้วทุกใบ</p>;
+  }
+  return (
+    <div className="pending-list">
+      {rows.map((r) => {
+        const left = r.seconds_left ?? null;
+        const urgent = left !== null && left > 0 && left < 2 * 3600;
+        return (
+          <div key={r.quotation_no} className={"pending-row" + (urgent ? " urgent" : "")}>
+            <div className="pending-main">
+              <b className="mono">{r.quotation_no}</b>
+              <div className="small muted">
+                {r.first_item}{r.item_count > 1 ? ` และอีก ${r.item_count - 1} รายการ` : ""}
+              </div>
+              <div className={"small " + (urgent ? "red" : "muted")}>
+                <Icon name="schedule" size={13} /> {timeLeftText(left)}
+                {left !== null && left > 0 && " · ไม่ชำระภายในเวลาจะถูกยกเลิกอัตโนมัติ"}
+              </div>
+            </div>
+            <div className="pending-side">
+              <b>{baht(r.amount)}</b>
+              <Link to={`/pay/${r.quotation_no}`} className="btn primary sm" onClick={reload}>ชำระเงิน</Link>
+              <Link to={`/q/${r.quotation_no}`} className="link-btn small">ดูรายละเอียด</Link>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function AccountPage() {
   const wishStore = useWishlist(true);  // ตัวเก็บสถานะร่วมกับปุ่มหัวใจบนการ์ด
   const { tab: raw } = useParams();
@@ -413,6 +450,7 @@ export default function AccountPage() {
       {error && <p className="err">{error}</p>}
       {!auth.user && tab !== "recent" && <p className="muted">เข้าสู่ระบบเพื่อดู{TABS.find((t) => t.key === tab)?.label}ของคุณ</p>}
 
+      {tab === "pending" && <PendingPanel />}
       {tab === "profile" && <ProfilePanel />}
       {tab === "addresses" && auth.user && <AddressPanel />}
       {tab === "orders" && auth.user && (

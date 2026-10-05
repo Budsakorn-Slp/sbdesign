@@ -355,3 +355,9 @@
 @media (max-width: 389px) {
   .brand-item { padding: 8px 4px; font-size: 12px; }
 }
+
+/* ตัวเลขบนกระดิ่ง — ของที่ "ต้องทำอะไรต่อ" ต้องเห็นโดยไม่ต้องกดเข้าไปหา */
+.icon-btn.bell { position: relative; }
+.bell-dot { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: #c62828; color: #fff; font-size: 10px; font-weight: 600;
+  display: grid; place-items: center; line-height: 1; }

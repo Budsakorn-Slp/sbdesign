@@ -88,6 +88,8 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("GET", "/me/wishlist", AUTH, None),
     ("POST", f"/me/wishlist/{BAD}", AUTH, None),
     ("GET", "/me/orders", AUTH, None),
+    # รายการรอชำระของตัวเอง — ต้องล็อกอิน ไม่งั้นใครก็ดูของคนอื่นได้
+    ("GET", "/me/pending-payments", AUTH, None),
     ("GET", f"/me/orders/{BAD}", AUTH, None),
     ("GET", "/me/bought-again", AUTH, None),
     ("GET", "/me/privacy", AUTH, None),

@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user_optional, require_role
+from app.api.deps import get_current_user, get_current_user_optional, require_role
+from app.models.common import utcnow
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.payment import Payment, SapSyncJob
@@ -19,6 +20,20 @@ manager = require_role("manager", "admin")
 class IntentIn(BaseModel):
     method: str = "qr_promptpay"  # qr_promptpay | card | installment | link (ไม่มี cash)
     kind: str = "full"  # full | deposit
+
+
+class PendingPaymentOut(BaseModel):
+    """รายการรอชำระที่โชว์ในแท็บของลูกค้า"""
+
+    quotation_no: str
+    payment_no: str | None = None
+    amount: str
+    method: str | None = None
+    issued_at: datetime
+    expires_at: datetime | None = None
+    seconds_left: int | None = None   # ติดลบได้ถ้าเพิ่งหมดพอดี — หน้าเว็บปัดเป็น 0 เอง
+    item_count: int = 0
+    first_item: str | None = None
 
 
 class PaymentOut(BaseModel):
@@ -123,6 +138,28 @@ def mock_confirm(
     body = json.dumps(payload).encode()
     payment_service.handle_webhook(db, body, payment_service.sign(body))
     return payment_out(payment_service.get_payment(db, payment_no))
+
+
+@router.get("/me/pending-payments", response_model=list[PendingPaymentOut])
+def my_pending_payments(db: Session = Depends(get_db), me: User = Depends(get_current_user)):
+    """คำสั่งซื้อที่รอชำระของฉัน — แท็บ "รอชำระเงิน" กับตัวเลขบนกระดิ่งอ่านจากตัวนี้
+
+    กวาดของที่หมดเวลาก่อนตอบเสมอ ไม่งั้นลูกค้าเห็นรายการที่หมดอายุไปแล้วค้างอยู่
+    แล้วกดจ่ายไม่ได้ (job ตามรอบก็กวาดอยู่ แต่คนเปิดหน้าต้องเห็นของจริง ณ วินาทีนั้น)
+    """
+    payment_service.sweep_expired(db)
+    rows = payment_service.pending_for_user(db, me)
+    now = utcnow()
+    return [
+        PendingPaymentOut(
+            quotation_no=q.quotation_no, payment_no=p.payment_no if p else None,
+            amount=str(p.amount if p else q.grand_total), method=p.method if p else None,
+            issued_at=q.issued_at, expires_at=p.expires_at if p else None,
+            seconds_left=int((p.expires_at - now).total_seconds()) if p else None,
+            item_count=len(q.lines), first_item=q.lines[0].name if q.lines else None,
+        )
+        for q, p in rows
+    ]
 
 
 # ---------- admin: คิวส่ง SAP ----------

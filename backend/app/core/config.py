@@ -135,6 +135,9 @@ class Settings(BaseSettings):
     # ใช้ได้เฉพาะตอน payment_provider=mock เท่านั้น — ต่อ gateway จริงแล้วเปิดตัวนี้
     # เท่ากับปลอมสถานะว่าจ่ายแล้วทั้งที่เงินไม่เข้า ซึ่งจะไปโผล่เป็น SO ใน SAP
     mock_payment_enabled: bool = False
+    # QR/รายการชำระเงินมีอายุกี่ชั่วโมง — หมดแล้วใบเสนอราคาถูกยกเลิกอัตโนมัติ
+    # ของเดิมเป็น 15 นาที ซึ่งสั้นไปสำหรับคนที่ปิดหน้าไปแล้วค่อยกลับมาจ่ายทีหลัง
+    payment_expire_hours: int = 24
     kbank_base_url: str = ""       # sandbox: https://dev-kpaymentgateway.kasikornbank.com
     kbank_merchant_id: str = ""
     kbank_public_key: str = ""     # ใช้กับ kpayment.js บนหน้าเว็บ (ไม่ลับ)

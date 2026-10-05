@@ -30,5 +30,8 @@ MAILTO=""
 0 4 * * 0 root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api python -m app.etl.sync_home_media >> /var/log/sbdesign/content.log 2>&1
 10 4 * * 0 root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api python -m app.etl.sync_cms_pages >> /var/log/sbdesign/content.log 2>&1
 
+# ทุก 20 นาที ยกเลิกใบที่ไม่ได้ชำระเงินในเวลาที่กำหนด (คืนคิวจัดส่งให้คนอื่น)
+*/20 * * * * root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api python -m app.etl.expire_payments >> /var/log/sbdesign/expire.log 2>&1
+
 # 05:00 ลบล็อกเก่าเกิน 30 วัน
 0 5 * * * root find /var/log/sbdesign -name '*.log' -mtime +30 -delete

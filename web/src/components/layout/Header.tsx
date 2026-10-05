@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { useContent } from "../../lib/content";
+import { usePendingPayments } from "../../lib/pending";
 import { localName, useLang } from "../../lib/i18n";
 import { areaLabel, getProvinces, lookupPostcode } from "../../lib/geo";
 import type { Province } from "../../lib/types";
@@ -13,6 +14,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
   const { lang, setLang, t } = useLang();
   const { content, plants, plant, setPlantCode, postcode, shipTo, setShipTo } = useContent();
   const [branchQ, setBranchQ] = useState("");
+  const { count: pendingCount } = usePendingPayments();
   const [menu, setMenu] = useState<string | null>(null);
   // -1 = โชว์หมวดทั้งหมด · เลขอื่น = โชว์หมวดย่อยของห้องนั้น (เปลี่ยนตอนชี้ค้างที่รายชื่อด้านซ้าย)
   // ต้องเริ่มที่ -1 เพราะจอแคบซ่อนรายชื่อด้านซ้ายไว้ ชี้ค้างไม่ได้ ถ้าเริ่มที่ 0 เมนู
@@ -189,7 +191,12 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
         <SearchBox onNavigate={() => setMenu(null)} />
 
         <div className="hdr-icons">
-          <button className="icon-btn" aria-label="แจ้งเตือน"><Icon name="notifications" /></button>
+          {/* กระดิ่งบอกของที่ "ต้องทำอะไรต่อ" — ตอนนี้มีเรื่องเดียวคือค้างจ่ายเงิน
+              กดแล้วพาไปแท็บนั้นเลย ไม่ใช่เปิดรายการแจ้งเตือนที่มีอยู่รายการเดียว */}
+          <Link to="/account/pending" className="icon-btn bell" aria-label={pendingCount ? `รอชำระเงิน ${pendingCount} รายการ` : "แจ้งเตือน"}>
+            <Icon name="notifications" />
+            {pendingCount > 0 && <span className="bell-dot">{pendingCount > 9 ? "9+" : pendingCount}</span>}
+          </Link>
           <button className="icon-btn" aria-label="คูปอง"><Icon name="confirmation_number" /></button>
           <Link to="/account/wishlist" className="icon-btn" aria-label="รายการโปรด" title="รายการโปรด"><Icon name="favorite" /></Link>
           <Link to={cartHref} className="icon-btn" aria-label="ตะกร้า">

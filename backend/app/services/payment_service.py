@@ -27,7 +27,8 @@ from app.services import audit_service, quotation_service
 log = logging.getLogger("sb.payment")
 
 METHODS = ("qr_promptpay", "card", "installment", "link")
-INTENT_MINUTES = 15
+# อายุรายการชำระเงิน — อ่านจาก settings เพราะต้องปรับได้โดยไม่ต้อง deploy
+# (ดู payment_expire_hours) · ค่าเดิมฝังไว้ 15 นาที
 RETRY_BACKOFF_MINUTES = (1, 5, 15, 60, 240)
 MAX_ATTEMPTS = len(RETRY_BACKOFF_MINUTES)
 
@@ -87,7 +88,7 @@ def create_intent(db: Session, q: Quotation, actor: User | None, method: str, ki
         provider_ref=res.provider_ref,
         qr_payload=res.qr_payload,
         pay_url=res.redirect_url or f"/pay/{q.quotation_no}?p={no}",
-        expires_at=now + timedelta(minutes=INTENT_MINUTES),
+        expires_at=now + timedelta(hours=get_settings().payment_expire_hours),
         created_by_user_id=actor.id if actor else None,
     )
     db.add(p)
@@ -102,9 +103,60 @@ def get_payment(db: Session, payment_no: str) -> Payment:
     if not p:
         raise HTTPException(status_code=404, detail="ไม่พบรายการชำระเงินนี้")
     if p.status == "pending" and p.expires_at < utcnow():
-        p.status = "expired"
-        db.commit()
+        expire_payment(db, p)
     return p
+
+
+def expire_payment(db: Session, p: Payment) -> Payment:
+    """หมดเวลาจ่าย — ยกเลิกใบเสนอราคาตามไปด้วย
+
+    ถ้าปล่อยใบไว้เฉยๆ ของจะถูกจองไว้ในสายตาลูกค้าทั้งที่ไม่มีใครจ่าย แล้วคิวจัดส่ง
+    ที่กันไว้ก็ค้างกินที่ของคนอื่น · ลูกค้ายังสั่งใหม่ได้ ไม่ได้เสียอะไร
+    """
+    p.status = "expired"
+    db.commit()
+    q = p.quotation
+    if q and q.status == "issued":
+        hours = get_settings().payment_expire_hours
+        # ใช้ตัวเดียวกับที่เซลล์กดยกเลิก — ตรรกะคืนคิวจัดส่ง/เปิด Preso กลับ อยู่ที่นั่นที่เดียว
+        quotation_service.cancel_quotation(db, q, None, f"ไม่ได้ชำระเงินภายใน {hours} ชั่วโมง")
+        audit_service.log(db, None, "quotation.auto_cancel", "quotation", q.quotation_no,
+                          {"payment_no": p.payment_no}, role="system")
+        db.commit()
+    db.refresh(p)
+    return p
+
+
+def pending_for_user(db: Session, user: User) -> list[tuple[Quotation, Payment | None]]:
+    """ใบที่ออกแล้วยังไม่จ่ายของลูกค้าคนนี้ พร้อมรายการชำระล่าสุด (ถ้าเคยกดจ่าย)
+
+    ใบที่ยังไม่เคยกดจ่ายเลยก็นับด้วย — ลูกค้ามองว่าเป็น "คำสั่งซื้อที่ต้องจ่าย" เหมือนกัน
+    ต่างแค่ยังไม่มี QR · ถ้าไม่นับ ใบพวกนี้จะหายไปจากสายตาจนหมดอายุ
+    """
+    qs = db.scalars(
+        select(Quotation).where(Quotation.customer_user_id == user.id, Quotation.status == "issued")
+        .order_by(Quotation.issued_at.desc())
+    ).all()
+    out: list[tuple[Quotation, Payment | None]] = []
+    for q in qs:
+        p = db.scalar(
+            select(Payment).where(Payment.quotation_id == q.id, Payment.status == "pending")
+            .order_by(Payment.created_at.desc())
+        )
+        out.append((q, p))
+    return out
+
+
+def sweep_expired(db: Session) -> int:
+    """กวาดรายการที่หมดเวลาไปแล้ว — เรียกจาก job ตามรอบ
+
+    ต้องมี job ไม่ใช่รอให้มีคนเปิดหน้านั้น เพราะคนที่ไม่จ่ายก็คือคนที่ไม่กลับมาเปิดอีก
+    ใบจะค้างเป็น "รอชำระ" ตลอดกาลโดยไม่มีใครรู้
+    """
+    rows = db.scalars(select(Payment).where(Payment.status == "pending", Payment.expires_at < utcnow())).all()
+    for p in rows:
+        expire_payment(db, p)
+    return len(rows)
 
 
 # ---------- webhook ----------

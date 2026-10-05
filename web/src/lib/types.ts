@@ -636,3 +636,17 @@ export type PostcodeHit = {
   area_id: number | null;
   is_blocked: boolean;
 };
+
+/** คำสั่งซื้อที่รอชำระเงิน — แท็บ "รอชำระเงิน" กับตัวเลขบนกระดิ่งอ่านจากตัวนี้ */
+export type PendingPayment = {
+  quotation_no: string;
+  payment_no: string | null;
+  amount: string;
+  method: string | null;
+  issued_at: string;
+  expires_at: string | null;
+  /** ติดลบได้ถ้าเพิ่งหมดพอดี — หน้าเว็บปัดเป็น 0 เอง */
+  seconds_left: number | null;
+  item_count: number;
+  first_item: string | null;
+};
