@@ -194,7 +194,7 @@ export default function SearchPage() {
   // ชิปสรุปว่ากรองอะไรอยู่ กดกากบาทเพื่อถอดทีละตัว
   const chips: { key: string; label: string; clear: () => void }[] = [
     // ต้องมีชิปบอก ไม่งั้นลูกค้าเลือกสาขาไว้แล้วลืม พอของหายไปครึ่งหนึ่งจะนึกว่าเว็บพัง
-    ...(plant ? [{ key: "plant", label: `สาขา ${plant.name}`, clear: () => setPlantCode(null) }] : []),
+    ...(plant ? [{ key: "plant", label: `ตัวโชว์ที่ ${plant.name}`, clear: () => setPlantCode(null) }] : []),
     ...(category ? [{ key: "category", label: catObj?.name_th ?? category, clear: () => set("category", "") }] : []),
     ...(room ? [{ key: "room", label: ROOM_LABEL[room] || room, clear: () => set("room", "") }] : []),
     ...(tag ? [{ key: "tag", label: TAG_LABEL[tag] || tag, clear: () => set("tag", "") }] : []),

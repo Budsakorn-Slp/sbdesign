@@ -182,20 +182,41 @@ def test_ของทั่วไปไม่ต้องรกด้วยร�
     assert line["show_at_sites"] == []
 
 
-def test_เลือกสาขาแล้วเห็นเฉพาะของที่สาขานั้น(client):
-    """ลูกค้าเลือกสาขาบนหัวเว็บ = อยากเห็นเฉพาะของที่ไปดูที่นั่นได้จริง"""
+def _display(matnr: str, name: str) -> str:
+    """สร้างสินค้าตัวโชว์ (รหัสขึ้นต้น 20 = กลุ่ม display ที่ต้องรับที่สาขา)"""
     with SessionLocal() as db:
-        a, b = db.scalars(select(Material.matnr).where(Material.is_public.is_(True))).all()[:2]
+        if not db.get(Material, matnr):
+            src = db.scalars(select(Material).where(Material.is_public.is_(True))).first()
+            db.add(Material(matnr=matnr, sku=f"SKU-{matnr}", name_th=name, is_public=True,
+                            synced_at=src.synced_at, brand_id=src.brand_id, category_id=src.category_id))
+            db.commit()
+    return matnr
+
+
+def test_เลือกสาขาแล้วเห็นตัวโชว์เฉพาะสาขานั้น(client):
+    """ของตัวโชว์ต้องไปดูของจริงที่สาขา เลือกสาขาแล้วจึงควรเหลือเฉพาะที่สาขานั้นมี"""
+    a = _display("20008801", "ตู้โชว์ A")
+    b = _display("20008802", "ตู้โชว์ B")
+    with SessionLocal() as db:
         db.query(ProductStockSite).filter(ProductStockSite.matnr.in_([a, b])).delete(synchronize_session=False)
-        db.add(ProductStockSite(matnr=a, plant_code="S319", name="DS-บางแค", available_qty=3, fetched_at=utcnow()))
+        db.add(ProductStockSite(matnr=a, plant_code="S319", name="DS-บางแค", available_qty=1, fetched_at=utcnow()))
         db.add(ProductStockSite(matnr=b, plant_code="S304", name="DS-ภูเก็ต", available_qty=1, fetched_at=utcnow()))
         db.commit()
-    got = client.get("/materials/search", params={"plant": "S319", "limit": 100}).json()
-    codes = [m["matnr"] for m in got["items"]]
+    # ตัวโชว์โผล่เฉพาะตอนขอหมวดนี้ตรงๆ (ไม่งั้นจะไปปนอยู่ในหน้ารวมสินค้าทั่วไป)
+    codes = [m["matnr"] for m in client.get(
+        "/materials/search", params={"group": "display", "plant": "S319", "limit": 100}).json()["items"]]
     assert a in codes and b not in codes
-    # ไม่เลือกสาขา = เห็นทั้งหมดเหมือนเดิม
-    allrows = client.get("/materials/search", params={"limit": 1}).json()
-    assert allrows["total"] > got["total"]
+
+
+def test_เลือกสาขาแล้วของทั่วไปต้องไม่หายไป(client):
+    """ของทั่วไปขายออนไลน์ ส่งจากคลัง สาขาไม่เกี่ยวกับการตัดสินใจซื้อ
+    ถ้าเอามากรองทั้งเว็บ ของจะหายไปสองในสามโดยไม่มีเหตุผล"""
+    with SessionLocal() as db:
+        normal = db.scalars(select(Material.matnr).where(Material.is_public.is_(True), Material.matnr.like("10%"))).first()
+        db.query(ProductStockSite).filter(ProductStockSite.matnr == normal).delete()
+        db.commit()   # ของทั่วไปตัวนี้ไม่มีแถวสาขาเลย
+    got = client.get("/materials/search", params={"plant": "S319", "limit": 100}).json()
+    assert normal in [m["matnr"] for m in got["items"]]
 
 
 def test_สาขาที่เลือกได้ต้องเป็นของจริงจาก_sap(client):
@@ -211,5 +232,7 @@ def test_สาขาที่เลือกได้ต้องเป็น�
     codes = {p["plant_code"] for p in rows}
     assert "S399" in codes
     assert not (codes & {"BKN", "RIT", "CNX", "BPL"}), "สาขาสมมติต้องถูกลบทิ้ง"
-    # โรงงาน/ระดับบริษัทไม่ใช่ store จึงไม่โผล่ในตัวเลือกของลูกค้า
-    assert {p["type"] for p in rows if p["plant_code"] in ("1000", "9000")} == {"warehouse"}
+    # โรงงาน/ระดับบริษัทต้องไม่เป็น store ไม่งั้นโผล่ในตัวเลือกของลูกค้า
+    # (มีในฐานหรือไม่ขึ้นกับว่าเทสก่อนหน้าใส่ไว้ไหม — ตรวจเฉพาะตัวที่มีจริง)
+    assert all(p["type"] == "warehouse" for p in rows if p["plant_code"] in ("1000", "9000"))
+    assert all(p["type"] == "store" for p in rows if p["plant_code"].startswith("S"))

@@ -36,6 +36,9 @@
 .hdr-loc-sep { width: 1px; height: 36px; background: var(--line); }
 .hdr-pop { position: absolute; top: 100%; left: 0; margin-top: 6px; width: 320px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.14); z-index: 60; }
 .hdr-pop-input { flex: 1; min-height: 38px; padding: 6px 10px; border: 1px solid var(--line-2); border-radius: 8px; }
+/* รายชื่อสาขามี 32 แห่ง ยาวเกินจอ — จำกัดความสูงแล้วให้เลื่อนในกล่อง
+   ไม่ใช่ปล่อยให้ยืดทะลุจอจนกดสาขาท้ายๆ ไม่ได้ (ตัวที่อยู่ล่างสุดคือ DS-โคราช/แฟชั่น) */
+.hdr-pop-scroll { max-height: min(46vh, 340px); overflow-y: auto; margin: 0 -4px; padding: 0 4px; overscroll-behavior: contain; }
 .hdr-pop-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px; border-radius: 8px; border: 1px solid transparent; background: transparent; }
 .hdr-pop-row.on, .hdr-pop-row:hover { background: var(--bg-2); border-color: var(--line); }
 .hdr-pop-row b { display: block; font-size: 13px; }

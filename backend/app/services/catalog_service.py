@@ -319,12 +319,23 @@ def _filtered(db: Session, f: "SearchFilters"):
     if f.abc:
         stmt = stmt.where(Material.abc_class == f.abc)
     if f.plant:
-        # เลือกสาขาแล้ว = อยากเห็นเฉพาะของที่ไปดู/ไปรับที่สาขานั้นได้จริง
-        # อ่านจาก product_stock_sites (ยอดรายสาขาจาก SAP) ไม่ใช่ product_stock ที่เป็นยอดรวม
-        stmt = stmt.where(Material.matnr.in_(
-            select(ProductStockSite.matnr).where(ProductStockSite.plant_code == f.plant,
-                                                 ProductStockSite.available_qty > 0)
-        ))
+        # เลือกสาขา = "ขอดูของตัวโชว์ที่สาขานี้" ไม่ใช่กรองทั้งเว็บ
+        #
+        # ของทั่วไปขายออนไลน์และส่งจากคลัง สาขาไม่เกี่ยวกับการตัดสินใจซื้อเลย ถ้าเอามากรอง
+        # ทั้งเว็บ ของจะหายไปสองในสามโดยไม่มีเหตุผล (3,722 -> 1,044) · ส่วนของตัวโชว์
+        # ต้องไปดูของจริงแล้วรับที่สาขา สาขาจึงเป็นเรื่องเป็นเรื่องตาย
+        #
+        # เงื่อนไข: ของที่ไม่ใช่กลุ่มรับที่สาขา ผ่านหมด · กลุ่มรับที่สาขา เอาเฉพาะที่สาขานี้มี
+        at_plant = select(ProductStockSite.matnr).where(
+            ProductStockSite.plant_code == f.plant, ProductStockSite.available_qty > 0
+        )
+        blocked = {g.strip() for g in get_settings().online_checkout_blocked_groups.split(",") if g.strip()}
+        prefixes = [p for name, p in matnr_groups().items() if name in blocked]
+        if prefixes:
+            is_pickup = or_(*[Material.matnr.startswith(p) for p in prefixes])
+            stmt = stmt.where(or_(~is_pickup, Material.matnr.in_(at_plant)))
+        else:
+            stmt = stmt.where(Material.matnr.in_(at_plant))
     if f.sold_out:
         # เฉพาะของที่หมดจริง (เงื่อนไขเดียวกับ _SOLD_OUT ที่ใช้ดันลงล่าง)
         #

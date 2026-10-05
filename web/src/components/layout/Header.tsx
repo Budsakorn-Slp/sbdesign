@@ -12,6 +12,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
   const auth = useAuth();
   const { lang, setLang, t } = useLang();
   const { content, plants, plant, setPlantCode, postcode, shipTo, setShipTo } = useContent();
+  const [branchQ, setBranchQ] = useState("");
   const [menu, setMenu] = useState<string | null>(null);
   // -1 = โชว์หมวดทั้งหมด · เลขอื่น = โชว์หมวดย่อยของห้องนั้น (เปลี่ยนตอนชี้ค้างที่รายชื่อด้านซ้าย)
   // ต้องเริ่มที่ -1 เพราะจอแคบซ่อนรายชื่อด้านซ้ายไว้ ชี้ค้างไม่ได้ ถ้าเริ่มที่ 0 เมนู
@@ -156,17 +157,32 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
               )}
             </div>
           )}
-          {pop === "branch" && (
-            <div className="hdr-pop">
-              <div className="strong" style={{ marginBottom: 6 }}>รับที่สาขา</div>
-              {plants.filter((p) => p.type === "store").map((p) => (
-                <button key={p.plant_code} className={"hdr-pop-row" + (plant?.plant_code === p.plant_code ? " on" : "")} onClick={() => { setPlantCode(p.plant_code); setPop(null); }}>
-                  <Icon name="storefront" size={18} /> <span><b>{p.name}</b>{p.address && <small>{p.address}</small>}</span>
-                </button>
-              ))}
-              {plant && <button className="link-btn small" onClick={() => { setPlantCode(null); setPop(null); }}>{t("ไม่เลือกสาขา")}</button>}
-            </div>
-          )}
+          {pop === "branch" && (() => {
+            // สาขาจริงมี 32 แห่ง รายการยาวเกินจอ — ต้องมีทั้งช่องพิมพ์หาและแถบเลื่อน
+            // ตอนมีแค่สาขาสมมติ 3 แห่งไม่เจอปัญหานี้
+            const stores = plants.filter((p) => p.type === "store");
+            const kw = branchQ.trim().toLowerCase();
+            const shown = kw ? stores.filter((p) => p.name.toLowerCase().includes(kw)) : stores;
+            return (
+              <div className="hdr-pop">
+                <div className="strong">รับที่สาขา</div>
+                {/* บอกขอบเขตให้ชัด ไม่งั้นลูกค้าเลือกแล้วคาดว่าทั้งเว็บจะเหลือเฉพาะของสาขานั้น */}
+                <div className="small muted" style={{ margin: "2px 0 8px" }}>ใช้ดูว่าสินค้าตัวโชว์ตั้งอยู่สาขาไหน · ของทั่วไปส่งจากคลังเหมือนเดิม</div>
+                <input className="hdr-pop-input" style={{ width: "100%", marginBottom: 8 }} value={branchQ}
+                       onChange={(e) => setBranchQ(e.target.value)} placeholder={t("พิมพ์ชื่อสาขา")} autoFocus />
+                <div className="hdr-pop-scroll">
+                  {shown.length === 0 ? (
+                    <div className="small muted" style={{ padding: "8px 2px" }}>{t("ไม่พบสาขาที่ค้นหา")}</div>
+                  ) : shown.map((p) => (
+                    <button key={p.plant_code} className={"hdr-pop-row" + (plant?.plant_code === p.plant_code ? " on" : "")} onClick={() => { setPlantCode(p.plant_code); setPop(null); setBranchQ(""); }}>
+                      <Icon name="storefront" size={18} /> <span><b>{p.name}</b>{p.address && <small>{p.address}</small>}</span>
+                    </button>
+                  ))}
+                </div>
+                {plant && <button className="link-btn small" onClick={() => { setPlantCode(null); setPop(null); setBranchQ(""); }}>{t("ไม่เลือกสาขา")}</button>}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ช่องค้นหาอยู่กลางแถวเดียวกับโลโก้ ช่องว่างตรงกลางจะได้ไม่โล่ง และไม่ต้องมีแถวแยกอีกแถว */}
