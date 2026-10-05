@@ -124,6 +124,17 @@ class Settings(BaseSettings):
     # โค้ดกับด่านอนุมัติของผู้จัดการยังอยู่ครบ เปิดคืนได้วันที่นโยบายเปลี่ยน
     staff_discount_enabled: bool = False
 
+    # ---------- ช่องทางรับชำระเงิน ----------
+    # mock  = หน้าธนาคารจำลองของเราเอง (/pay/{no}/bank) ไม่มีเงินเคลื่อนไหวจริง
+    # kbank = K-Payment Gateway ของกสิกร — ยังต่อไม่ได้ รอคีย์กับเอกสาร API
+    #         ตั้งเป็น kbank โดยไม่ใส่คีย์ ระบบจะตีกลับพร้อมบอกว่าขาดอะไร ไม่ปล่อยเงียบ
+    payment_provider: str = "mock"
+    kbank_base_url: str = ""       # sandbox: https://dev-kpaymentgateway.kasikornbank.com
+    kbank_merchant_id: str = ""
+    kbank_public_key: str = ""     # ใช้กับ kpayment.js บนหน้าเว็บ (ไม่ลับ)
+    kbank_secret_key: str = ""     # ฝั่งเซิร์ฟเวอร์เท่านั้น ห้ามส่งไปหน้าเว็บ
+    kbank_timeout_seconds: float = 20.0
+
     # ---------- ท้ายใบเสนอราคา ----------
     # เงื่อนไขการชำระเงิน + บัญชีบริษัท · เป็นข้อความที่ลูกค้าใช้โอนเงินจริง จึงไม่ฝังในโค้ด
     # ใส่ใน .env แล้วแก้ได้โดยไม่ต้อง deploy · เว้นว่าง = ไม่พิมพ์ส่วนนั้นในเอกสาร

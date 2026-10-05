@@ -263,3 +263,73 @@ def test_ปุ่มจำลองจ่ายเงินต้องปิ�
     finally:
         object.__setattr__(s, "app_env", old_env)
         object.__setattr__(s, "otp_debug", old_dbg)
+
+
+def test_จำลองผลธนาคารได้ครบสามทาง(client):
+    """เส้นทาง "ไม่สำเร็จ" กับ "ยกเลิก" คือเส้นที่คนลืมทดสอบ แล้วไปเจอหน้างานว่า
+    เว็บค้างอยู่ที่ "กำลังรอผล" ตลอดกาล"""
+    hs = auth_headers(client, "SA-104", "staff")
+
+    # ยกเลิก — ใบเสนอราคาต้องยังใช้ได้ กดจ่ายใหม่ได้
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    r = client.post(f"/payments/{pay['payment_no']}/mock-confirm", params={"outcome": "cancelled"}, headers=hs).json()
+    assert r["status"] == "cancelled"
+    assert client.get(f"/quotations/{q['quotation_no']}", headers=hs).json()["status"] == "issued"
+
+    # ธนาคารปฏิเสธ — ต้องบอกเหตุผล ไม่ใช่ "ไม่สำเร็จ" ลอยๆ
+    pay2 = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs).json()
+    r2 = client.post(f"/payments/{pay2['payment_no']}/mock-confirm", params={"outcome": "failed"}, headers=hs).json()
+    assert r2["status"] == "failed" and r2["failed_reason"]
+    assert client.get(f"/quotations/{q['quotation_no']}", headers=hs).json()["status"] == "issued"
+
+    # จ่ายสำเร็จ — ใบเปลี่ยนสถานะและได้เลข SO
+    pay3 = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    r3 = client.post(f"/payments/{pay3['payment_no']}/mock-confirm", params={"outcome": "paid"}, headers=hs).json()
+    assert r3["status"] == "paid" and r3["sap_so_no"]
+
+
+def test_ยกเลิกรายการที่จ่ายไปแล้วไม่ได้(client):
+    """ของที่จ่ายแล้วต้องไปทางคืนเงิน ไม่ใช่กดยกเลิกย้อนหลัง"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    client.post(f"/payments/{pay['payment_no']}/mock-confirm", params={"outcome": "paid"}, headers=hs)
+    r = client.post(f"/payments/{pay['payment_no']}/mock-confirm", params={"outcome": "cancelled"}, headers=hs)
+    assert r.status_code == 400 and "ยกเลิกไม่ได้" in r.json()["detail"]
+
+
+def test_ผลที่ไม่รู้จักต้องตีกลับ(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs).json()
+    assert client.post(f"/payments/{pay['payment_no']}/mock-confirm", params={"outcome": "refunded"}, headers=hs).status_code == 422
+
+
+def test_ยังไม่ได้ตั้งคีย์กสิกร_ต้องตีกลับพร้อมบอกว่าขาดอะไร(client, monkeypatch):
+    """ตั้ง provider เป็น kbank แล้วลืมใส่คีย์ ต้องรู้ทันทีตอนกดจ่าย ไม่ใช่ปล่อยให้
+    ลูกค้าไปตันที่หน้าจ่ายเงินแล้วมาถามทีหลังว่าทำไมกดไม่ได้"""
+    from app.core.config import get_settings
+    from app.integrations.payment import reset_payment_gateway
+
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _quotation(client, hs)
+    s = get_settings()
+    monkeypatch.setattr(s, "payment_provider", "kbank")
+    reset_payment_gateway()
+    try:
+        r = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "card", "kind": "full"}, headers=hs)
+        assert r.status_code == 503
+        detail = r.json()["detail"]
+        assert "KBANK_BASE_URL" in detail and "KBANK_SECRET_KEY" in detail
+    finally:
+        monkeypatch.setattr(s, "payment_provider", "mock")
+        reset_payment_gateway()
+
+
+def test_กสิกรปฏิเสธ_webhook_ที่ยังยืนยันไม่ได้(client):
+    """ยังไม่รู้ว่าธนาคารเซ็นยังไง — ต้องปฏิเสธไว้ก่อน ไม่ใช่รับไปตัดสถานะว่าจ่ายแล้ว"""
+    from app.integrations.payment.kbank import KBankGateway
+
+    gw = KBankGateway("https://x", "secret", "M1")
+    assert gw.verify_webhook(b'{"event":"paid"}', {"x-signature": "อะไรก็ได้"}) is False

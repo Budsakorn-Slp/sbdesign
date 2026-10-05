@@ -544,6 +544,8 @@ export type Payment = {
   sap_so_no: string | null;
   sap_sync_status: "pending" | "ok" | "failed";
   quotation_status: Quotation["status"];
+  /** เหตุผลที่ธนาคารปฏิเสธ — หน้าผลการชำระเงินต้องบอกให้ตรง ไม่ใช่ "ไม่สำเร็จ" ลอยๆ */
+  failed_reason: string | null;
 };
 
 export type SyncJob = {

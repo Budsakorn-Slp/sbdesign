@@ -10,12 +10,13 @@ import logging
 from datetime import date, timedelta
 from decimal import Decimal
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.integrations.sap import SapError, get_sap_client
+from app.integrations.payment import ChargeRequest, PaymentError, get_payment_gateway
 from app.models.common import utcnow
 from app.integrations.sap.sales_order import SalesOrderDTO, SoAmounts, SoLine
 from app.models.payment import Payment, SapSyncJob
@@ -38,10 +39,6 @@ def _payment_no(db: Session) -> str:
 def amount_for(q: Quotation, kind: str) -> Decimal:
     return Decimal(q.deposit_amount if kind == "deposit" else q.grand_total)
 
-
-def _qr_payload(no: str, amount: Decimal) -> str:
-    """mock EMVCo QR — ฝั่ง frontend เอาไปวาดเป็น QR ได้เลย"""
-    return f"00020101021229370016A000000677010111011300000000000053037645402{amount:.2f}5802TH6304{no[-4:]}"
 
 
 def create_intent(db: Session, q: Quotation, actor: User | None, method: str, kind: str) -> Payment:
@@ -70,11 +67,26 @@ def create_intent(db: Session, q: Quotation, actor: User | None, method: str, ki
 
     amount = amount_for(q, kind)
     no = _payment_no(db)
+
+    # ให้ gateway เป็นคนบอกว่าจะพาลูกค้าไปไหน — ตอนนี้เป็น mock (หน้าธนาคารจำลองของเราเอง)
+    # วันที่ได้คีย์กสิกรมาแล้วแค่เปลี่ยน PAYMENT_PROVIDER ตรงนี้ไม่ต้องแก้
+    try:
+        # เรียก factory ในนี้ด้วย — ค่าที่ตั้งผิด/ขาดจะโผล่ตอนสร้าง gateway ไม่ใช่ตอน charge
+        res = get_payment_gateway().charge(ChargeRequest(
+            payment_no=no, amount=amount, method=method,
+            description=f"SB Design Square · {q.quotation_no}",
+            customer_name=(q.customer_snapshot or {}).get("name"),
+            customer_email=(q.customer_snapshot or {}).get("email"),
+            return_url=f"/pay/{q.quotation_no}/result",
+        ))
+    except PaymentError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"เปิดรายการชำระเงินไม่ได้: {e}")
+
     p = Payment(
         payment_no=no, quotation_id=q.id, method=method, kind=kind, amount=amount, status="pending",
-        provider_ref=f"mockpsp_{no.replace('-', '').lower()}",
-        qr_payload=_qr_payload(no, amount) if method == "qr_promptpay" else None,
-        pay_url=f"/pay/{q.quotation_no}?p={no}",
+        provider_ref=res.provider_ref,
+        qr_payload=res.qr_payload,
+        pay_url=res.redirect_url or f"/pay/{q.quotation_no}?p={no}",
         expires_at=now + timedelta(minutes=INTENT_MINUTES),
         created_by_user_id=actor.id if actor else None,
     )
@@ -98,6 +110,21 @@ def get_payment(db: Session, payment_no: str) -> Payment:
 # ---------- webhook ----------
 def sign(body: bytes) -> str:
     return hmac.new(get_settings().payment_webhook_secret.encode(), body, hashlib.sha256).hexdigest()
+
+
+def cancel_payment(db: Session, p: Payment) -> Payment:
+    """ลูกค้ากดยกเลิกที่หน้าธนาคาร — ใบเสนอราคายังอยู่ กดจ่ายใหม่ได้
+
+    ไม่ไปแตะสถานะใบเสนอราคา เพราะ "ยกเลิกการจ่ายรอบนี้" กับ "ยกเลิกใบเสนอราคา"
+    เป็นคนละเรื่อง · ของที่จ่ายไปแล้วยกเลิกไม่ได้ ต้องไปทางคืนเงินแทน
+    """
+    if p.status == "paid":
+        raise HTTPException(status_code=400, detail="รายการนี้ชำระเงินสำเร็จแล้ว ยกเลิกไม่ได้")
+    p.status = "cancelled"
+    audit_service.log(db, None, "payment.cancelled", "payment", p.payment_no, {"quotation": p.quotation.quotation_no}, role="system")
+    db.commit()
+    db.refresh(p)
+    return p
 
 
 def handle_webhook(db: Session, body: bytes, signature: str | None) -> dict:

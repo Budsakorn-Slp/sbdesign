@@ -35,6 +35,9 @@ class PaymentOut(BaseModel):
     sap_so_no: str | None
     sap_sync_status: str
     quotation_status: str
+    # เหตุผลที่ธนาคารปฏิเสธ — หน้าผลการชำระเงินต้องบอกให้ตรง ไม่ใช่ "ไม่สำเร็จ" ลอยๆ
+    # แล้วลูกค้าโทรมาถามว่าทำไม
+    failed_reason: str | None = None
 
 
 class SyncJobOut(BaseModel):
@@ -55,6 +58,7 @@ def payment_out(p: Payment) -> PaymentOut:
         payment_no=p.payment_no, quotation_no=q.quotation_no, method=p.method, kind=p.kind, amount=str(p.amount), status=p.status,
         qr_payload=p.qr_payload, pay_url=p.pay_url, expires_at=p.expires_at, paid_at=p.paid_at,
         sap_so_no=q.sap_so_no, sap_sync_status=q.sap_sync_status, quotation_status=q.status,
+        failed_reason=p.failed_reason,
     )
 
 
@@ -81,8 +85,17 @@ async def payment_webhook(request: Request, x_signature: str | None = Header(def
 
 
 @router.post("/payments/{payment_no}/mock-confirm", response_model=PaymentOut)
-def mock_confirm(payment_no: str, t: str | None = Query(default=None), db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
-    """โหมด dev เท่านั้น: จำลองว่าลูกค้าสแกนจ่ายแล้ว → เซ็น payload เองแล้วยิงเข้า webhook ปกติ
+def mock_confirm(
+    payment_no: str,
+    outcome: str = Query(default="paid", pattern="^(paid|failed|cancelled)$", description="ผลที่อยากจำลอง"),
+    t: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+):
+    """โหมด dev เท่านั้น: จำลองผลจากธนาคาร — หน้า mock ของ KBank เรียกตัวนี้
+
+    จำลองได้ 3 ทางเพราะของจริงก็มีสามทาง และเส้นทางที่ไม่สำเร็จคือเส้นที่คนลืมทดสอบ
+    แล้วไปเจอหน้างานว่าเว็บค้างอยู่ที่ "กำลังรอผล" ตลอดกาล
 
     ปิดด้วย APP_ENV ไม่ใช่ OTP_DEBUG — ของเดิมผูกกับ OTP_DEBUG ซึ่งเป็นคนละเรื่องกัน
     พอเปิด OTP_DEBUG ไว้ให้ผู้ทดสอบดูรหัสบนจอ ปุ่ม "จ่ายเงินสำเร็จ" ก็เปิดตามไปด้วย
@@ -92,7 +105,17 @@ def mock_confirm(payment_no: str, t: str | None = Query(default=None), db: Sessi
         raise HTTPException(status_code=404, detail="ปิดใช้งานในโหมด production")
     p = payment_service.get_payment(db, payment_no)
     quotation_service.check_access(p.quotation, user, t)
-    body = json.dumps({"event": "payment.succeeded", "payment_no": p.payment_no, "provider_ref": p.provider_ref, "amount": str(p.amount)}).encode()
+
+    # ลูกค้ากดยกเลิกเอง ไม่ใช่ธนาคารปฏิเสธ — webhook ของจริงไม่มีเหตุการณ์นี้
+    # (provider ถือว่ารายการยังค้าง แล้วหมดอายุไปเอง) จึงตั้งสถานะตรงนี้ ไม่ผ่าน webhook
+    if outcome == "cancelled":
+        return payment_out(payment_service.cancel_payment(db, p))
+
+    event = "payment.succeeded" if outcome == "paid" else "payment.failed"
+    payload = {"event": event, "payment_no": p.payment_no, "provider_ref": p.provider_ref, "amount": str(p.amount)}
+    if outcome == "failed":
+        payload["reason"] = "จำลอง: ธนาคารปฏิเสธรายการ (ยอดเงินไม่พอ)"
+    body = json.dumps(payload).encode()
     payment_service.handle_webhook(db, body, payment_service.sign(body))
     return payment_out(payment_service.get_payment(db, payment_no))
 

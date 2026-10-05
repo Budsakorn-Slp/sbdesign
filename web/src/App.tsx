@@ -22,6 +22,8 @@ const AccountPage = lazy(() => import("./pages/AccountPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const PayPage = lazy(() => import("./pages/PayPage"));
+const MockBankPage = lazy(() => import("./pages/MockBankPage"));
+const PayResultPage = lazy(() => import("./pages/PayResultPage"));
 const QuotationPage = lazy(() => import("./pages/QuotationPage"));
 const SalesPage = lazy(() => import("./pages/SalesPage"));
 const PresosPage = lazy(() => import("./pages/PresosPage"));
@@ -74,6 +76,9 @@ export default function App() {
                   <Route path="/q/:no" element={<QuotationPage mode="customer" />} />
                   <Route path="/quotations/:no" element={<QuotationPage mode="customer" />} />
                   <Route path="/pay/:no" element={<PayPage />} />
+                  {/* หน้าธนาคารจำลอง + หน้าผลการจ่าย · ของจริงหน้าธนาคารจะเป็นเว็บของธนาคารเอง */}
+                  <Route path="/pay/:no/bank" element={<MockBankPage />} />
+                  <Route path="/pay/:no/result" element={<PayResultPage />} />
                   <Route path="/manager/approvals" element={<ApprovalsPage />} />
                   <Route path="/manager/sap-sync" element={<SapSyncPage />} />
                   <Route path="/manager/insights" element={<InsightsPage />} />
