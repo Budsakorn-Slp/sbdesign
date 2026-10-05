@@ -50,7 +50,9 @@ services:
       - ./backend:/app
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      target: dev        # vite dev server · ของจริงใช้ชั้น prod ที่ build แล้วเสิร์ฟด้วย nginx
     environment:
       API_PROXY_TARGET: http://api:8000
     depends_on:

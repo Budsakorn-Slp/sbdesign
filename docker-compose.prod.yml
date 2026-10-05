@@ -1,0 +1,77 @@
+# ชุดสำหรับเซิร์ฟเวอร์จริง (Linux) — คนละไฟล์กับ docker-compose.yml ที่ใช้รันในเครื่อง
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml --profile tunnel up -d --build   # เปิด Cloudflare Tunnel ด้วย
+#
+# ต้องมีก่อนรัน:
+#   backend/.env                 ค่าจริงทั้งหมด (APP_ENV=prod, คีย์ SAP, JWT_SECRET)
+#   .env ที่โฟลเดอร์นี้           POSTGRES_PASSWORD=<รหัสที่สุ่มเอง>
+#                                CLOUDFLARE_TUNNEL_TOKEN=<token>  (เฉพาะตอนใช้ profile tunnel)
+#
+# ที่ต่างจากชุดรันในเครื่อง:
+#   - ไม่ mount source code เข้า container · ของที่รันคือสิ่งที่ build ไว้เท่านั้น
+#   - หน้าเว็บเป็นไฟล์ที่ build แล้วเสิร์ฟด้วย nginx ไม่ใช่ vite dev server
+#   - ไม่ seed ข้อมูลตัวอย่าง (entrypoint ปฏิเสธอยู่แล้วเมื่อ APP_ENV=prod)
+#   - ไม่เปิดพอร์ตฐานข้อมูล · เว็บออกที่ 127.0.0.1 เท่านั้น ให้ tunnel เป็นทางเข้าทางเดียว
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sbdesign}
+      POSTGRES_USER: ${POSTGRES_USER:-sb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ต้องตั้ง POSTGRES_PASSWORD ในไฟล์ .env ก่อน}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sb} -d ${POSTGRES_DB:-sbdesign}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ./backend
+      target: prod
+    restart: unless-stopped
+    # .env ไม่ได้อยู่ใน image แล้ว (ดู backend/.dockerignore) — ส่งค่าเข้าตอนรันแทน
+    env_file:
+      - path: ./backend/.env
+        required: true
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-sb}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sbdesign}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      # snapshot ราคาจาก SAP ที่ job รายวันเขียนไว้ — ต้องอยู่รอดตอน build ใหม่
+      - sapdata:/app/data
+    # ไม่ publish พอร์ตออกมาเลย — nginx ในเครือข่ายเดียวกันเรียกถึงอยู่แล้ว
+    expose:
+      - "8000"
+
+  web:
+    build:
+      context: ./web
+      target: prod
+    restart: unless-stopped
+    depends_on:
+      - api
+    # 127.0.0.1 เท่านั้น — ทางเข้าจากข้างนอกคือ Cloudflare Tunnel ไม่ใช่พอร์ตที่เปิดโล่ง
+    # ถ้าเครื่องนี้มี IP สาธารณะ การ publish แบบ "8080:80" เฉยๆ = เปิดเว็บให้ทุกคนยิงตรง
+    # ข้าม Cloudflare ไปเลย (ทั้ง WAF ทั้ง log หายหมด)
+    ports:
+      - "127.0.0.1:8080:80"
+
+  # เปิดด้วย --profile tunnel · ไม่ใส่ profile ก็ไม่ขึ้น เผื่อหน้าบ้านใช้ตัวอื่น
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:?ต้องตั้ง CLOUDFLARE_TUNNEL_TOKEN ในไฟล์ .env}
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  sapdata:
