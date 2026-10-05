@@ -136,11 +136,9 @@ class Settings(BaseSettings):
     company_address_en: str = "126/150 MOO 1, PAKKRET, NONTHABURI 11120"
     company_tax_id: str = "0125555022441"
 
-    quotation_payment_terms: str = ""
-    company_bank_name: str = ""
-    company_bank_account_name: str = ""
-    company_bank_account_no: str = ""
-    company_bank_branch: str = ""
+    # เงื่อนไขท้ายใบ — ปล่อยว่างไว้จะใช้ข้อความมาตรฐานใน api/quotation_doc.py
+    # ตั้งค่านี้เมื่อต้องการเขียนทับทั้งก้อน (คั่นแต่ละข้อด้วย | และขึ้นบรรทัดใหม่ด้วย ;)
+    quotation_terms: str = ""
     invite_only: bool = False
     # dev | prod — prod จะปิดหน้าเอกสาร API, บังคับ cookie secure และใส่ security header
     # แยกจาก invite_only เพราะคนละเรื่อง: อันนั้นคือ "ใครสมัครได้" อันนี้คือ "เปิดสู่เน็ตจริงหรือยัง"

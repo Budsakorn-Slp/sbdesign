@@ -22,6 +22,32 @@ STATUS_TXT = {"issued": "ออกแล้ว · รอชำระ", "paid": "
               "cancelled": "ยกเลิก", "expired": "หมดอายุ"}
 
 
+# เงื่อนไขท้ายใบเสนอราคา — ข้อความมาตรฐานของบริษัท
+#
+# เก็บเป็นโค้ดไม่ใช่ .env เพราะมันยาวหลายบรรทัดและมีเลขบัญชีที่ต้องถูกต้องเป๊ะ
+# ยัดลง .env แล้วจะอ่านไม่ออกและแก้ผิดง่าย · อยากเขียนทับทั้งก้อนใช้ QUOTATION_TERMS ได้
+# {valid_until} ถูกแทนด้วยวันยืนราคาของใบนั้นๆ ตอนพิมพ์ — ห้ามเขียนวันที่ตายตัว
+# ไม่งั้นทุกใบจะบอกวันหมดอายุของใบแรกที่เคยออก
+DEFAULT_TERMS = [
+    "ใบเสนอราคานี้มีกำหนดอายุถึงวันที่ {valid_until} หรือตามกำหนดเวลาที่ระบุในโปรโมชั่นของบริษัท",
+    "บริษัทฯ อาจมีการเรียกเก็บค่าขนส่งสินค้า นอกเขตพื้นที่การให้บริการ สอบถามรายละเอียดได้จากพนักงานขาย",
+    "การชำระเงิน : รับชำระเป็น เงินสด, แคชเชียร์เช็ค, บัตรเครดิต หรือ โอนเงิน\n"
+    'ชื่อบัญชี "บริษัท เอสบี ดีไซน์สแควร์ จำกัด"\n'
+    "ธ.กรุงเทพ เลขที่ 207-4-23928-2 บัญชีออมทรัพย์ สาขาปากเกร็ด\n"
+    "ธ.กสิกรไทย เลขที่ 142-1-06853-0 บัญชีกระแสรายวัน สาขาปากเกร็ด\n"
+    "ธ.ไทยพาณิชย์ เลขที่ 305-3-02510-4 บัญชีกระแสรายวัน สาขาปากเกร็ด",
+    "ลูกค้าเป็นผู้จัดเตรียม พื้นที่ให้พร้อมในการติดตั้ง",
+    "การรับประกันสินค้า เป็นไปตามเงื่อนไขที่บริษัทกำหนด ดูรายละเอียดการรับประกันได้ที่ www.sbdesignsquare.com",
+    "อื่นๆ ..",
+]
+
+
+def _terms(valid_until: str) -> list[str]:
+    raw = get_settings().quotation_terms
+    items = [t.strip() for t in raw.replace(";", "\n").split("|") if t.strip()] if raw else DEFAULT_TERMS
+    return [t.format(valid_until=valid_until) if "{valid_until}" in t else t for t in items]
+
+
 def _money(v) -> str:
     return f"{float(v):,.2f}"
 
@@ -118,20 +144,15 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
     note_block = (f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note)}</div></div>" if note
                   else "<div class='note-box'><b>หมายเหตุ</b><div class='blank'></div></div>")
 
-    terms = []
-    if s.quotation_payment_terms:
-        terms.append(f"<div><b>เงื่อนไขการชำระเงิน</b><br>{e(s.quotation_payment_terms)}</div>")
-    if s.company_bank_account_no:
-        bank = " · ".join(x for x in [e(s.company_bank_name), e(s.company_bank_branch)] if x)
-        terms.append(f"<div><b>ชำระโดยโอนเข้าบัญชี</b><br>{bank}<br>"
-                     f"{e(s.company_bank_account_name)}<br><b>{e(s.company_bank_account_no)}</b></div>")
-    terms_block = f"<div class='terms'>{''.join(terms)}</div>" if terms else ""
+    items = _terms(q.valid_until.strftime("%d/%m/%Y"))
+    lis = "".join(f"<li>{e(t).replace(chr(10), '<br>')}</li>" for t in items)
+    terms_block = f"<div class='terms'><b>เงื่อนไข</b><ol>{lis}</ol></div>" if items else ""
 
     img_css = ".ph{width:72px}.ph img{width:64px;height:64px;object-fit:cover;border-radius:4px;background:#f2f2f0}" if with_images else ""
 
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{display:flex;gap:32px;margin-top:18px;font-size:13px;border-top:1px solid #e0e0de;padding-top:14px}}{img_css}@media print{{body{{margin:0}}}}</style></head>
+<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px;border-top:1px solid #e0e0de;padding-top:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}{img_css}@media print{{body{{margin:0}}}}</style></head>
 <body><div class="box"><div><h1>ใบเสนอราคา / Quotation</h1>
 <div class="muted">{e(s.company_name_th)} · {e(s.company_name_en)}<br>{e(s.company_address_th)}<br>เลขประจำตัวผู้เสียภาษี {e(s.company_tax_id)}</div></div>
 <div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div></div></div>

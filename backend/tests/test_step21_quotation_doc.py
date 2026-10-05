@@ -4,6 +4,7 @@
 เทสจึงอ่าน HTML จริงที่ออกมา ไม่ใช่เช็คว่าฟังก์ชันถูกเรียก
 """
 import re
+from datetime import date
 
 import pytest
 
@@ -149,21 +150,37 @@ def test_ลูกค้าไม่ได้_token_ติดมาด้วย(
         assert row["quotation_token"] is None
 
 
-def test_เงื่อนไขชำระเงินกับบัญชีบริษัทขึ้นเมื่อตั้งค่าแล้ว(client, monkeypatch):
-    """ไม่ตั้งค่า = ไม่พิมพ์ · ดีกว่าพิมพ์เลขบัญชีตัวอย่างค้างไว้แล้วมีคนโอนผิดที่"""
+def test_เงื่อนไขท้ายใบครบทุกข้อ(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    assert "เงื่อนไข" in doc
+    for must in ("แคชเชียร์เช็ค", "207-4-23928-2", "142-1-06853-0", "305-3-02510-4",
+                 "ลูกค้าเป็นผู้จัดเตรียม", "www.sbdesignsquare.com", "อื่นๆ"):
+        assert must in doc, f"เงื่อนไขขาด: {must}"
+    # เงื่อนไขต้องอยู่ท้ายใบ หลังยอดรวม
+    assert doc.index("รวมสุทธิ") < doc.index("แคชเชียร์เช็ค")
+
+
+def test_วันหมดอายุในเงื่อนไขต้องเป็นของใบนั้นจริง(client):
+    """เขียนวันที่ตายตัวไว้ ทุกใบจะบอกวันหมดอายุของใบแรกที่เคยออก"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    want = date.fromisoformat(q["valid_until"]).strftime("%d/%m/%Y")
+    assert f"มีกำหนดอายุถึงวันที่ {want}" in doc
+
+
+def test_เขียนทับเงื่อนไขจาก_env_ได้(client, monkeypatch):
+    """ข้อความเปลี่ยนได้โดยไม่ต้อง deploy ใหม่"""
     from app.core.config import get_settings
 
     hs = auth_headers(client, "SA-104", "staff")
     q, _ = _quotation(client, hs)
-    assert "โอนเข้าบัญชี" not in _doc(client, hs, q["quotation_no"])
-
-    s = get_settings()
-    monkeypatch.setattr(s, "quotation_payment_terms", "ชำระเต็มจำนวนก่อนจัดส่ง")
-    monkeypatch.setattr(s, "company_bank_name", "ธนาคารกสิกรไทย")
-    monkeypatch.setattr(s, "company_bank_account_name", "บริษัท เอส.บี.อุตสาหกรรมเครื่องเรือน จำกัด")
-    monkeypatch.setattr(s, "company_bank_account_no", "123-4-56789-0")
+    monkeypatch.setattr(get_settings(), "quotation_terms", "ข้อหนึ่ง|ข้อสอง;บรรทัดสอง")
     doc = _doc(client, hs, q["quotation_no"])
-    assert "ชำระเต็มจำนวนก่อนจัดส่ง" in doc and "123-4-56789-0" in doc and "ธนาคารกสิกรไทย" in doc
+    assert "ข้อหนึ่ง" in doc and "ข้อสอง" in doc and "บรรทัดสอง" in doc
+    assert "แคชเชียร์เช็ค" not in doc
 
 
 def test_รหัสสินค้าแยกคอลัมน์จากชื่อสินค้า(client):
