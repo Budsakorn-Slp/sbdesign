@@ -6,6 +6,7 @@
 from datetime import date
 
 import pytest
+from sqlalchemy import select
 
 from app.db.session import SessionLocal
 from app.models.catalog import Material, ProductStockSite
@@ -20,6 +21,15 @@ def _seed():
     ensure_seed()
     with SessionLocal() as db:
         seed_catalog(db)
+    yield
+    # ฐานเทสใช้ร่วมกันทั้ง session — ตะกร้าที่เทสนี้เปิดไว้ต้องปิดทิ้ง ไม่งั้นเทสไฟล์หลัง
+    # ที่ล็อกอินด้วยสมาชิกคนเดียวกันจะเจอตะกร้าค้างแล้วนับของไม่ตรง
+    from app.models.cart import Cart
+
+    with SessionLocal() as db:
+        for c in db.scalars(select(Cart).where(Cart.status == "open")).all():
+            c.status = "closed"
+        db.commit()
 
 
 SITES = [
@@ -116,3 +126,57 @@ def test_ระดับบริษัทไม่โผล่ให้ลู�
         db.commit()
     got = client.get(f"/materials/{m}").json()["stock_sites"]
     assert [(x["plant_code"], x["qty"]) for x in got] == [("S319", 2)]
+
+
+def test_ตัวโชว์ในตะกร้าบอกสาขาที่ไปดูของจริงได้(client):
+    """ของตัวโชว์มีชิ้นเดียวต่อสาขาและต้องไปรับเอง — ตะกร้าต้องบอกว่าไปดูที่ไหนได้
+    ไม่ใช่ให้ลูกค้ากดหาเองทีหลัง"""
+    from sqlalchemy import select
+
+    from app.services import catalog_service
+
+    # สร้างสินค้าตัวโชว์ขึ้นมาเอง — ข้ามเทสเวลาไม่มีข้อมูลเท่ากับไม่ได้ทดสอบอะไรเลย
+    # (รหัสขึ้นต้น 20 = กลุ่ม display ซึ่ง pickup_only จะเป็น True)
+    display = "20009999"
+    with SessionLocal() as db:
+        src = db.scalars(select(Material).where(Material.is_public.is_(True))).first()
+        if not db.get(Material, display):
+            m = Material(matnr=display, sku=f"SKU-{display}", name_th="ตู้โชว์ตัวอย่างหน้าร้าน",
+                         is_public=True, synced_at=src.synced_at, brand_id=src.brand_id, category_id=src.category_id)
+            db.add(m)
+            db.commit()
+    assert catalog_service.pickup_only(display)
+
+    with SessionLocal() as db:
+        db.query(ProductStockSite).filter(ProductStockSite.matnr == display).delete()
+        db.add(ProductStockSite(matnr=display, plant_code="S319", name="DS-บางแค", available_qty=1, fetched_at=utcnow()))
+        db.add(ProductStockSite(matnr=display, plant_code="1000", name="S.B. Furniture", available_qty=9, fetched_at=utcnow()))
+        db.commit()
+
+    hs = auth_headers(client, "0949164600")
+    cart = client.post("/cart/items", json={"matnr": display, "qty": 1}, headers=hs).json()
+    line = next(i for i in cart["items"] if i["matnr"] == display)
+    assert [(s["plant_code"], s["name"]) for s in line["show_at_sites"]] == [("S319", "DS-บางแค")], \
+        "ต้องบอกเฉพาะโชว์รูม ไม่ใช่โรงงาน"
+
+
+def test_ของทั่วไปไม่ต้องรกด้วยรายชื่อสาขา(client):
+    """ของทั่วไปส่งถึงบ้าน รู้ว่าสาขาไหนมีก็ไม่ช่วยอะไร"""
+    from sqlalchemy import select
+
+    from app.services import catalog_service
+
+    with SessionLocal() as db:
+        normal = db.scalars(
+            select(Material.matnr).where(Material.is_public.is_(True), Material.matnr.like("10%"))
+        ).first()
+    if not normal or catalog_service.pickup_only(normal):
+        pytest.skip("ชุดข้อมูลทดสอบไม่มีสินค้าทั่วไป")
+    with SessionLocal() as db:   # เทสก่อนหน้าอาจใส่แถวนี้ไว้แล้ว — ล้างก่อนเสมอ
+        db.query(ProductStockSite).filter(ProductStockSite.matnr == normal).delete()
+        db.add(ProductStockSite(matnr=normal, plant_code="S319", name="DS-บางแค", available_qty=5, fetched_at=utcnow()))
+        db.commit()
+    hs = auth_headers(client, "0949164600")
+    cart = client.post("/cart/items", json={"matnr": normal, "qty": 1}, headers=hs).json()
+    line = next(i for i in cart["items"] if i["matnr"] == normal)
+    assert line["show_at_sites"] == []

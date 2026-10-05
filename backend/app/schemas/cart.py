@@ -7,6 +7,14 @@ from app.schemas.catalog import ProductStockOut
 from app.schemas.promo import TotalsOut
 
 
+class CartSiteOut(BaseModel):
+    """สาขาที่มีสินค้าตัวโชว์ชิ้นนี้ตั้งอยู่"""
+
+    plant_code: str
+    name: str
+    qty: int
+
+
 class CartItemOut(BaseModel):
     id: str
     matnr: str
@@ -31,6 +39,9 @@ class CartItemOut(BaseModel):
     requires_install: bool
     note: str | None = None
     selected: bool = True
+    # สาขาที่มีของตัวจริงให้ไปดู — ใส่เฉพาะสินค้าตัวโชว์ที่ต้องรับที่สาขาอยู่แล้ว
+    # ของทั่วไปไม่ต้องมี เพราะส่งถึงบ้าน การบอกว่ามีที่สาขาไหนไม่ช่วยอะไรแถมรกตะกร้า
+    show_at_sites: list["CartSiteOut"] = []
     # ยอดของจาก cache (อายุไม่เกิน TTL) ไว้โชว์ป้ายสต็อกในตะกร้าเหมือนการ์ดสินค้า
     # ไม่ใช่ยอดสด — ตอนสั่งซื้อจริงระบบยิงเช็คทั้งตะกร้าอีกรอบอยู่แล้ว
     stock: ProductStockOut | None = None

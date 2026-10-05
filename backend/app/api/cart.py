@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.cart import Cart, CartItem
 from app.models.user import User
-from app.schemas.cart import AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, PresoReadyOut, SelectIn, ShipToIn, UpdateItemIn
+from app.schemas.cart import CartSiteOut, AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, PresoReadyOut, SelectIn, ShipToIn, UpdateItemIn
 from app.schemas.catalog import ProductStockOut
 from app.services import cart_service, catalog_service, product_stock_service, staff_shipping_service
 
@@ -19,7 +19,7 @@ def person(u: User | None) -> CartPersonOut | None:
     return CartPersonOut(id=u.id, name=u.name, points=u.points, sap_customer_no=u.sap_customer_no, staff_code=u.staff_code, phone=u.phone, branch_id=u.branch_id, email=u.email, default_address=u.default_address, default_postcode=u.default_postcode)
 
 
-def item_out(it: CartItem, stock: dict | None = None) -> CartItemOut:
+def item_out(it: CartItem, stock: dict | None = None, sites: list | None = None) -> CartItemOut:
     u = it.added_by_user
     charge = staff_shipping_service.is_charge_line(it)
     return CartItemOut(
@@ -30,6 +30,7 @@ def item_out(it: CartItem, stock: dict | None = None) -> CartItemOut:
         added_by_code=u.staff_code if u else None, added_at=it.added_at, pending_ack=it.pending_ack, supply_mode=it.supply_mode, plant_code=it.plant_code, atp_date=it.atp_date,
         requires_install=it.requires_install, note=it.note, selected=it.selected,
         is_charge=charge, charge_role=staff_shipping_service.role_of(it.matnr) if charge else None,
+        show_at_sites=[CartSiteOut(plant_code=x.plant_code, name=x.name, qty=x.available_qty) for x in (sites or [])],
     )
 
 
@@ -56,9 +57,13 @@ def cart_out(cart: Cart, db: Session | None = None) -> CartOut:
     # ป้ายสต็อกในตะกร้าอ่านจาก cache เดียวกับการ์ดสินค้า — ไม่ยิง SAP ตอนเปิดตะกร้า
     # (ของจริงยืนยันอีกทีตอนเช็คทั้งบิลก่อนออกใบ) รหัสที่ยังไม่เคยเช็คจะไม่มี key = "ยังไม่รู้"
     stock = product_stock_service.summary_for(db, [it.matnr for it in cart.items]) if db is not None else {}
+    # สินค้าตัวโชว์ต้องไปรับที่สาขาอยู่แล้ว บอกไปเลยว่าไปดูของจริงได้ที่ไหน
+    # ถามเฉพาะรหัสกลุ่มนี้ ไม่ใช่ทั้งตะกร้า — ของทั่วไปส่งถึงบ้าน ไม่ต้องรู้ว่าสาขาไหนมี
+    display = [it.matnr for it in cart.items if catalog_service.pickup_only(it.matnr)]
+    sites = product_stock_service.sites_for(db, display) if (db is not None and display) else {}
     return CartOut(
         id=cart.id, no=cart.no, label=cart.label, status=cart.status, customer=person(cart.customer), owner_sales=person(cart.owner_sales),
-        is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it, stock.get(it.matnr)) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
+        is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it, stock.get(it.matnr), sites.get(it.matnr)) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
         pending_count=t["pending_count"], all_count=t["all_count"], item_count=t["item_count"], selected_count=t["selected_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals, delivery=delivery,
         preso=preso,
     )

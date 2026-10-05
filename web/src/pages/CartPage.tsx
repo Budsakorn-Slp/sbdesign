@@ -9,7 +9,7 @@ import { shipNeedsReview, useCart } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { bahtWord, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
-import type { CartItem, StockRow } from "../lib/types";
+import type { CartItem } from "../lib/types";
 
 const LOGIN_NOTE_MS = 60_000;          // 1 นาที
 const LOGIN_NOTE_KEY = "sb_login_note";  // ต่อหนึ่งแท็บ/หนึ่งการเข้าใช้งาน
@@ -478,45 +478,32 @@ function StockTag({ it }: { it: CartItem }) {
 /** "มีที่สาขาไหนบ้าง" สำหรับของตัวโชว์/ฝากขาย — กดแล้วค่อยยิงถาม ไม่ถามล่วงหน้าทุกใบ
  *  (เช็คสต็อกรายสาขาเป็นการยิง SAP สด ถ้าถามทุกใบตอนเปิดตะกร้าจะช้าและเปลืองโควตา) */
 function BranchPicker({ it }: { it: CartItem }) {
-  const [rows, setRows] = useState<StockRow[] | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const load = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await apiGet<{ rows: StockRow[] }>(`/materials/${it.matnr}/stock`);
-      setRows(res.rows.filter((r) => r.available > 0));
-    } catch (e) {
-      setErr(errorMessage(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
+  // รายชื่อสาขามากับตะกร้าอยู่แล้ว (ฟิลด์ NAME ของ STOCK_ON_SITES ฝั่ง SAP) ไม่ต้องกดโหลด
+  // ของเดิมให้กด "ดูสาขาที่มีของ" แล้วไปยิง /materials/{id}/stock ซึ่งอ่านสาขาจำลอง 4 แห่ง
+  // ของเรา ไม่ใช่โชว์รูมจริง 32 แห่ง — ลูกค้าได้คำตอบที่ไม่ตรงกับที่ไปเจอหน้าร้าน
+  const sites = it.show_at_sites || [];
   return (
     <div className="pickup-box">
       <div className="pickup-head"><Icon name="storefront" size={15} /> รับที่สาขาเท่านั้น · ยังสั่งซื้อออนไลน์ไม่ได้</div>
       {/* เงื่อนไขต้องอยู่ตรงที่ลูกค้าตัดสินใจ ไม่ใช่ซ่อนอยู่ในหน้านโยบาย */}
       <div className="pickup-head warn"><Icon name="block" size={15} /> ซื้อแล้วไม่รับเปลี่ยนหรือคืน</div>
-      {rows === null ? (
-        <button className="link-btn small" disabled={busy} onClick={load}>{busy ? "กำลังเช็ค…" : "ดูสาขาที่มีของ"}</button>
-      ) : rows.length === 0 ? (
-        /* SAP ตอบยอดรวมทุกสาขามาก้อนเดียว ยังไม่มีตัวเลขแยกรายสาขาให้ — บอกเท่าที่รู้จริง
-           ดีกว่าโชว์รายชื่อสาขาแบบเดา ซึ่งทำให้ลูกค้าขับรถไปเก้อ */
+      {sites.length === 0 ? (
+        /* บอกเท่าที่รู้จริง ดีกว่าโชว์รายชื่อสาขาแบบเดา ซึ่งทำให้ลูกค้าขับรถไปเก้อ */
         <div className="tiny muted">
           {it.stock?.ready_qty ? `มีของรวมทุกสาขา ${it.stock.ready_qty} ชิ้น · ` : ""}
-          ระบบยังไม่มีข้อมูลแยกรายสาขา — โทรถามสาขาที่สะดวก หรือติดต่อศูนย์บริการลูกค้าก่อนเดินทาง
+          ยังไม่มีข้อมูลว่าตั้งอยู่สาขาไหน — โทรถามสาขาที่สะดวกก่อนเดินทาง
         </div>
       ) : (
-        <ul className="pickup-list">
-          {rows.map((r) => (
-            <li key={r.plant_code}><b>{r.plant_name}</b> · มี {r.available} ชิ้น</li>
-          ))}
-        </ul>
+        <>
+          <div className="pickup-head ok"><Icon name="visibility" size={15} /> ไปดูของจริงได้ที่ {sites.length} สาขา</div>
+          <ul className="pickup-list">
+            {sites.map((r) => (
+              <li key={r.plant_code}><b>{r.name}</b>{r.qty > 1 ? ` · มี ${r.qty} ชิ้น` : ""}</li>
+            ))}
+          </ul>
+          <div className="tiny muted">ยอดอัปเดตเป็นรอบ — โทรเช็คกับสาขาก่อนเดินทาง</div>
+        </>
       )}
-      {err && <div className="tiny err">{err}</div>}
     </div>
   );
 }

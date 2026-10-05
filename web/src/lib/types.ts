@@ -257,6 +257,8 @@ export type CartItem = {
   atp_date: string | null;
   requires_install: boolean;
   note: string | null;
+  /** สาขาที่มีของตัวจริงให้ไปดู — มีเฉพาะสินค้าตัวโชว์ที่ต้องรับที่สาขา */
+  show_at_sites: StockSite[];
 };
 
 export type CartPerson = {
