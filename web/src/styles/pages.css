@@ -824,12 +824,8 @@
 /* สรุปคำสั่งซื้อซ้าย · ช่องทางจ่ายขวา — อ่านว่าจ่ายอะไรก่อน แล้วค่อยเลือกวิธีจ่าย */
 .pay-grid { display: grid; grid-template-columns: 1fr 380px; gap: 24px; align-items: start; }
 .pay-pick h3 { margin: 0 0 10px; font-size: 16px; }
-/* ช่องทางเรียงแนวตั้ง — สองคอลัมน์ทำให้ตาต้องกวาดซ้ายขวาเพื่อเทียบของที่เลือกอันเดียว */
-.pay-methods { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.pay-method { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px;
-  border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
-.pay-method > div:first-of-type { flex: 1; }
-.pay-method.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+/* ช่องทางชำระเงินนิยามอยู่ที่ cart.css ที่เดียว — เคยเขียนซ้ำที่นี่แล้วตัวที่โหลดทีหลัง
+   ทับตัวหน้า กลายเป็นแก้แล้วหน้าเว็บไม่เปลี่ยน หาสาเหตุอยู่นาน */
 .pay-method:hover { border-color: var(--line-2); }
 
 /* ---------- หน้าธนาคารจำลอง ---------- */

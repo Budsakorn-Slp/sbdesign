@@ -214,8 +214,12 @@
 }
 
 /* ===== ชำระเงิน (STEP 9) ===== */
-.pay-methods { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin: 14px 0 6px; }
-.pay-method { display: flex; align-items: center; gap: 12px; text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
+/* เรียงเป็นแถวลงมา ไม่ใช่กริดสองคอลัมน์ — ช่องทางมีไม่กี่อัน เลือกได้อันเดียว
+   สองคอลัมน์ทำให้ตาต้องกวาดซ้ายขวาเพื่อเทียบ และชื่อยาวๆ ถูกบีบจนตัดบรรทัดกลางคำ */
+.pay-methods { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; }
+.pay-method { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer; }
+/* ชื่อช่องทางกินที่ที่เหลือทั้งหมด ไอคอนติ๊กจะได้ชิดขวาเสมอ */
+.pay-method > div { flex: 1; min-width: 0; }
 .pay-method.on { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
 .pay-intent { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin: 14px 0; }
 .qr-art { display: grid; grid-template-columns: repeat(25, 6px); grid-auto-rows: 6px; width: 150px; padding: 10px; background: #fff; border: 1px solid var(--line); border-radius: 8px; }
@@ -224,7 +228,6 @@
 .pay-done { max-width: 640px; margin: 0 auto; text-align: center; }
 .pay-done h1 { font-size: 26px; margin: 8px 0 4px; }
 .pay-tick { color: var(--green, #1a7f37); display: flex; justify-content: center; }
-@media (max-width: 599px) { .pay-methods { grid-template-columns: 1fr; } }
 
 /* ===== สมุดที่อยู่จัดส่ง (หน้าสั่งซื้อ) =====
    ปกติเห็นแค่ใบที่เลือกอยู่ใบเดียว กด "เปลี่ยน" ค่อยกางรายการ — หน้าสั่งซื้อจะได้ไม่ยาว
