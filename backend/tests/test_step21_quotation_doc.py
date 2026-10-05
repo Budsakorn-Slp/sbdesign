@@ -55,11 +55,44 @@ def test_ส่วนลดยอดศูนย์ต้องไม่พิ�
 
 def test_โชว์เบอร์พนักงานไม่ใช่คิวจัดส่ง(client):
     """คิวจัดส่งเปลี่ยนได้หลังออกใบ พิมพ์ค้างไว้จะเป็นข้อมูลผิดในมือลูกค้า"""
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.staff_code == "SA-104"))
+        u.phone = "0812345678"
+        db.commit()
     hs = auth_headers(client, "SA-104", "staff")
     q, _ = _quotation(client, hs)
     doc = _doc(client, hs, q["quotation_no"])
     assert "คิวจัดส่ง" not in doc
-    assert "โทร" in doc
+    assert "โทร 0812345678" in doc
+
+
+def test_พนักงานไม่มีเบอร์_ต้องไม่พิมพ์โทรขีด(client):
+    """"โทร -" คือช่องว่างที่กินที่แล้วไม่ได้บอกอะไร — ไม่มีเบอร์ให้ใช้อีเมลแทน"""
+    from sqlalchemy import select
+
+    from app.models.user import User
+
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.staff_code == "SA-104"))
+        u.phone = None
+        db.commit()
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    assert "โทร -" not in doc
+    assert "somchai@sb.local" in doc
+
+
+def test_ช่องหมายเหตุอยู่เหนือตารางสินค้า(client):
+    """เซลล์ขอให้อยู่ข้างบน จะได้อ่านเงื่อนไขก่อนไล่ดูรายการ ไม่ใช่เจอทีหลังตอนอ่านจบแล้ว"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs, note="ลูกค้าขอส่งหลัง 15 น.")
+    doc = _doc(client, hs, q["quotation_no"])
+    assert doc.index("หมายเหตุ") < doc.index("<table>"), "ช่องหมายเหตุต้องมาก่อนตารางสินค้า"
 
 
 def test_มีช่องหมายเหตุและแสดงที่เซลล์พิมพ์ไว้(client):

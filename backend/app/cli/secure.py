@@ -144,6 +144,27 @@ def cmd_set_staff(args) -> int:
     return 0
 
 
+def cmd_set_phone(args) -> int:
+    """ตั้งเบอร์โทรให้พนักงานรายคน — เบอร์นี้ไปโผล่บนใบเสนอราคาที่ลูกค้าถือกลับบ้าน
+
+    ลูกค้าถือใบแล้วอยากโทรถามคนที่คุยด้วย ไม่ใช่โทรเข้าคอลเซ็นเตอร์แล้วเริ่มเล่าใหม่
+    ไม่ตั้งไว้ เอกสารจะใช้อีเมลแทน และถ้าไม่มีทั้งคู่ก็ไม่พิมพ์ช่องติดต่อเลย
+    """
+    digits = "".join(ch for ch in args.phone if ch.isdigit())
+    if not (9 <= len(digits) <= 10):
+        print(f"! เบอร์ไม่ถูกต้อง: {args.phone!r} (ต้องเป็นตัวเลข 9-10 หลัก)")
+        return 1
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.staff_code == args.staff_code))
+        if not u:
+            print(f"! ไม่พบพนักงานรหัส {args.staff_code}")
+            return 1
+        u.phone, u.updated_at = digits, utcnow()
+        db.commit()
+        print(f"ตั้งเบอร์ให้ {u.staff_code} ({u.name}) = {digits}")
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="python -m app.cli.secure", description="ตรวจความปลอดภัยและตั้งรหัสใหม่")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -154,6 +175,10 @@ def main(argv=None) -> int:
     ss = sub.add_parser("set-staff", help="ตั้งรหัสพนักงานทุกบัญชีเป็นค่าเดียวกัน (เครื่องทดสอบเท่านั้น)")
     ss.add_argument("--password", required=True)
     ss.set_defaults(fn=cmd_set_staff)
+    sp = sub.add_parser("set-phone", help="ตั้งเบอร์โทรพนักงาน (ขึ้นบนใบเสนอราคา)")
+    sp.add_argument("staff_code", help="รหัสพนักงาน เช่น SA-104")
+    sp.add_argument("phone", help="เบอร์โทร 9-10 หลัก")
+    sp.set_defaults(fn=cmd_set_phone)
 
     args = ap.parse_args(argv)
     return args.fn(args)

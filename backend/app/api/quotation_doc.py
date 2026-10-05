@@ -95,7 +95,13 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
     # คิวจัดส่งเปลี่ยนได้หลังออกใบ เอาไปพิมพ์ค้างไว้จะกลายเป็นข้อมูลผิดในมือลูกค้า
     sales_name = e(q.sales.name) if q.sales else "สั่งซื้อออนไลน์"
     sales_code = f" ({e(q.sales.staff_code)})" if q.sales and q.sales.staff_code else ""
-    sales_phone = e(q.sales.phone) if q.sales and q.sales.phone else "-"
+    # ไม่มีเบอร์ก็ใช้อีเมล ไม่มีทั้งคู่ก็ไม่พิมพ์บรรทัดนั้น — "โทร -" คือช่องว่างที่กินที่
+    # แล้วไม่ได้บอกอะไร ลูกค้าอ่านแล้วนึกว่าระบบพัง (ตั้งเบอร์ให้พนักงานด้วย cli.secure set-phone)
+    contact = ""
+    if q.sales and q.sales.phone:
+        contact = f"<span class='muted'>โทร {e(q.sales.phone)}</span>"
+    elif q.sales and q.sales.email:
+        contact = f"<span class='muted'>{e(q.sales.email)}</span>"
 
     note = (q.preso.note if q.preso and q.preso.note else "").strip()
     note_block = (f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note)}</div></div>" if note
@@ -118,13 +124,13 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
 <body><div class="box"><div><h1>ใบเสนอราคา / Quotation</h1><div class="muted">SB Design Square · บริษัท เอส.บี.อุตสาหกรรมเครื่องเรือน จำกัด</div></div>
 <div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div></div></div>
 <div class="box"><div><b>ลูกค้า</b><br>{e(c.get('name') or '')} · CUST {e(c.get('sap_customer_no') or '-')} · {e(c.get('tier') or 'ทั่วไป')}<br><span class="muted">{e(c.get('phone') or '')} · {e(c.get('email') or '')}</span><br><span class="muted">{e(q.ship_address or '')} {e(q.ship_postcode or '')}</span></div>
-<div style="text-align:right"><b>พนักงานขาย</b><br>{sales_name}{sales_code}<br><span class="muted">โทร {sales_phone}</span></div></div>
+<div style="text-align:right"><b>พนักงานขาย</b><br>{sales_name}{sales_code}{f"<br>{contact}" if contact else ""}</div></div>
+{note_block}
 <table><thead><tr><th>#</th>{img_col}<th>รายการ</th><th class="r">จำนวน</th><th class="r">ราคา/หน่วย</th><th class="r">ส่วนลด</th><th class="r">รวม</th><th>รับสินค้า</th></tr></thead><tbody>{rows}
 <tr><td colspan="{span}" class="r">รวมสินค้า</td><td class="r">{_money(q.subtotal)}</td><td></td></tr>{disc_rows}
 {fee_row}
 <tr class="tot"><td colspan="{span}" class="r">รวมสุทธิ (รวม VAT 7% = {_money(q.vat)})</td><td class="r">{_money(q.grand_total)}</td><td></td></tr>
 {dep_row}</tbody></table>
-{note_block}
 {terms_block}
 <p class="muted">เอกสารนี้สร้างจากระบบ SB Sales App (mock PDF) · ราคาและโปรโมชั่นถูกล็อกไว้จนถึงวันยืนราคา · เมื่อชำระเงินสำเร็จ ระบบจะส่งใบเสนอราคาไป convert เป็น Sales Order ใน SAP{(' · SO ' + e(q.sap_so_no)) if q.sap_so_no else ''}</p>
 </body></html>"""
