@@ -69,30 +69,68 @@ docker compose -f docker-compose.prod.yml logs --tail=30 api
 `APP_ENV=prod` container จะไม่ยอมขึ้นเลย (ดูเหตุผลใน `backend/docker-entrypoint.sh`)
 เพราะ seed สร้างบัญชีพนักงานรหัส `1122` และยัดสินค้าตัวอย่างทับของจริงทุกครั้งที่รีสตาร์ท
 
-ดึงของจริงเข้าแทน — ลำดับเดียวกับที่ `backend/scripts/sync_all.ps1` ทำบน Windows
-(`dc` = `docker compose -f docker-compose.prod.yml`)
+ดึงของจริงเข้าแทน — `dc` = `docker compose -f docker-compose.prod.yml`
 
 ```bash
-dc exec api python -m app.etl.import_catalog          # สินค้าจากเว็บจริง
-dc exec api python -m app.etl.sync_web_categories
-dc exec api python -m app.etl.sync_product_images
-dc exec api python -m app.etl.sync_english_names
-dc exec api python -m app.etl.sync_product_signals
-dc exec api python -m app.etl.sync_shipping_rules
-dc exec api python -m app.etl.sync_thai_geo
-dc exec api python -m app.etl.sync_home_media
-dc exec api python -m app.etl.sync_cms_pages
-dc exec api python -m app.etl.refresh_stock
-dc exec api python -m app.etl.sync_sap_prices         # ราคาจาก SAP (ตัวนี้ตั้ง cron รายวัน)
-dc exec api python -m app.etl.sync_display_items
+dc exec api scripts/sync_all.sh --with-sap
 ```
 
-> `refresh_stock` ห้ามใส่ `--mock` เด็ดขาด — มันเขียนทับจำนวนจริงด้วยเลขสุ่ม
+ตัวนี้เรียกทุกอย่างตามลำดับที่ถูกต้อง (สินค้า → ค่าส่ง/ที่อยู่ → เนื้อหาหน้าเว็บ → สต็อก/ราคา SAP)
+ครั้งแรกใช้เวลาเป็นชั่วโมง · แยกรันทีละชุดได้ถ้าต้องการ
+
+```bash
+dc exec api scripts/sync_products.sh     # ข้อมูลสินค้า 7 ขั้น
+dc exec api scripts/sync_daily.sh        # กฎค่าส่ง + ที่อยู่ไทย
+dc exec api scripts/sync_stock.sh        # สต็อก + ราคาจาก SAP (ยิง SAP หลายพันครั้ง)
+```
+
+> `sync_stock.sh` ไม่มีโหมด `--mock` ให้โดยตั้งใจ — `refresh_stock --mock` เขียนตัวเลขสุ่ม
+> ทับสต็อกจริง ถ้ามีใครเผลอใส่บน prd จะไม่มีใครรู้จนกว่าลูกค้าจะสั่งของที่ไม่มี
+
+ขั้นไหนล้ม สคริปต์จะรันตัวที่เหลือต่อแล้วสรุปตอนจบว่าตัวไหนพังพร้อม exit code —
+รันซ้ำเฉพาะตัวที่ล้มได้เลย ไม่ต้องเริ่มใหม่ทั้งชุด
 
 ตรวจความปลอดภัย/บัญชีพนักงาน:
 
 ```bash
 dc exec api python -m app.cli.secure audit
+```
+
+---
+
+## ตั้งให้อัปเดตเอง (cron)
+
+```bash
+sudo mkdir -p /var/log/sbdesign
+sudo cp deploy/cron/sbdesign.cron /etc/cron.d/sbdesign
+sudo chown root:root /etc/cron.d/sbdesign
+sudo chmod 644 /etc/cron.d/sbdesign
+```
+
+ในไฟล์ตั้ง path ไว้เป็น `/opt/sbdesign` — แก้ให้ตรงกับที่วางโปรเจ็คจริง และตรวจโซนเวลา
+ด้วย `timedatectl` ว่าเป็น Asia/Bangkok ไม่งั้นงานจะรันผิดเวลาไป 7 ชั่วโมง
+
+| เวลา | ทำอะไร |
+|---|---|
+| 01:30 ทุกวัน | สำรองฐาน (`pg_dump` เก็บ 14 วัน) |
+| 02:00 ทุกวัน | ข้อมูลสินค้า |
+| 03:00 ทุกวัน | กฎค่าส่ง + ที่อยู่ไทย |
+| 03:30 ทุกวัน | สต็อก + ราคาจาก SAP |
+| 04:00 อาทิตย์ | แบนเนอร์หน้าแรก + หน้า CMS |
+| 05:00 ทุกวัน | ลบล็อกเก่าเกิน 30 วัน |
+
+ล็อกอยู่ที่ `/var/log/sbdesign/` · ดูว่ารอบล่าสุดผ่านไหม:
+
+```bash
+tail -20 /var/log/sbdesign/stock.log
+grep -l "เสร็จแบบมีปัญหา" /var/log/sbdesign/*.log
+```
+
+### สำรอง / กู้คืนฐานข้อมูล
+
+```bash
+deploy/cron/backup_db.sh                 # สำรองทันที 1 รอบ
+gunzip -c backups/sbdesign_<วันเวลา>.sql.gz | dc exec -T db psql -U sb -d sbdesign
 ```
 
 ---
@@ -131,8 +169,7 @@ docker compose -f docker-compose.prod.yml down -v       # ลบข้อมู�
 
 ---
 
-## ยังไม่ได้ทำ
+## หมายเหตุ
 
-- ETL ยังเป็น `.ps1` (3 ไฟล์ใน `backend/scripts/`) — Linux รันไม่ได้ ต้องแปลงเป็น `.sh` + cron
-  ไม่งั้นสินค้า/ราคาจะไม่อัปเดตเองหลังขึ้น ต้องสั่งมือตามคำสั่งข้างบน
-- สำรองฐานข้อมูล (`pg_dump` ตามรอบ)
+สคริปต์ `.ps1` ใน `backend/scripts/` ยังอยู่ ใช้กับเครื่อง Windows ในออฟฟิศเหมือนเดิม
+ตัว `.sh` คือฝาแฝดของมันสำหรับ Linux — แก้ขั้นตอนตรงไหนต้องแก้ทั้งคู่

@@ -1,0 +1,34 @@
+# งานตามเวลาของ sbdesign — ติดตั้งด้วย:
+#
+#   sudo cp deploy/cron/sbdesign.cron /etc/cron.d/sbdesign
+#   sudo chown root:root /etc/cron.d/sbdesign && sudo chmod 644 /etc/cron.d/sbdesign
+#   sudo mkdir -p /var/log/sbdesign
+#
+# แก้ /opt/sbdesign ให้ตรงกับที่วางโปรเจ็คจริง ถ้าไม่ได้วางตรงนั้น
+# เวลาเป็นเวลาเครื่อง — ตรวจด้วย timedatectl ว่าเป็น Asia/Bangkok
+#
+# ทำไมต้องมี MAILTO ว่าง: cron ส่งเมลทุกครั้งที่งานพิมพ์อะไรออกมา ถ้าเครื่องไม่มี MTA
+# จะกองเป็น error ใน syslog ทุกคืน · เราเก็บล็อกลงไฟล์เองอยู่แล้ว
+
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MAILTO=""
+
+# 01:30 สำรองฐานก่อน แล้วค่อยแตะข้อมูล
+30 1 * * * root /opt/sbdesign/deploy/cron/backup_db.sh >> /var/log/sbdesign/backup.log 2>&1
+
+# 02:00 ข้อมูลสินค้า (อ่าน/เขียนฐานเราเองกับฐานเว็บ ไม่กวน SAP)
+0 2 * * * root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api scripts/sync_products.sh >> /var/log/sbdesign/products.log 2>&1
+
+# 03:00 กฎค่าส่ง + ที่อยู่ไทย
+0 3 * * * root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api scripts/sync_daily.sh >> /var/log/sbdesign/daily.log 2>&1
+
+# 03:30 สต็อก + ราคาจาก SAP — ยิง SAP หลายพันครั้ง จึงไว้นอกเวลาทำการ
+30 3 * * * root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api scripts/sync_stock.sh >> /var/log/sbdesign/stock.log 2>&1
+
+# 04:00 วันอาทิตย์ เนื้อหาหน้าเว็บ (แบนเนอร์หน้าแรก + หน้า CMS) เปลี่ยนไม่บ่อย
+0 4 * * 0 root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api python -m app.etl.sync_home_media >> /var/log/sbdesign/content.log 2>&1
+10 4 * * 0 root cd /opt/sbdesign && docker compose -f docker-compose.prod.yml exec -T api python -m app.etl.sync_cms_pages >> /var/log/sbdesign/content.log 2>&1
+
+# 05:00 ลบล็อกเก่าเกิน 30 วัน
+0 5 * * * root find /var/log/sbdesign -name '*.log' -mtime +30 -delete

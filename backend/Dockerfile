@@ -12,7 +12,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements.txt requirements-dev.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
-RUN chmod +x docker-entrypoint.sh
+# ตั้ง exec bit ในอิมเมจเอง — Windows ไม่เก็บบิตนี้ในไฟล์ระบบ ถ้าพึ่ง COPY อย่างเดียว
+# สคริปต์จะกลายเป็น "Permission denied" ตอนรันบน Linux ทั้งที่ไฟล์มาครบ
+RUN chmod +x docker-entrypoint.sh scripts/*.sh
 EXPOSE 8000
 ENTRYPOINT ["./docker-entrypoint.sh"]
 
