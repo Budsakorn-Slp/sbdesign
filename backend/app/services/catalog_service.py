@@ -318,24 +318,18 @@ def _filtered(db: Session, f: "SearchFilters"):
         stmt = stmt.where(Material.image_url.isnot(None), Material.image_url != "")
     if f.abc:
         stmt = stmt.where(Material.abc_class == f.abc)
-    if f.plant:
-        # เลือกสาขา = "ขอดูของตัวโชว์ที่สาขานี้" ไม่ใช่กรองทั้งเว็บ
-        #
-        # ของทั่วไปขายออนไลน์และส่งจากคลัง สาขาไม่เกี่ยวกับการตัดสินใจซื้อเลย ถ้าเอามากรอง
-        # ทั้งเว็บ ของจะหายไปสองในสามโดยไม่มีเหตุผล (3,722 -> 1,044) · ส่วนของตัวโชว์
-        # ต้องไปดูของจริงแล้วรับที่สาขา สาขาจึงเป็นเรื่องเป็นเรื่องตาย
-        #
-        # เงื่อนไข: ของที่ไม่ใช่กลุ่มรับที่สาขา ผ่านหมด · กลุ่มรับที่สาขา เอาเฉพาะที่สาขานี้มี
-        at_plant = select(ProductStockSite.matnr).where(
-            ProductStockSite.plant_code == f.plant, ProductStockSite.available_qty > 0
-        )
-        blocked = {g.strip() for g in get_settings().online_checkout_blocked_groups.split(",") if g.strip()}
-        prefixes = [p for name, p in matnr_groups().items() if name in blocked]
-        if prefixes:
-            is_pickup = or_(*[Material.matnr.startswith(p) for p in prefixes])
-            stmt = stmt.where(or_(~is_pickup, Material.matnr.in_(at_plant)))
-        else:
-            stmt = stmt.where(Material.matnr.in_(at_plant))
+    # เลือกสาขา = "ขอดูของตัวโชว์ที่สาขานี้" ใช้เฉพาะตอนเปิดหมวดที่ต้องรับที่สาขาเท่านั้น
+    #
+    # ไม่เอาไปกรองรายการรวม เพราะของทั่วไปขายออนไลน์และส่งจากคลัง สาขาไม่เกี่ยวกับการ
+    # ตัดสินใจซื้อ · เคยลองกรองทั้งเว็บแล้วของหายไป 147 ตัวโดยที่ลูกค้าไม่ได้ขอ
+    # (3,722 -> 3,575) ซึ่งเป็นผลข้างเคียงที่อธิบายให้คนใช้เข้าใจไม่ได้
+    blocked = {g.strip() for g in get_settings().online_checkout_blocked_groups.split(",") if g.strip()}
+    if f.plant and f.group in blocked:
+        stmt = stmt.where(Material.matnr.in_(
+            select(ProductStockSite.matnr).where(
+                ProductStockSite.plant_code == f.plant, ProductStockSite.available_qty > 0
+            )
+        ))
     if f.sold_out:
         # เฉพาะของที่หมดจริง (เงื่อนไขเดียวกับ _SOLD_OUT ที่ใช้ดันลงล่าง)
         #

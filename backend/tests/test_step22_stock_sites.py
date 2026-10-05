@@ -208,15 +208,12 @@ def test_เลือกสาขาแล้วเห็นตัวโชว�
     assert a in codes and b not in codes
 
 
-def test_เลือกสาขาแล้วของทั่วไปต้องไม่หายไป(client):
-    """ของทั่วไปขายออนไลน์ ส่งจากคลัง สาขาไม่เกี่ยวกับการตัดสินใจซื้อ
-    ถ้าเอามากรองทั้งเว็บ ของจะหายไปสองในสามโดยไม่มีเหตุผล"""
-    with SessionLocal() as db:
-        normal = db.scalars(select(Material.matnr).where(Material.is_public.is_(True), Material.matnr.like("10%"))).first()
-        db.query(ProductStockSite).filter(ProductStockSite.matnr == normal).delete()
-        db.commit()   # ของทั่วไปตัวนี้ไม่มีแถวสาขาเลย
-    got = client.get("/materials/search", params={"plant": "S319", "limit": 100}).json()
-    assert normal in [m["matnr"] for m in got["items"]]
+def test_เลือกสาขาแล้วรายการรวมต้องเท่าเดิมเป๊ะ(client):
+    """สาขาใช้เฉพาะตอนเปิดหมวดตัวโชว์ — ของทั่วไปส่งจากคลัง สาขาไม่เกี่ยวกับการเลือกซื้อ
+    เคยกรองทั้งเว็บแล้วของหายไปโดยที่ลูกค้าไม่ได้ขอ ซึ่งอธิบายให้คนใช้เข้าใจไม่ได้"""
+    plain = client.get("/materials/search", params={"limit": 1}).json()["total"]
+    with_plant = client.get("/materials/search", params={"plant": "S319", "limit": 1}).json()["total"]
+    assert with_plant == plain, "เลือกสาขาแล้วรายการรวมต้องไม่เปลี่ยน"
 
 
 def test_สาขาที่เลือกได้ต้องเป็นของจริงจาก_sap(client):
