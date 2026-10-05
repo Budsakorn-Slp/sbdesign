@@ -1,12 +1,24 @@
+# ชุดสำหรับ "รันบนเครื่องตัวเอง" เท่านั้น — ไม่ใช่ไฟล์ที่เอาไปขึ้นเซิร์ฟเวอร์
+#
+# ที่ต่างจากของจริง: mount โค้ดจากเครื่องเข้า container (แก้แล้วเห็นทันที) · ลงเครื่องมือเทส ·
+# ยัดข้อมูลตัวอย่างให้ · เปิดพอร์ตออกมาให้เรียกจากเครื่องตัวเอง
+#
+#   docker compose up
+#
+# ต้องตั้ง POSTGRES_PASSWORD ก่อน (ไฟล์ .env ที่โฟลเดอร์นี้ หรือ export เอา) — เดิมมีค่า
+# ตั้งต้น sb_secret ฝังไว้ในไฟล์ ซึ่งแปลว่ารหัสฐานข้อมูลคือค่าที่อยู่ใน git ให้ทุกคนอ่าน
 services:
   db:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-sbdesign}
       POSTGRES_USER: ${POSTGRES_USER:-sb}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sb_secret}
-    ports:
-      - "5432:5432"
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?ต้องตั้ง POSTGRES_PASSWORD ก่อน (.env ที่โฟลเดอร์นี้ หรือ export)}
+    # ไม่ publish 5432 ออกมา — api คุยกับ db ผ่านเครือข่ายภายในของ compose อยู่แล้ว
+    # เดิมเปิด "5432:5432" ซึ่งบนเครื่องที่มี IP สาธารณะ = เปิดฐานข้อมูลให้ทั้งอินเทอร์เน็ตยิง
+    # ถ้าต้องต่อด้วย DBeaver/psql ให้เปิดเฉพาะ loopback: ปลดคอมเมนต์ข้างล่าง
+    # ports:
+    #   - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -16,19 +28,24 @@ services:
       retries: 20
 
   api:
-    build: ./backend
+    build:
+      context: ./backend
+      target: dev          # ชั้น dev = มี pytest · ของจริงใช้ชั้น prod ที่ไม่มีเครื่องมือเทส
     env_file:
       - path: .env.example
         required: true
       - path: .env
         required: false
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-sb}:${POSTGRES_PASSWORD:-sb_secret}@db:5432/${POSTGRES_DB:-sbdesign}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-sb}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sbdesign}
+      # ยัดข้อมูลตัวอย่างให้ตอนเปิด — เครื่องตัวเองเท่านั้น
+      # entrypoint จะปฏิเสธถ้าเจอคู่กับ APP_ENV=prod (ดู backend/docker-entrypoint.sh)
+      SEED_ON_START: "true"
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./backend:/app
 
@@ -39,7 +56,7 @@ services:
     depends_on:
       - api
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     volumes:
       - ./web:/app
       - web_node_modules:/app/node_modules
