@@ -197,6 +197,25 @@ class ProductStock(Base):
     fetched_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False, index=True)
 
 
+class ProductStockSite(Base):
+    """ของรหัสนี้อยู่ที่สาขาไหนบ้าง — มาจาก STOCK_ON_SITES ของ ZAIBAPI_MATERIAL_STOCK
+
+    เก็บเฉพาะสาขาที่ "มีของจริง" ไม่ได้เก็บทุกสาขา · SAP ตอบมา 32 แถวต่อรหัสเสมอ
+    ถ้าเก็บหมดจะได้เกือบล้านแถวเพื่อบอกว่าส่วนใหญ่เป็นศูนย์ ซึ่งไม่มีใครถาม
+
+    ชื่อสาขาเก็บติดมาด้วยเลย ไม่ได้ไป join ตาราง plants เพราะ plants เป็นสาขาจำลอง
+    ของเรา (4 แห่ง) ส่วนรหัสจริงฝั่ง SAP มี 32 แห่งและชื่อมากับคำตอบอยู่แล้ว
+    """
+
+    __tablename__ = "product_stock_sites"
+
+    matnr: Mapped[str] = mapped_column(String(18), primary_key=True)
+    plant_code: Mapped[str] = mapped_column(String(8), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    available_qty: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
 class StockCheck(Base):
     """log ทุกครั้งที่กดเช็คสต็อก — ใช้อ้างอิงเมื่อลูกค้าเคลม 'ตอนนั้นบอกว่ามีของ'"""
 

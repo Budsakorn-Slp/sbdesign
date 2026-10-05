@@ -690,3 +690,11 @@ table.tbl tr:last-child td {
 .auth-soon h2 { margin: 4px 0 0; font-size: 20px; }
 .auth-soon p { margin: 0; }
 .auth-soon .btn { margin-top: 10px; }
+
+/* สาขาที่มีของ (หน้าสินค้า) — รายการสั้นๆ ที่ยุบได้ ของบางตัวมีถึง 30 สาขา
+   ปล่อยกางหมดจะดันปุ่มใส่ตะกร้าตกจอไปเลย */
+.site-stock { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.site-stock summary { cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; }
+.site-stock ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 2px 16px; }
+.site-stock li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; font-size: 13px; border-bottom: 1px dotted var(--line); }
+.site-stock p { margin: 8px 0 0; }

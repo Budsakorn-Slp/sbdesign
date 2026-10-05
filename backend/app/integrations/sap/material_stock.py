@@ -21,7 +21,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 
 from app.core.config import Settings, get_settings
@@ -34,6 +34,19 @@ NOT_STOCKED_QTY = 999
 
 
 @dataclass
+class SiteStock:
+    """ของที่สาขาหนึ่ง — ชื่อสาขามากับคำตอบของ SAP (ฟิลด์ NAME)
+
+    บางแถวชื่อว่าง เช่น PLANT 1000 ซึ่งเป็นคลัง ไม่ใช่โชว์รูมที่ลูกค้าเดินเข้าไปดูของได้
+    คนเรียกเป็นคนตัดสินว่าจะโชว์ตัวไหน ตรงนี้ส่งกลับไปให้ครบตามที่ SAP ตอบ
+    """
+
+    plant_code: str
+    name: str
+    available: int
+
+
+@dataclass
 class StockLine:
     """ของหนึ่งรหัส รวมทุกสาขาแล้ว"""
 
@@ -42,6 +55,7 @@ class StockLine:
     committed: int  # จะเข้ามาเพิ่ม
     committed_date: date | None
     made_to_order: bool = False  # SAP ตอบ 999 = สั่งได้เสมอ ไม่ต้องรอสต็อก
+    sites: list["SiteStock"] = field(default_factory=list)  # เฉพาะสาขาที่มีของ
 
 
 def _matnr(raw: str) -> str:
@@ -111,9 +125,19 @@ class HttpMaterialStockClient:
 
         # สาขาไหนตอบ 999 = สินค้าตัวนั้นไม่คุมสต็อก (ดูคอมเมนต์หัวไฟล์)
         # เช็คจากยอดรายสาขา ไม่ใช่ยอดรวม เพราะยอดรวมเป็น 999 × จำนวนสาขา ซึ่งเดาย้อนกลับไม่ได้
+        sites_raw = data.get("STOCK_ON_SITES") or []
         not_stocked = {
-            _matnr(s.get("MATERIAL", "")) for s in (data.get("STOCK_ON_SITES") or []) if _qty(s.get("AVAILABLE_QTY")) >= NOT_STOCKED_QTY
+            _matnr(s.get("MATERIAL", "")) for s in sites_raw if _qty(s.get("AVAILABLE_QTY")) >= NOT_STOCKED_QTY
         }
+        # เก็บเฉพาะสาขาที่มีของ — SAP ตอบ 32 แถวต่อรหัสเสมอ ส่วนใหญ่เป็นศูนย์
+        by_matnr: dict[str, list[SiteStock]] = {}
+        for srow in sites_raw:
+            qty = _qty(srow.get("AVAILABLE_QTY"))
+            if qty <= 0 or qty >= NOT_STOCKED_QTY:
+                continue
+            by_matnr.setdefault(_matnr(srow.get("MATERIAL", "")), []).append(
+                SiteStock(plant_code=(srow.get("PLANT") or "").strip(), name=(srow.get("NAME") or "").strip(), available=qty)
+            )
         out: dict[str, StockLine] = {}
         for r in data.get("STOCK_REQUIREMENTS") or []:
             m = _matnr(r.get("MATERIAL", ""))
@@ -124,6 +148,7 @@ class HttpMaterialStockClient:
                 committed=0 if mto else _qty(r.get("COMMITTED_QTY")),
                 committed_date=None if mto else _date(r.get("COMMITTED_DATE", "")),
                 made_to_order=mto,
+                sites=[] if mto else sorted(by_matnr.get(m, []), key=lambda x: (-x.available, x.name)),
             )
         log.info("material-stock: ขอ %d รหัส ได้ %d (cached=%s) ใน %.1f วิ",
                  len(matnrs), len(out), res.get("cached"), time.monotonic() - t0)

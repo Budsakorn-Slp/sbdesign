@@ -95,6 +95,14 @@ class CategoryRefOut(BaseModel):
     name_th: str
 
 
+class StockSiteOut(BaseModel):
+    """สาขาที่มีของตัวนี้ — ชื่อมาจาก SAP ตรงๆ (ฟิลด์ NAME ของ STOCK_ON_SITES)"""
+
+    plant_code: str
+    name: str
+    qty: int
+
+
 class MaterialDetail(MaterialCard):
     barcode: str | None = None
     description: str | None = None            # SHORT_DESC — กล่อง "ข้อมูลสินค้า"
@@ -110,6 +118,8 @@ class MaterialDetail(MaterialCard):
     sizes: list[VariantOptionOut] = []
     colors: list[VariantOptionOut] = []
     related_categories: list[CategoryRefOut] = []
+    # สาขาที่มีของให้ไปดูได้จริง — ไม่รวมคลัง/ระดับบริษัท (ดู product_stock_service.sites_for)
+    stock_sites: list[StockSiteOut] = []
     synced_at: datetime
 
 

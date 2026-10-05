@@ -417,6 +417,25 @@ export default function ProductPage() {
             </div>
           )}
 
+          {/* สาขาที่มีของให้ไปดูของจริงได้ — มาจาก STOCK_ON_SITES ของ SAP (ไม่รวมคลัง/ระดับบริษัท)
+              สำคัญกับสินค้าตัวโชว์เป็นพิเศษ: ของมีชิ้นเดียวต่อสาขา ลูกค้าต้องรู้ว่าไปดูที่ไหนได้ */}
+          {item.stock_sites.length > 0 && (
+            <details className="site-stock" open={item.stock_sites.length <= 6}>
+              <summary>
+                <Icon name="storefront" size={16} /> มีของที่ {item.stock_sites.length} สาขา
+              </summary>
+              <ul>
+                {item.stock_sites.map((st) => (
+                  <li key={st.plant_code}>
+                    <span>{st.name}</span>
+                    <b>{st.qty} ชิ้น</b>
+                  </li>
+                ))}
+              </ul>
+              <p className="tiny muted">ยอดนี้อัปเดตเป็นรอบ — โทรเช็คกับสาขาก่อนเดินทางไปดูของ</p>
+            </details>
+          )}
+
           {/* ต้นทางแยกทุกสีเป็นคนละ MATNR — กดสีอื่นคือเปลี่ยนหน้าสินค้า ไม่ใช่เปลี่ยนตัวเลือกในหน้าเดิม */}
           {item.colors.length > 1 && (
             <div className="colors">

@@ -2,7 +2,7 @@
 from app.models.analytics import BestSeller, MaterialDailyStat, OrderHistory, OrderHistoryLine, RecentlyViewed, SearchQuery, UserEvent, Wishlist  # noqa: F401
 from app.models.audit import AuditLog  # noqa: F401
 from app.models.cart import Cart, CartItem, CartItemHistory  # noqa: F401
-from app.models.catalog import Brand, Category, Material, MaterialPrice, Plant, StockCache, StockCheck  # noqa: F401
+from app.models.catalog import Brand, Category, Material, MaterialPrice, Plant, ProductStockSite, StockCache, StockCheck  # noqa: F401
 from app.models.consent import Consent, DataRequest  # noqa: F401
 from app.models.content import HomeMedia  # noqa: F401
 from app.models.counter import DocCounter  # noqa: F401

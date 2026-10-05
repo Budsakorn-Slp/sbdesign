@@ -91,6 +91,9 @@ export type VariantOption = {
   price: string | null;
 };
 
+/** สาขาที่มีของตัวนี้ — ชื่อมาจาก SAP ตรงๆ ไม่รวมคลัง/ระดับบริษัท */
+export type StockSite = { plant_code: string; name: string; qty: number };
+
 export type MaterialDetail = MaterialCard & {
   barcode: string | null;
   description: string | null;
@@ -109,6 +112,7 @@ export type MaterialDetail = MaterialCard & {
   colors: VariantOption[];
   /** หมวดของสินค้านี้ + หมวดพี่น้อง — ใช้เป็นชิปสลับใน "สินค้าที่เกี่ยวข้อง" */
   related_categories: { id: string; name_th: string }[];
+  stock_sites: StockSite[];
   synced_at: string;
 };
 

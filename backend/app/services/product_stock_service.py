@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.integrations.sap.base import SapError
 from app.integrations.sap.material_stock import get_material_stock_client
-from app.models.catalog import ProductStock
+from app.models.catalog import ProductStock, ProductStockSite
 from app.models.common import utcnow
 from app.services.availability_service import req_date_for
 
@@ -57,13 +57,48 @@ def stale_matnrs(db: Session, matnrs: list[str]) -> list[str]:
 
 
 def _write(db: Session, matnr: str, *, ready: int, later: int, later_date: date | None, known: bool,
-           now: datetime, mto: bool = False) -> None:
+           now: datetime, mto: bool = False, sites: list | None = None) -> None:
     row = db.get(ProductStock, matnr)
     if not row:
         row = ProductStock(matnr=matnr)
         db.add(row)
     row.ready_qty, row.later_qty, row.later_date = ready, later, later_date
     row.sap_known, row.made_to_order, row.fetched_at = known, mto, now
+    if sites is not None:
+        _write_sites(db, matnr, sites, now)
+
+
+def _write_sites(db: Session, matnr: str, sites: list, now: datetime) -> None:
+    """ลบของเดิมทิ้งแล้วใส่ชุดใหม่ — ของย้ายสาขา/ขายหมดที่สาขาหนึ่ง แถวเก่าต้องหายไปด้วย
+    ถ้า upsert ทับอย่างเดียว สาขาที่ของหมดแล้วจะค้างอยู่บอกว่ายังมีของตลอดไป"""
+    db.query(ProductStockSite).filter(ProductStockSite.matnr == matnr).delete(synchronize_session=False)
+    for s in sites:
+        db.add(ProductStockSite(matnr=matnr, plant_code=s.plant_code, name=s.name,
+                                available_qty=s.available, fetched_at=now))
+
+
+# รหัสที่ไม่ใช่โชว์รูม — ลูกค้าเดินเข้าไปดูของไม่ได้ ไม่ควรโผล่ในรายการ "มีของที่สาขา"
+#   1000  ไม่มีชื่อเลย = คลัง
+#   9000  ชื่อเป็นชื่อบริษัท = สต็อกระดับบริษัท
+# ที่เหลือ (S***, SH**, SO**, STLV) เป็นโชว์รูมจริงและมีชื่อเรียกที่ลูกค้ารู้จัก
+NON_STORE_PLANTS = {"1000", "9000"}
+
+
+def sites_for(db: Session, matnrs: list[str], named_only: bool = True) -> dict[str, list[ProductStockSite]]:
+    """สาขาที่มีของ เรียงจากมากไปน้อย
+
+    named_only = เอาเฉพาะแถวที่มีชื่อสาขา · แถวชื่อว่าง (เช่น PLANT 1000) คือคลัง
+    ไม่ใช่โชว์รูมที่ลูกค้าเดินเข้าไปดูของได้ เอาไปโชว์จะกลายเป็น "มีของที่ (ว่าง)"
+    """
+    if not matnrs:
+        return {}
+    q = select(ProductStockSite).where(ProductStockSite.matnr.in_(matnrs))
+    if named_only:
+        q = q.where(ProductStockSite.name != "", ProductStockSite.plant_code.not_in(NON_STORE_PLANTS))
+    out: dict[str, list[ProductStockSite]] = {}
+    for r in db.scalars(q.order_by(ProductStockSite.available_qty.desc(), ProductStockSite.name)).all():
+        out.setdefault(r.matnr, []).append(r)
+    return out
 
 
 def refresh_mock(db: Session, matnrs: list[str], on_batch: Callable[[int], None] | None = None) -> int:
@@ -125,10 +160,10 @@ def refresh(db: Session, matnrs: list[str], req_date: date | None = None,
         for matnr in chunk:
             line = got.get(matnr)
             if line is None:  # SAP ไม่รู้จักรหัสนี้
-                _write(db, matnr, ready=0, later=0, later_date=None, known=False, now=now)
+                _write(db, matnr, ready=0, later=0, later_date=None, known=False, now=now, sites=[])
                 continue
             _write(db, matnr, ready=line.available, later=line.committed, later_date=line.committed_date,
-                   known=True, now=now, mto=line.made_to_order)
+                   known=True, now=now, mto=line.made_to_order, sites=line.sites)
             done += 1
         db.commit()
         if on_batch:

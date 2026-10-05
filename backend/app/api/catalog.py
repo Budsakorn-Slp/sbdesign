@@ -15,7 +15,7 @@ from app.models.user import User
 from app.schemas.catalog import (
     ProductStockOut, BrandOut, CategoryOut, CategoryRefOut, ColorOptionOut, FacetsOut, MaterialCard,
     InfoPageOut, MaterialDetail, VariantOptionOut, PlantOut, ProductStockOut, SearchOut, StockOut, StockRowOut, SuggestItemOut, SuggestOut,
-    UnderstoodOut,
+    StockSiteOut, UnderstoodOut,
 )
 from app.services import analytics_service, product_stock_service, cart_service, catalog_service, stock_service
 
@@ -172,7 +172,8 @@ def gallery_of(db: Session, m: Material) -> list[str]:
 
 
 def to_detail(m: Material, user: User | None, stock: dict | None, sizes=None, colors=None,
-              cats: list[Category] | None = None, images: list[str] | None = None) -> MaterialDetail:
+              cats: list[Category] | None = None, images: list[str] | None = None,
+              sites: list | None = None) -> MaterialDetail:
     card = to_card(m, user, stock)
     return MaterialDetail(
         **card.model_dump(), barcode=m.barcode, description=m.description, description_long=m.description_long,
@@ -180,6 +181,7 @@ def to_detail(m: Material, user: User | None, stock: dict | None, sizes=None, co
         volume_m3=m.volume_m3, weight_kg=m.weight_kg, sold_qty=m.sold_qty, synced_at=m.synced_at,
         related_categories=[CategoryRefOut(id=c.id, name_th=c.name_th) for c in (cats or [])],
         images=images or [], sizes=sizes or [], colors=colors or [],
+        stock_sites=[StockSiteOut(plant_code=x.plant_code, name=x.name, qty=x.available_qty) for x in (sites or [])],
     )
 
 
@@ -332,7 +334,8 @@ def material_detail(matnr: str, request: Request, db: Session = Depends(get_db),
     analytics_service.track(db, user, cart_service.anon_token_from(request), "view_material", matnr)
     db.commit()
     sizes, colors = variant_axes(db, m, user)
-    return to_detail(m, user, stock, sizes, colors, related_categories(db, m), gallery_of(db, m))
+    sites = product_stock_service.sites_for(db, [matnr]).get(matnr, [])
+    return to_detail(m, user, stock, sizes, colors, related_categories(db, m), gallery_of(db, m), sites)
 
 
 @router.get("/materials/{matnr}/stock", response_model=StockOut)
