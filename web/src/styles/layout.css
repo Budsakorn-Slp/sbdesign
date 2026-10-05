@@ -139,7 +139,10 @@
 .mega { position: absolute; left: 0; right: 0; top: 100%; max-height: calc(100vh - 150px); overflow-y: auto; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.12); z-index: 55; }
 .mega-in { display: grid; grid-template-columns: 240px 1fr; gap: 24px; padding: 18px 0 24px; }
 .mega-side { max-height: 460px; overflow: auto; border-right: 1px solid var(--line); padding-right: 12px; }
-.mega-side li { padding: 8px 12px; border-radius: 6px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; }
+/* ภาษาไทยมีสระบน/วรรณยุกต์ที่กินที่เหนือตัวอักษร (ใ ้ ่ ์) line-height 1.5 จึงแคบไป
+   แถวชิดกันสนิท (ห่าง 0px) + แถวที่เลือกมีพื้นดำทึบ = หัวสระของแถวล่างไปอยู่บนพื้นดำ
+   แล้วดูเหมือนตัวหนังสือทับกัน · เว้นระยะระหว่างแถวและเพิ่มความสูงบรรทัดให้พอ */
+.mega-side li { padding: 7px 12px; margin-bottom: 3px; border-radius: 6px; font-size: 13.5px; line-height: 1.8; color: var(--ink-2); cursor: pointer; }
 .mega-side li.on { background: var(--ink); color: #fff; font-weight: 600; }
 .mega-side li.on a { color: #fff; }
 /* หัวข้อในเมนูที่กางลงมา — ซ้ำกับชื่อเมนูที่กดอยู่ซึ่งขีดเส้นใต้เด่นอยู่บนแถบแล้ว
