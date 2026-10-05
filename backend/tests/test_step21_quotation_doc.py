@@ -221,3 +221,15 @@ def test_แยกที่อยู่ออกบิลกับที่อ�
     assert "ชื่อ-ที่อยู่ลูกค้า" in doc and "ชื่อ-สถานที่ส่งสินค้า" in doc
     assert doc.index("ชื่อ-ที่อยู่ลูกค้า") < doc.index("ชื่อ-สถานที่ส่งสินค้า")
     assert "รหัสลูกค้า" in doc
+
+
+def test_ไม่มีเส้นลอยคั่นระหว่างยอดรวมกับเงื่อนไข(client):
+    """เส้นใต้แถวสุดท้าย + เส้นเหนือบล็อกเงื่อนไข = ขีดสองเส้นคั่นที่ว่างเปล่า
+    ไม่ได้แบ่งอะไรให้อ่านง่ายขึ้น แค่ทำให้ดูเหมือนตารางยังไม่จบ
+    (เส้นหนาเหนือแถว "รวมสุทธิ" คนละเส้น อันนั้นตั้งใจให้มี)"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    assert "tbody tr:last-child td{border-bottom:none}" in doc
+    assert ".terms{margin-top:18px;font-size:12px}" in doc
+    assert ".tot td{font-weight:700;border-top:2px solid #111}" in doc
