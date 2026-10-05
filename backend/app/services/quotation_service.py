@@ -296,7 +296,11 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
     s = get_settings()
     q = Quotation(
         quotation_no=_doc_no(db, Quotation, Quotation.quotation_no, "QT"), preso_id=preso.id, cart_id=cart.id, customer_user_id=cart.customer.id, sales_user_id=actor.id if actor.is_staff else None,
-        channel=channel, customer_snapshot={"id": cart.customer.id, "name": cart.customer.name, "points": cart.customer.points, "sap_customer_no": cart.customer.sap_customer_no, "phone": cart.customer.phone, "email": cart.customer.email},
+        channel=channel, customer_snapshot={"id": cart.customer.id, "name": cart.customer.name, "points": cart.customer.points, "sap_customer_no": cart.customer.sap_customer_no, "phone": cart.customer.phone, "email": cart.customer.email,
+                           # ที่อยู่ตามทะเบียนลูกค้า (คนละช่องกับที่อยู่จัดส่ง) — ใบเสนอราคาต้องแยกสองที่อยู่
+                           # เหมือนใบรับคำสั่งซื้อของระบบเดิม ลูกค้าให้ส่งที่หนึ่งแต่ออกบิลอีกที่หนึ่งเป็นเรื่องปกติ
+                           "address": cart.customer.sap_address or cart.customer.default_address,
+                           "postcode": cart.customer.sap_postcode or cart.customer.default_postcode},
         subtotal=t.subtotal, discount_total=t.discount_total, shipping_fee=t.shipping_fee, install_fee=t.install_fee, shipping_discount=t.shipping_discount, vat=t.vat_included, grand_total=t.grand_total,
         deposit_amount=promo_service.q1(t.grand_total * Decimal("0.2")), valid_until=date.today() + timedelta(days=s.quotation_valid_days), ship_address=cart.ship_address, ship_postcode=cart.ship_postcode,
         ship_zone=cart.ship_zone, slot_id=cart.slot_id, slot_date=slot.date if slot else None, slot_period=slot.period if slot else None, stock_warnings=shortages or None,

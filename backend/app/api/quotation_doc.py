@@ -49,7 +49,8 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
 
     imgs = _image_map(db, [l.matnr for l in items]) if with_images else {}
     img_col = "<th></th>" if with_images else ""
-    span = 6 if with_images else 5   # จำนวนคอลัมน์ก่อนช่อง "รวม"
+    # # · [รูป] · รหัสสินค้า · รายการ · จำนวน · ราคา/หน่วย · ส่วนลด = คอลัมน์ก่อนช่อง "รวม"
+    span = 6 + (1 if with_images else 0)
 
     def item_row(i: int, l) -> str:
         cell = ""
@@ -62,7 +63,10 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
         price = (f"<s class='muted'>{_money(l.list_price)}</s><br><b>{_money(l.unit_price)}</b>"
                  if off > 0 else _money(l.unit_price))
         disc = f"-{_money(off * l.qty)}" if off > 0 else "-"
-        return (f"<tr><td>{i}</td>{cell}<td>{e(l.name)}<br><small class='muted'>{e(l.variant or '')} · MATNR {e(l.matnr)}</small></td>"
+        # รหัสสินค้าแยกคอลัมน์ ไม่ใช่ตัวเล็กต่อท้ายชื่อ — คนคลังกับฝ่ายบัญชีไล่ทีละรหัส
+        # การต้องกวาดตาหาเลขที่ซ่อนอยู่ท้ายชื่อยาวๆ ทำให้อ่านผิดบรรทัดได้ง่าย
+        sub = f"<br><small class='muted'>{e(l.variant)}</small>" if l.variant else ""
+        return (f"<tr><td>{i}</td>{cell}<td class='mono'>{e(l.matnr)}</td><td>{e(l.name)}{sub}</td>"
                 f"<td class='r'>{l.qty}</td><td class='r'>{price}</td><td class='r'>{disc}</td>"
                 f"<td class='r'>{_money(l.line_total)}</td><td>{e(SUPPLY_TXT.get(l.supply_mode, l.supply_mode))}</td></tr>")
 
@@ -103,6 +107,13 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
     elif q.sales and q.sales.email:
         contact = f"<span class='muted'>{e(q.sales.email)}</span>"
 
+    # ที่อยู่ออกบิลมาจากทะเบียนลูกค้า ที่อยู่ส่งของมาจากที่กรอกตอนคำนวณค่าส่ง — คนละช่องกัน
+    # ไม่มีที่อยู่ออกบิลก็ใช้ที่อยู่ส่งของแทน ดีกว่าปล่อยช่องว่างให้ดูเหมือนข้อมูลหาย
+    bill_addr = " ".join(x for x in [e(c.get("address") or ""), e(c.get("postcode") or "")] if x).strip()
+    ship_addr = " ".join(x for x in [e(q.ship_address or ""), e(q.ship_postcode or "")] if x).strip()
+    bill_addr = bill_addr or ship_addr or "<i>ไม่มีข้อมูล</i>"
+    ship_addr = ship_addr or "<i>ยังไม่ได้ระบุ</i>"
+
     note = (q.preso.note if q.preso and q.preso.note else "").strip()
     note_block = (f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note)}</div></div>" if note
                   else "<div class='note-box'><b>หมายเหตุ</b><div class='blank'></div></div>")
@@ -120,13 +131,16 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
 
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.tot td{{font-weight:700;border-top:2px solid #111}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{display:flex;gap:32px;margin-top:18px;font-size:13px;border-top:1px solid #e0e0de;padding-top:14px}}{img_css}@media print{{body{{margin:0}}}}</style></head>
-<body><div class="box"><div><h1>ใบเสนอราคา / Quotation</h1><div class="muted">SB Design Square · บริษัท เอส.บี.อุตสาหกรรมเครื่องเรือน จำกัด</div></div>
+<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{display:flex;gap:32px;margin-top:18px;font-size:13px;border-top:1px solid #e0e0de;padding-top:14px}}{img_css}@media print{{body{{margin:0}}}}</style></head>
+<body><div class="box"><div><h1>ใบเสนอราคา / Quotation</h1>
+<div class="muted">{e(s.company_name_th)} · {e(s.company_name_en)}<br>{e(s.company_address_th)}<br>เลขประจำตัวผู้เสียภาษี {e(s.company_tax_id)}</div></div>
 <div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div></div></div>
-<div class="box"><div><b>ลูกค้า</b><br>{e(c.get('name') or '')} · CUST {e(c.get('sap_customer_no') or '-')} · {e(c.get('tier') or 'ทั่วไป')}<br><span class="muted">{e(c.get('phone') or '')} · {e(c.get('email') or '')}</span><br><span class="muted">{e(q.ship_address or '')} {e(q.ship_postcode or '')}</span></div>
-<div style="text-align:right"><b>พนักงานขาย</b><br>{sales_name}{sales_code}{f"<br>{contact}" if contact else ""}</div></div>
+<div class="box three">
+<div><b>ชื่อ-ที่อยู่ลูกค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{bill_addr}</span><br><span class="muted">{e(c.get('phone') or '')}{(' · ' + e(c.get('email'))) if c.get('email') else ''}</span></div>
+<div><b>ชื่อ-สถานที่ส่งสินค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{ship_addr}</span></div>
+<div style="text-align:right"><b>พนักงานขาย</b><br>{sales_name}{sales_code}{f"<br>{contact}" if contact else ""}<br><span class="muted">รหัสลูกค้า {e(c.get('sap_customer_no') or '-')}</span></div></div>
 {note_block}
-<table><thead><tr><th>#</th>{img_col}<th>รายการ</th><th class="r">จำนวน</th><th class="r">ราคา/หน่วย</th><th class="r">ส่วนลด</th><th class="r">รวม</th><th>รับสินค้า</th></tr></thead><tbody>{rows}
+<table><thead><tr><th>ลำดับ</th>{img_col}<th>รหัสสินค้า</th><th>รายการ</th><th class="r">จำนวน</th><th class="r">ราคาต่อหน่วย</th><th class="r">ส่วนลด</th><th class="r">จำนวนเงิน</th><th>รับสินค้า</th></tr></thead><tbody>{rows}
 <tr><td colspan="{span}" class="r">รวมสินค้า</td><td class="r">{_money(q.subtotal)}</td><td></td></tr>{disc_rows}
 {fee_row}
 <tr class="tot"><td colspan="{span}" class="r">รวมสุทธิ (รวม VAT 7% = {_money(q.vat)})</td><td class="r">{_money(q.grand_total)}</td><td></td></tr>

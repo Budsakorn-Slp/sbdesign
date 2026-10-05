@@ -107,7 +107,7 @@ def test_มีช่องส่วนลดต่อบรรทัด(client)
     q, _ = _quotation(client, hs)
     doc = _doc(client, hs, q["quotation_no"])
     head = doc[doc.index("<thead>"):doc.index("</thead>")]
-    assert "ส่วนลด" in head and "ราคา/หน่วย" in head
+    assert "ส่วนลด" in head and "ราคาต่อหน่วย" in head
 
 
 def test_pdf_สองแบบ_มีรูปกับไม่มีรูป(client):
@@ -164,3 +164,43 @@ def test_เงื่อนไขชำระเงินกับบัญช�
     monkeypatch.setattr(s, "company_bank_account_no", "123-4-56789-0")
     doc = _doc(client, hs, q["quotation_no"])
     assert "ชำระเต็มจำนวนก่อนจัดส่ง" in doc and "123-4-56789-0" in doc and "ธนาคารกสิกรไทย" in doc
+
+
+def test_รหัสสินค้าแยกคอลัมน์จากชื่อสินค้า(client):
+    """คนคลัง/บัญชีไล่ทีละรหัส — เลขที่ซ่อนอยู่ท้ายชื่อยาวๆ ทำให้อ่านผิดบรรทัดได้ง่าย"""
+    import re
+
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    for images in (False, True):
+        doc = _doc(client, hs, q["quotation_no"], images=images)
+        head = doc[doc.index("<thead>"):doc.index("</thead>")]
+        assert "รหัสสินค้า" in head and "รายการ" in head
+        assert "MATNR" not in doc, "รหัสไม่ควรเหลือเป็นตัวเล็กต่อท้ายชื่อแล้ว"
+        matnr = q["lines"][0]["matnr"]
+        assert f"<td class='mono'>{matnr}</td>" in doc, "รหัสต้องอยู่ในช่องของตัวเอง"
+        # ทุกแถวสินค้าต้องมีช่องเท่าหัวตาราง ไม่งั้นคอลัมน์เหลื่อมกันทั้งใบ
+        th = len(re.findall(r"<th[ >]", head))
+        body = doc[doc.index("<tbody>"):doc.index("รวมสินค้า")]
+        item_rows = [r for r in re.findall(r"<tr>(.*?)</tr>", body, re.S) if "colspan" not in r]
+        assert item_rows, "ไม่เจอแถวสินค้า"
+        for r in item_rows:
+            assert len(re.findall(r"<td[ >]", r)) == th, f"หัวตาราง {th} ช่อง แต่แถวนี้มี {len(re.findall(r'<td[ >]', r))}"
+
+
+def test_หัวเอกสารมีที่อยู่บริษัทและเลขผู้เสียภาษี(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    assert "เลขประจำตัวผู้เสียภาษี" in doc and "0125555022441" in doc
+    assert "นนทบุรี" in doc
+
+
+def test_แยกที่อยู่ออกบิลกับที่อยู่ส่งของ(client):
+    """ลูกค้าให้ส่งที่หนึ่งแต่ออกบิลอีกที่หนึ่งเป็นเรื่องปกติ — ใบเดิมของบริษัทก็แยกสองช่อง"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    assert "ชื่อ-ที่อยู่ลูกค้า" in doc and "ชื่อ-สถานที่ส่งสินค้า" in doc
+    assert doc.index("ชื่อ-ที่อยู่ลูกค้า") < doc.index("ชื่อ-สถานที่ส่งสินค้า")
+    assert "รหัสลูกค้า" in doc
