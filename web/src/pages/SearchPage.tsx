@@ -50,7 +50,7 @@ const SWITCHES: { key: string; label: string; staffOnly?: boolean }[] = [
 export default function SearchPage() {
   const isStaff = !!useAuth().user?.is_staff;
   const [params, setParams] = useSearchParams();
-  const { content } = useContent();
+  const { content, plant, setPlantCode } = useContent();
   const q = params.get("q") || "";
   const category = params.get("category") || "";
   const room = params.get("room") || "";
@@ -82,10 +82,13 @@ export default function SearchPage() {
     const qs = new URLSearchParams();
     for (const [k, v] of params) if (k !== "sort" && v) qs.append(k, v);
     if (sort !== "relevance") qs.set("sort", sort);
+    // เลือกสาขาไว้บนหัวเว็บ = อยากเห็นเฉพาะของที่ไปดูที่สาขานั้นได้จริง
+    // อยู่นอก query string เพราะเป็นค่าที่ติดตัวผู้ใช้ข้ามหน้า ไม่ใช่ตัวกรองของหน้านี้
+    if (plant) qs.set("plant", plant.plant_code);
     // มีคำค้นให้เรียงตามความตรงอยู่แล้ว การสลับลำดับใช้เฉพาะตอนเปิดดูเฉยๆ
     if (!params.get("q") && sort === "relevance") qs.set("seed", String(seed));
     return qs.toString();
-  }, [params, sort, seed]);
+  }, [params, sort, seed, plant]);
 
   const fetchPage = useCallback(
     (offset: number) => {
@@ -190,6 +193,8 @@ export default function SearchPage() {
 
   // ชิปสรุปว่ากรองอะไรอยู่ กดกากบาทเพื่อถอดทีละตัว
   const chips: { key: string; label: string; clear: () => void }[] = [
+    // ต้องมีชิปบอก ไม่งั้นลูกค้าเลือกสาขาไว้แล้วลืม พอของหายไปครึ่งหนึ่งจะนึกว่าเว็บพัง
+    ...(plant ? [{ key: "plant", label: `สาขา ${plant.name}`, clear: () => setPlantCode(null) }] : []),
     ...(category ? [{ key: "category", label: catObj?.name_th ?? category, clear: () => set("category", "") }] : []),
     ...(room ? [{ key: "room", label: ROOM_LABEL[room] || room, clear: () => set("room", "") }] : []),
     ...(tag ? [{ key: "tag", label: TAG_LABEL[tag] || tag, clear: () => set("tag", "") }] : []),

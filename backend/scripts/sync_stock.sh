@@ -21,5 +21,7 @@ say "===== SYNC STOCK + PRICES เริ่ม (ยิง SAP จริง) ====
 run "sync_sap_prices"    python -m app.etl.sync_sap_prices
 run "refresh_stock"      python -m app.etl.refresh_stock --all
 run "sync_display_items" python -m app.etl.sync_display_items --all
+# รายชื่อสาขามาจากคำตอบของ refresh_stock ต้องอัปเดตตามทุกรอบ ไม่งั้นสาขาใหม่ไม่โผล่ให้เลือก
+run "sync_plants"        python -m app.etl.sync_plants
 
 finish "SYNC STOCK + PRICES"

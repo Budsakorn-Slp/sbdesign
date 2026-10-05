@@ -180,3 +180,36 @@ def test_ของทั่วไปไม่ต้องรกด้วยร�
     cart = client.post("/cart/items", json={"matnr": normal, "qty": 1}, headers=hs).json()
     line = next(i for i in cart["items"] if i["matnr"] == normal)
     assert line["show_at_sites"] == []
+
+
+def test_เลือกสาขาแล้วเห็นเฉพาะของที่สาขานั้น(client):
+    """ลูกค้าเลือกสาขาบนหัวเว็บ = อยากเห็นเฉพาะของที่ไปดูที่นั่นได้จริง"""
+    with SessionLocal() as db:
+        a, b = db.scalars(select(Material.matnr).where(Material.is_public.is_(True))).all()[:2]
+        db.query(ProductStockSite).filter(ProductStockSite.matnr.in_([a, b])).delete(synchronize_session=False)
+        db.add(ProductStockSite(matnr=a, plant_code="S319", name="DS-บางแค", available_qty=3, fetched_at=utcnow()))
+        db.add(ProductStockSite(matnr=b, plant_code="S304", name="DS-ภูเก็ต", available_qty=1, fetched_at=utcnow()))
+        db.commit()
+    got = client.get("/materials/search", params={"plant": "S319", "limit": 100}).json()
+    codes = [m["matnr"] for m in got["items"]]
+    assert a in codes and b not in codes
+    # ไม่เลือกสาขา = เห็นทั้งหมดเหมือนเดิม
+    allrows = client.get("/materials/search", params={"limit": 1}).json()
+    assert allrows["total"] > got["total"]
+
+
+def test_สาขาที่เลือกได้ต้องเป็นของจริงจาก_sap(client):
+    """ตาราง plants เคยเป็นสาขาสมมติ 4 แห่งจาก seed — ลูกค้าเห็นสาขาที่ไม่มีอยู่จริง"""
+    from app.etl.sync_plants import sync
+
+    with SessionLocal() as db:
+        db.add(ProductStockSite(matnr="20009998", plant_code="S399", name="DS-ทดสอบ", available_qty=1, fetched_at=utcnow()))
+        db.commit()
+        res = sync(db)
+    assert "S399" in res["added"] or "S399" in res["updated"]
+    rows = client.get("/plants").json()
+    codes = {p["plant_code"] for p in rows}
+    assert "S399" in codes
+    assert not (codes & {"BKN", "RIT", "CNX", "BPL"}), "สาขาสมมติต้องถูกลบทิ้ง"
+    # โรงงาน/ระดับบริษัทไม่ใช่ store จึงไม่โผล่ในตัวเลือกของลูกค้า
+    assert {p["type"] for p in rows if p["plant_code"] in ("1000", "9000")} == {"warehouse"}

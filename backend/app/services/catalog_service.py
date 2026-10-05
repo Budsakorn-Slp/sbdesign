@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import get_settings
 from app.integrations.sap.base import MaterialDTO
-from app.models.catalog import Brand, Category, Material, MaterialCategory, MaterialPrice, Plant, ProductStock
+from app.models.catalog import Brand, Category, Material, MaterialCategory, MaterialPrice, Plant, ProductStock, ProductStockSite
 from app.models.common import utcnow
 from app.models.user import User
 from app.services import search_query as sq
@@ -318,6 +318,13 @@ def _filtered(db: Session, f: "SearchFilters"):
         stmt = stmt.where(Material.image_url.isnot(None), Material.image_url != "")
     if f.abc:
         stmt = stmt.where(Material.abc_class == f.abc)
+    if f.plant:
+        # เลือกสาขาแล้ว = อยากเห็นเฉพาะของที่ไปดู/ไปรับที่สาขานั้นได้จริง
+        # อ่านจาก product_stock_sites (ยอดรายสาขาจาก SAP) ไม่ใช่ product_stock ที่เป็นยอดรวม
+        stmt = stmt.where(Material.matnr.in_(
+            select(ProductStockSite.matnr).where(ProductStockSite.plant_code == f.plant,
+                                                 ProductStockSite.available_qty > 0)
+        ))
     if f.sold_out:
         # เฉพาะของที่หมดจริง (เงื่อนไขเดียวกับ _SOLD_OUT ที่ใช้ดันลงล่าง)
         #
@@ -338,9 +345,9 @@ class SearchFilters:
     """พารามิเตอร์ค้นหาชุดเดียว ส่งต่อระหว่าง API / ผลลัพธ์ / facet โดยไม่ต้องไล่ส่งทีละตัว"""
 
     __slots__ = ("q", "category", "room", "tag", "brands", "min_price", "max_price", "discount_only", "in_stock", "has_image",
-                 "sold_out", "sort", "loose", "include_hidden", "analysis", "corrected", "color", "mode", "understood", "effective", "group", "seed", "abc")
+                 "sold_out", "plant", "sort", "loose", "include_hidden", "analysis", "corrected", "color", "mode", "understood", "effective", "group", "seed", "abc")
 
-    def __init__(self, q=None, category=None, room=None, tag=None, brands=None, min_price=None, max_price=None, discount_only=False, in_stock=False, sold_out=False, has_image=False, sort="relevance", include_hidden=False, color=None, mode="auto", group=None, seed=None, abc=None):
+    def __init__(self, q=None, category=None, room=None, tag=None, brands=None, min_price=None, max_price=None, discount_only=False, in_stock=False, sold_out=False, plant=None, has_image=False, sort="relevance", include_hidden=False, color=None, mode="auto", group=None, seed=None, abc=None):
         self.q, self.category, self.room, self.tag = q, category, room, tag
         self.color = color  # ชื่อสีแบบไม่ต้องตรงเป๊ะ ("ขาว" เข้าได้ทั้ง "สีขาว" และ "ขาว-แดง")
         self.mode = mode if mode in MODES else "auto"
@@ -352,6 +359,7 @@ class SearchFilters:
         self.min_price, self.max_price = min_price, max_price
         self.discount_only, self.in_stock, self.has_image = discount_only, in_stock, has_image
         self.sold_out = sold_out
+        self.plant = plant
         self.sort = sort if sort in SORTS else "relevance"
         # เลขสุ่มประจำการเปิดหน้าหนึ่งครั้ง — ใช้สลับลำดับสินค้าตอนเปิดดูเฉยๆ (ไม่ได้ค้นอะไร)
         self.seed = seed
@@ -467,7 +475,7 @@ def _interpreted(db: Session, f: SearchFilters, limit: int, offset: int) -> tupl
             category=f.category or ip.category_id, room=f.room, tag=f.tag, brands=f.brands, group=f.group,
             min_price=f.min_price if f.min_price is not None else ip.min_price,
             max_price=f.max_price if f.max_price is not None else ip.max_price,
-            discount_only=f.discount_only, in_stock=f.in_stock, sold_out=f.sold_out, has_image=f.has_image, sort=f.sort,
+            discount_only=f.discount_only, in_stock=f.in_stock, sold_out=f.sold_out, plant=f.plant, has_image=f.has_image, sort=f.sort,
             include_hidden=f.include_hidden, color=f.color or (None if "color" in drop else ip.color), mode="keyword",
         )
         rows, total = _run(db, g, limit, offset)

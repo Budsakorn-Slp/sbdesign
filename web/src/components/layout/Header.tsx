@@ -161,7 +161,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
               <div className="strong" style={{ marginBottom: 6 }}>รับที่สาขา</div>
               {plants.filter((p) => p.type === "store").map((p) => (
                 <button key={p.plant_code} className={"hdr-pop-row" + (plant?.plant_code === p.plant_code ? " on" : "")} onClick={() => { setPlantCode(p.plant_code); setPop(null); }}>
-                  <Icon name="storefront" size={18} /> <span><b>{p.name}</b><small>{p.address}</small></span>
+                  <Icon name="storefront" size={18} /> <span><b>{p.name}</b>{p.address && <small>{p.address}</small>}</span>
                 </button>
               ))}
               {plant && <button className="link-btn small" onClick={() => { setPlantCode(null); setPop(null); }}>{t("ไม่เลือกสาขา")}</button>}
