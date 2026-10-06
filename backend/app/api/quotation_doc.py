@@ -19,6 +19,8 @@ from app.models.catalog import Material
 from app.models.promo import AppliedDiscount
 from app.models.quotation import Quotation
 
+COMPANY_LOGO = "https://media.sbdesignsquare.com/media/logo/stores/2/Logo_header_newsb_1.png"
+
 SUPPLY_TXT = {"takeaway": "ยกกลับ", "ship": "จัดส่ง", "install": "ส่ง+ติดตั้ง", "pickup": "รับที่สาขา"}
 STATUS_TXT = {"issued": "ออกแล้ว · รอชำระ", "paid": "ชำระแล้ว", "converted": "สร้าง SO แล้ว",
               "cancelled": "ยกเลิก", "expired": "หมดอายุ"}
@@ -178,7 +180,7 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
     b_name = tp.get("branch_name") or (q.sales.branch_name if q.sales else None)
     if b_name:
         code = (b_code or "").lstrip("S")   # ของเดิมพิมพ์ 319 ไม่ใช่ S319
-        br = f"<div class='muted'>สาขา {e(code)} · {e(b_name)}</div>"
+        br = f"{e(code)} · {e(b_name)}"
 
     # พนักงานร่วมบิล Z1-ZK
     staff_block = ""
@@ -189,7 +191,12 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
 
     # โลโก้ของ DS · ลิงก์แบบ relative เพราะเอกสารนี้เปิดได้ทั้งตรงที่ API (/quotations/..)
     # และผ่านหน้าเว็บ (/api/quotations/..) — "../../media" ไปถูกที่ทั้งสองทาง
-    logo = f"<img class='logo' src='../../media/{e(tp['logo_path'])}' alt=''>" if tp.get("logo_path") else ""
+    # ไม่มีโลโก้ใน template ของ DS → ใช้โลโก้บริษัท · โหมด proxy ดึงผ่านเซิร์ฟเวอร์เราเพื่อให้วาดลง PDF ได้
+    if tp.get("logo_path"):
+        logo_src = f"../../media/{tp['logo_path']}"
+    else:
+        logo_src = f"../../media-proxy?url={quote(COMPANY_LOGO, safe='')}" if proxy_images else COMPANY_LOGO
+    logo = f"<img class='logo' src='{e(logo_src)}' alt='SB Design Square'>"
 
     note = (q.overall_remark or (q.preso.note if q.preso and q.preso.note else "") or "").strip()
     std = (tp.get("standard_remark") or "").strip()
@@ -209,15 +216,18 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
 
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{max-height:56px;max-width:180px;display:block;margin-bottom:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}.doc-tools{{display:flex;align-items:center;gap:10px;margin:-16px 0 18px;padding:8px 10px;border-radius:8px;background:#f2f2f0;font-size:12px;color:#777}}.doc-tools button{{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:0;background:#111;color:#fff;cursor:pointer}}@media print{{body{{margin:0}}.no-print{{display:none!important}}}}</style></head>
+<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{width:110px;max-height:70px;object-fit:contain;flex:none}}.hdr{{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #111}}.hdr-co{{display:flex;gap:14px;align-items:flex-start}}.co-txt{{font-size:11.5px;line-height:1.55;color:#333}}.co-txt b{{color:#111;font-size:12.5px}}.hdr-doc{{text-align:right;min-width:250px}}.hdr-doc h1{{font-size:26px;line-height:1.1}}.hdr-doc .sub{{color:#777;font-size:12px;margin-bottom:8px}}.meta{{width:auto;margin:0 0 0 auto}}.meta th,.meta td{{padding:2px 0 2px 14px;border:0;background:none;font-size:12.5px;text-align:right;white-space:nowrap}}.meta th{{color:#777;font-weight:400}}.parties{{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:16px;font-size:13px;line-height:1.6}}.parties .ttl{{display:block;margin-bottom:2px;font-size:13.5px}}.who{{display:flex;flex-wrap:wrap;gap:6px 40px;margin-top:14px;padding:8px 0;border-top:1px solid #e0e0de;border-bottom:1px solid #e0e0de;font-size:13px}}.who b{{margin-right:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}.doc-tools{{display:flex;align-items:center;gap:10px;margin:-16px 0 18px;padding:8px 10px;border-radius:8px;background:#f2f2f0;font-size:12px;color:#777}}.doc-tools button{{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:0;background:#111;color:#fff;cursor:pointer}}@media print{{body{{margin:0}}.no-print{{display:none!important}}}}</style></head>
 <body><div class="doc-tools no-print"><button onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button><span>ปุ่มนี้ไม่ติดไปในเอกสาร</span></div>
-<div class="box"><div>{logo}<h1>ใบเสนอราคา / Quotation</h1>
-<div class="muted">{e(s.company_name_th)} · {e(s.company_name_en)}<br>{e(s.company_address_th)}<br>เลขประจำตัวผู้เสียภาษี {e(s.company_tax_id)}</div></div>
-<div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div>{br}</div></div>
-<div class="box three">
-<div><b>ชื่อ-ที่อยู่ลูกค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{bill_addr}</span><br><span class="muted">{e(c.get('phone') or '')}{(' · ' + e(c.get('email'))) if c.get('email') else ''}</span></div>
-<div><b>ชื่อ-สถานที่ส่งสินค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{ship_addr}</span></div>
-<div style="text-align:right"><b>พนักงานขาย</b><br>{sales_name}{sales_code}{f"<br>{contact}" if contact else ""}<br><span class="muted">รหัสลูกค้า {e(c.get('sap_customer_no') or '-')}</span></div></div>
+<div class="hdr">
+<div class="hdr-co">{logo}<div class="co-txt"><b>{e(s.company_name_th)}</b><br><b>{e(s.company_name_en)}</b><br>{e(s.company_address_th)}<br>{e(s.company_address_en)}<br>เลขประจำตัวผู้เสียภาษี TAX ID {e(s.company_tax_id)}</div></div>
+<div class="hdr-doc"><h1>ใบเสนอราคา</h1><div class="sub">Quotation</div>
+<table class="meta">{f"<tr><th>สาขา</th><td>{br}</td></tr>" if br else ""}<tr><th>เลขที่ใบเสนอราคา</th><td><b>{e(q.quotation_no)}</b></td></tr><tr><th>วันที่ออก</th><td>{q.issued_at.strftime('%d/%m/%Y')}</td></tr><tr><th>ยืนราคาถึง</th><td><b>{q.valid_until.strftime('%d/%m/%Y')}</b></td></tr><tr><th>สถานะ</th><td><span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></td></tr></table></div>
+</div>
+<div class="parties">
+<div><b class="ttl">ชื่อ-ที่อยู่ลูกค้า</b><div>{e(c.get('name') or '')}</div><div>{bill_addr}</div><div>{e(c.get('phone') or '')}{(' · ' + e(c.get('email'))) if c.get('email') else ''}</div></div>
+<div><b class="ttl">ชื่อ-สถานที่ส่งสินค้า</b><div>{e(c.get('name') or '')}</div><div>{ship_addr}</div>{f"<div>Tel. {e(c.get('phone'))}</div>" if c.get('phone') else ""}</div>
+</div>
+<div class="who"><span><b>รหัสลูกค้า</b> {e(c.get('sap_customer_no') or '-')}</span><span><b>พนักงานขาย</b> {sales_name}{sales_code}{f" · {contact}" if contact else ""}</span></div>
 {staff_block}
 {note_block}
 <table><thead><tr><th>ลำดับ</th>{img_col}<th>รหัสสินค้า</th><th>รายการ</th><th class="r">จำนวน</th><th class="r">ราคาต่อหน่วย</th><th class="r">ส่วนลด</th><th class="r">จำนวนเงิน</th><th>รับสินค้า</th></tr></thead><tbody>{rows}

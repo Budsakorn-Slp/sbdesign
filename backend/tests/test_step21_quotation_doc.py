@@ -124,7 +124,7 @@ def test_pdf_สองแบบ_มีรูปกับไม่มีรูป
         db.commit()
     plain = _doc(client, hs, q["quotation_no"])
     withimg = _doc(client, hs, q["quotation_no"], images=True)
-    assert "<img" not in plain
+    assert "<img" not in plain.split("<tbody>")[1], "แบบไม่มีรูป ตารางสินค้าต้องไม่มีรูป (โลโก้บนหัวใบมีได้)"
     assert "<img" in withimg, "แบบมีรูปต้องมีรูปสินค้าจริง"
     # เนื้อหาเหมือนกันทุกอย่างยกเว้นรูป — ยอดต้องไม่เพี้ยนตามแบบเอกสาร
     assert f"{float(q['grand_total']):,.2f}" in plain
@@ -172,7 +172,7 @@ def test_วันที่ในเงื่อนไขท้ายบิล�
     doc = _doc(client, hs, q["quotation_no"])
     issued = date.fromisoformat(q["issued_at"][:10])
     assert f"มีกำหนดอายุถึงวันที่ {month_end(issued).strftime('%d/%m/%Y')}" in doc
-    assert f"ยืนราคาถึง <b>{date.fromisoformat(q['valid_until']).strftime('%d/%m/%Y')}</b>" in doc
+    assert f"<th>ยืนราคาถึง</th><td><b>{date.fromisoformat(q['valid_until']).strftime('%d/%m/%Y')}</b>" in doc
 
 
 def test_เขียนทับเงื่อนไขจาก_env_ได้(client, monkeypatch):
@@ -252,7 +252,7 @@ def test_หัวใบบอกสาขาที่ออกใบ(client):
     hs = auth_headers(client, "SA-104", "staff")
     q, _ = _quotation(client, hs)
     doc = _doc(client, hs, q["quotation_no"])
-    assert "สาขา 319 · DS-บางแค" in doc, "ต้องตัด S ออกเหมือนใบเดิม"
+    assert "<th>สาขา</th><td>319 · DS-บางแค" in doc, "ต้องตัด S ออกเหมือนใบเดิม"
 
 
 def test_พนักงานยังไม่ผูกสาขา_ต้องไม่พิมพ์บรรทัดว่าง(client):
@@ -304,3 +304,12 @@ def test_ลูกค้าคนอื่นไม่ได้_token_ของ�
     other = {"Authorization": "Bearer " + login(client, "0812223333")["access_token"]}
     r = client.get(f"/quotations/{q['quotation_no']}", headers=other)
     assert r.status_code == 403 or r.json().get("link_token") is None
+
+
+def test_หัวใบแบบใบรับคำสั่งซื้อเดิม(client):
+    """โลโก้+บริษัทแถวบน · ลูกค้ากับสถานที่ส่งคู่กัน · รหัสลูกค้า/พนักงานขายอยู่แถวถัดลงมา"""
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs)
+    doc = _doc(client, hs, q["quotation_no"])
+    assert "class='logo'" in doc.split('class="hdr-doc"')[0], "โลโก้อยู่หัวใบ"
+    assert doc.index("ชื่อ-ที่อยู่ลูกค้า") < doc.index("ชื่อ-สถานที่ส่งสินค้า") < doc.index("<b>รหัสลูกค้า</b>") < doc.index("<b>พนักงานขาย</b>") < doc.index("<table><thead>")

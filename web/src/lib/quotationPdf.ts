@@ -16,10 +16,8 @@ export async function quotationPdf(no: string, token: string | null | undefined,
 
   const qs = new URLSearchParams();
   if (token) qs.set("t", token);
-  if (withImages) {
-    qs.set("images", "1");
-    qs.set("proxy", "1");   // รูปสินค้าผ่านเซิร์ฟเวอร์เรา ไม่งั้นวาดลงไฟล์ไม่ได้
-  }
+  if (withImages) qs.set("images", "1");
+  qs.set("proxy", "1");   // โลโก้/รูปสินค้าผ่านเซิร์ฟเวอร์เรา ไม่งั้นวาดลงไฟล์ไม่ได้
   const docPath = `${API_BASE}/quotations/${no}/document`;
   const auth = loadAuth();
   const res = await fetch(`${docPath}?${qs.toString()}`, {
