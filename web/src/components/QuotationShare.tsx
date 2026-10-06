@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { API_BASE, errorMessage } from "../lib/api";
-import { openGoogleSheet } from "../lib/gsheet";
 import { downloadBlob, quotationPdf } from "../lib/quotationPdf";
 import Icon from "./Icon";
 
@@ -84,7 +83,6 @@ export default function QuotationShare({ no, token, staff = false, onClose }: { 
           <>
             <div className="qs-links" style={{ marginTop: 12 }}>
               <a className="qs-chip" href={exportUrl("xlsx")}><Icon name="table_view" size={16} /> Excel (.xlsx)</a>
-              <button className="qs-chip" onClick={() => openGoogleSheet(no, token).then(setMsg).catch((e) => setErr(errorMessage(e)))}><Icon name="grid_on" size={16} /> Google Sheets</button>
             </div>
           </>
         )}
