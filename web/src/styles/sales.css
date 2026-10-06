@@ -362,12 +362,17 @@
 .sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
 .sp-item { position: relative; margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .sp-item.mine { border-color: #111; }
-.sp-thumb { display: block; width: 100%; padding: 0; border: 0; background: #f2f2f0; cursor: zoom-in; aspect-ratio: 1; }
+.sp-thumb { position: relative; display: block; width: 100%; padding: 0; border: 0; background: #f2f2f0; cursor: zoom-in; aspect-ratio: 1; }
 .sp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .sp-item figcaption { display: flex; flex-direction: column; padding: 4px 8px 6px; min-width: 0; }
 .sp-item figcaption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sp-acts { position: absolute; top: 4px; right: 4px; display: flex; gap: 4px; }
-.sp-acts .icon-btn { background: rgba(255, 255, 255, .92); border-radius: 6px; }
+/* แถวปุ่มใต้รูป — ไม่ทับรูป ไม่ล้นขอบการ์ด */
+.sp-acts { display: flex; align-items: center; gap: 2px; padding: 0 4px 6px; }
+.sp-acts .icon-btn { flex: none; width: 26px; height: 26px; border-radius: 6px; }
+.sp-share { flex: 1; min-width: 0; display: inline-flex; align-items: center; justify-content: center; gap: 3px; padding: 4px 4px; border-radius: 6px;
+  border: 1px solid var(--ink); background: var(--ink); color: #fff; font: inherit; font-size: 12px; white-space: nowrap; cursor: pointer; }
+.sp-share.on { background: #fff; color: var(--ink); border-color: var(--line-2); }
+.sp-share:disabled { opacity: .4; cursor: not-allowed; }
 .sp-full { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: 8px; }
 .sp-audit { overflow-x: auto; }
 .sp-audit table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -385,7 +390,7 @@
 .tpl-f textarea { resize: vertical; }
 
 /* สถานะแชร์บนรูปของพนักงาน */
-.sp-state { position: absolute; top: 4px; left: 4px; padding: 1px 6px; border-radius: 4px; font-size: 11px; background: rgba(0,0,0,.6); color: #fff; }
+.sp-state { position: absolute; left: 4px; bottom: 4px; max-width: calc(100% - 8px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 1px 6px; border-radius: 4px; font-size: 11px; background: rgba(0,0,0,.6); color: #fff; }
 .sp-state.on { background: var(--green); }
 
 /* รูปของจริงตามสาขา — ฝั่งลูกค้า */

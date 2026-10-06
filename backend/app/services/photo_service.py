@@ -33,6 +33,7 @@ MEDIA_PREFIX = "/media"
 MAX_BYTES = 12 * 1024 * 1024      # รูปจากกล้องมือถือรุ่นใหม่ใหญ่ราว 4-8 MB
 MAX_SIDE = 2000                   # ย่อเหลือด้านยาว 2000px พอดูรายละเอียดรอย ไม่เปลืองที่
 MAX_PER_BRANCH = 30               # ต่อหนึ่งรหัสต่อหนึ่งสาขา — กันกดอัปโหลดรัวจนดิสก์เต็ม
+MAX_PUBLIC_PER_BRANCH = 5         # ลูกค้าเห็นได้สูงสุดกี่รูปต่อสาขา (ตกลงกันไว้ก่อน) — หน้าเว็บมีค่าเดียวกัน
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "HEIF", "MPO"}
 
 
@@ -193,6 +194,12 @@ def set_public(db: Session, emp: CurrentEmployee, photo_id: str, public: bool) -
     photo = _get(db, emp, photo_id)
     if not can_update(emp, photo):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="แชร์ได้เฉพาะรูปของตัวเอง")
+    if public and not photo.is_public:
+        shared = db.query(ProductPhoto).filter(
+            ProductPhoto.matnr == photo.matnr, ProductPhoto.branch_code == photo.branch_code,
+            ProductPhoto.is_public.is_(True), ProductPhoto.is_deleted.is_(False)).count()
+        if shared >= MAX_PUBLIC_PER_BRANCH:
+            raise HTTPException(status_code=400, detail=f"สาขานี้แชร์ครบ {MAX_PUBLIC_PER_BRANCH} รูปแล้ว — เลิกแชร์รูปอื่นก่อน")
     if photo.is_public != public:
         photo.is_public = public
         photo.shared_by_employee, photo.shared_at = (emp.employee_code, utcnow()) if public else (None, None)

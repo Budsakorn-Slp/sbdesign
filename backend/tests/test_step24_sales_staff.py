@@ -387,3 +387,17 @@ def test_google_sheet_สร้างชีตและแชร์ให้ค�
     # เซลล์คนอื่นที่ไม่ใช่เจ้าของใบ สร้างชีตของใบนี้ไม่ได้
     other = auth_headers(client, "SA-900", "staff")
     assert client.post(f"/quotations/{q['quotation_no']}/google-sheet", headers=other).status_code == 403
+
+
+def test_ลูกค้าเห็นได้ไม่เกิน_5_รูปต่อสาขา(client):
+    a = auth_headers(client, "SA-104", "staff")
+    m = "20000999"
+    ids = [p["id"] for p in _upload(client, a, n=6, matnr=m).json()]
+    for pid in ids[:5]:
+        assert client.post(f"/staff/photos/{pid}/share", json={"public": True}, headers=a).status_code == 200
+    r = client.post(f"/staff/photos/{ids[5]}/share", json={"public": True}, headers=a)
+    assert r.status_code == 400 and "5" in r.text
+    # เลิกแชร์หนึ่งรูป แล้วแชร์รูปที่หกได้
+    client.post(f"/staff/photos/{ids[0]}/share", json={"public": False}, headers=a)
+    assert client.post(f"/staff/photos/{ids[5]}/share", json={"public": True}, headers=a).status_code == 200
+    assert sum(len(b["photos"]) for b in client.get(f"/materials/{m}/branch-photos").json()) == 5

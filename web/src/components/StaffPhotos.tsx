@@ -4,6 +4,9 @@ import { thDate, thTime } from "../lib/format";
 import type { StaffMe, StaffPhoto, StaffPhotoAudit } from "../lib/types";
 import Icon from "./Icon";
 
+/** ลูกค้าเห็นได้สูงสุดกี่รูปต่อสาขา — ต้องตรงกับ MAX_PUBLIC_PER_BRANCH ฝั่ง backend */
+const MAX_SHARED = 5;
+
 const ACTION_TXT: Record<string, string> = { CREATE: "เพิ่ม", UPDATE: "แทนรูป", DELETE: "ลบ", SHARE: "แชร์ให้ลูกค้า", UNSHARE: "เลิกแชร์" };
 
 /** รูปถ่ายของจริงในสาขา (MATNR 20 ตัวโชว์) — เห็นเฉพาะรูปของสาขาตัวเอง
@@ -32,6 +35,8 @@ export default function StaffPhotos({ matnr }: { matnr: string }) {
   }, [load]);
 
   const can = (p: string) => !!me?.permissions.includes(p);
+  const sharedCount = (rows || []).filter((p) => p.is_public).length;
+  const sharedFull = sharedCount >= MAX_SHARED;
 
   const add = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -115,7 +120,7 @@ export default function StaffPhotos({ matnr }: { matnr: string }) {
       <div className="sp-head">
         <div>
           <b>รูปของจริงในสาขา</b>
-          <span className="small muted"> · {me?.branch_name || me?.branch_code || "ยังไม่ผูกสาขา"} · อัปโหลดแล้วเห็นเฉพาะพนักงาน ต้องกดแชร์ลูกค้าถึงจะเห็น</span>
+          <span className="small muted"> · {me?.branch_name || me?.branch_code || "ยังไม่ผูกสาขา"} · อัปโหลดแล้วเห็นเฉพาะพนักงาน ต้องกดแชร์ลูกค้าถึงจะเห็น · แชร์แล้ว <b>{sharedCount}/{MAX_SHARED}</b> รูป</span>
         </div>
         <div className="row" style={{ gap: 6 }}>
           {can("PRODUCT_IMAGE_AUDIT_VIEW") && <button className="btn sm" onClick={showAudit}><Icon name="history" size={16} /> ประวัติ</button>}
@@ -141,17 +146,23 @@ export default function StaffPhotos({ matnr }: { matnr: string }) {
         <div className="sp-grid">
           {rows.map((p) => (
             <figure key={p.id} className={"sp-item" + (p.mine ? " mine" : "")}>
+              {/* ปุ่มไม่วางทับรูป — การ์ดกว้างไม่ถึง 100px วางทับแล้วบังรูปและล้นขอบ */}
               <button className="sp-thumb" onClick={() => setView(p)} aria-label="ดูรูปใหญ่">
                 <img src={mediaUrl(p.url)} alt="" loading="lazy" />
+                <span className={"sp-state" + (p.is_public ? " on" : "")}>{p.is_public ? "ลูกค้าเห็น" : "เฉพาะพนักงาน"}</span>
               </button>
-              <span className={"sp-state" + (p.is_public ? " on" : "")}>{p.is_public ? "ลูกค้าเห็นแล้ว" : "เฉพาะพนักงาน"}</span>
               <figcaption>
                 <span className="tiny">{p.mine ? "รูปของฉัน" : p.owner_employee_name}</span>
                 <span className="tiny muted">{thDate(p.updated_at || p.created_at)}</span>
               </figcaption>
               {(p.can_edit || p.can_delete) && (
                 <div className="sp-acts">
-                  {p.can_edit && <button className="icon-btn sm" disabled={busy === p.id} title={p.is_public ? "เลิกแชร์ (ซ่อนจากลูกค้า)" : "แชร์ให้ลูกค้าเห็น"} onClick={() => share(p)}><Icon name={p.is_public ? "visibility_off" : "share"} size={16} /></button>}
+                  {p.can_edit && (
+                    <button className={"sp-share" + (p.is_public ? " on" : "")} disabled={busy === p.id || (!p.is_public && sharedFull)}
+                            title={!p.is_public && sharedFull ? `แชร์ครบ ${MAX_SHARED} รูปแล้ว — เลิกแชร์รูปอื่นก่อน` : ""} onClick={() => share(p)}>
+                      <Icon name={p.is_public ? "visibility_off" : "share"} size={14} /> {p.is_public ? "เลิกแชร์" : "แชร์"}
+                    </button>
+                  )}
                   {p.can_edit && <button className="icon-btn sm" disabled={busy === p.id} title="แทนรูป" onClick={() => pickReplace(p)}><Icon name="cached" size={16} /></button>}
                   {p.can_delete && <button className="icon-btn sm" disabled={busy === p.id} title="ลบ" onClick={() => remove(p)}><Icon name="delete" size={16} /></button>}
                 </div>
@@ -173,7 +184,7 @@ export default function StaffPhotos({ matnr }: { matnr: string }) {
               <span className="small muted">ถ่ายเมื่อ {thDate(view.created_at)} {thTime(view.created_at)}{view.updated_at ? ` · แทนรูปล่าสุด ${thDate(view.updated_at)}` : ""}</span>
               <span style={{ marginLeft: "auto" }} />
               {view.can_edit && (
-                <button className={"btn sm" + (view.is_public ? "" : " primary")} disabled={busy === view.id} onClick={() => share(view)}>
+                <button className={"btn sm" + (view.is_public ? "" : " primary")} disabled={busy === view.id || (!view.is_public && sharedFull)} onClick={() => share(view)}>
                   <Icon name={view.is_public ? "visibility_off" : "share"} size={16} /> {view.is_public ? "เลิกแชร์" : "แชร์ให้ลูกค้าเห็น"}
                 </button>
               )}
