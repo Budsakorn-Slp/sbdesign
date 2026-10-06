@@ -445,7 +445,7 @@
 .qs-main { display: flex; flex-direction: column; gap: 8px; }
 .qs-label { margin: 14px 0 6px; }
 .qs-links { display: flex; flex-wrap: wrap; gap: 6px; }
-.qs-chip { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.qs-chip { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; }
 .qs-chip.line { background: #06c755; border-color: #06c755; color: #fff; }
 .qs-chip.fb { background: #1877f2; border-color: #1877f2; color: #fff; }
 .qs-chip.wa { background: #25d366; border-color: #25d366; color: #fff; }

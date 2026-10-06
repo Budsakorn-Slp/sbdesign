@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { errorMessage } from "../lib/api";
+import { API_BASE, errorMessage } from "../lib/api";
+import { openGoogleSheet } from "../lib/gsheet";
 import { downloadBlob, quotationPdf } from "../lib/quotationPdf";
 import Icon from "./Icon";
 
@@ -12,7 +13,7 @@ import Icon from "./Icon";
  * ปุ่ม LINE/Facebook/WhatsApp/อีเมล ส่งเป็น "ลิงก์" (แอปพวกนี้รับไฟล์ผ่านลิงก์แชร์ไม่ได้)
  * ส่งเป็น "ไฟล์" ใช้ปุ่มแรก ซึ่งเปิดหน้าต่างแชร์ของเครื่องที่มี LINE/Messenger ให้เลือกอยู่แล้ว
  */
-export default function QuotationShare({ no, token, onClose }: { no: string; token: string | null | undefined; onClose: () => void }) {
+export default function QuotationShare({ no, token, staff = false, onClose }: { no: string; token: string | null | undefined; staff?: boolean; onClose: () => void }) {
   const [withImages, setWithImages] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(true);
@@ -37,6 +38,7 @@ export default function QuotationShare({ no, token, onClose }: { no: string; tok
   const link = token ? `${location.origin}/q/${no}?t=${token}` : `${location.origin}/q/${no}`;
   const text = `ใบเสนอราคา ${no} จาก SB Design Square`;
   const enc = encodeURIComponent;
+  const exportUrl = (format: "xlsx" | "csv") => `${API_BASE}/quotations/${no}/export?format=${format}${token ? `&t=${token}` : ""}`;
 
   const shareFile = async () => {
     if (!file) return;
@@ -80,6 +82,18 @@ export default function QuotationShare({ no, token, onClose }: { no: string; tok
           <p className="tiny muted" style={{ margin: "6px 0 0" }}>เครื่องนี้ส่งไฟล์เข้าแอปโดยตรงไม่ได้ — ดาวน์โหลดแล้วแนบเอง หรือส่งเป็นลิงก์ด้านล่าง</p>
         )}
 
+        {/* ไฟล์ตาราง — เครื่องมือพนักงาน (แก้ตัวเลข/แนบระบบอื่นต่อ) ลูกค้าใช้ PDF พอ */}
+        {staff && (
+          <>
+            <div className="qs-label small muted">ไฟล์ตาราง (แก้ไขต่อได้)</div>
+            <div className="qs-links">
+              <a className="qs-chip" href={exportUrl("xlsx")}><Icon name="table_view" size={16} /> Excel (.xlsx)</a>
+              <a className="qs-chip" href={exportUrl("csv")}><Icon name="download" size={16} /> CSV</a>
+              <button className="qs-chip" onClick={() => openGoogleSheet(no, token).then(setMsg).catch((e) => setErr(errorMessage(e)))}><Icon name="grid_on" size={16} /> Google Sheets</button>
+            </div>
+          </>
+        )}
+
         <div className="qs-label small muted">หรือส่งเป็นลิงก์เปิดดูใบ</div>
         <div className="qs-links">
           <a className="qs-chip line" href={`https://line.me/R/share?text=${enc(`${text}\n${link}`)}`} target="_blank" rel="noreferrer">LINE</a>
@@ -88,7 +102,7 @@ export default function QuotationShare({ no, token, onClose }: { no: string; tok
           <a className="qs-chip" href={`mailto:?subject=${enc(text)}&body=${enc(`${text}\n${link}`)}`}>อีเมล</a>
           <button className="qs-chip" onClick={() => { navigator.clipboard?.writeText(link); setMsg("คัดลอกลิงก์แล้ว"); }}>คัดลอกลิงก์</button>
         </div>
-        {msg && <div className="note ok small" style={{ marginTop: 8 }}>{msg}</div>}
+        {msg && <div className="note ok small" style={{ marginTop: 8, wordBreak: "break-all" }}>{msg}</div>}
       </div>
     </div>
   );

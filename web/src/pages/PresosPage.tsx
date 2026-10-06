@@ -1,4 +1,3 @@
-import { openGoogleSheet } from "../lib/gsheet";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
@@ -11,12 +10,6 @@ import type { PresoSummary, Quotation } from "../lib/types";
 
 /** S5 · Preso ที่เซฟไว้ — ดึงกลับมาทำต่อ / สร้าง Quotation / ดูใบเสนอราคาที่ออกแล้ว */
 /** ลิงก์เอกสาร — เปิดแท็บใหม่จึงต้องพ่วง token มาเอง (แท็บใหม่ไม่มี Authorization header) */
-function exportUrl(p: PresoSummary, format: "xlsx" | "csv"): string {
-  const qs = new URLSearchParams({ format });
-  if (p.quotation_token) qs.set("t", p.quotation_token);
-  return `${API_BASE}/quotations/${p.quotation_no}/export?${qs.toString()}`;
-}
-
 function docUrl(p: PresoSummary, withImages: boolean): string {
   const qs = new URLSearchParams();
   if (p.quotation_token) qs.set("t", p.quotation_token);
@@ -32,7 +25,6 @@ export default function PresosPage() {
   const [rows, setRows] = useState<PresoSummary[] | null>(null);
   const [quotes, setQuotes] = useState<Quotation[]>([]);
   const [err, setErr] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [share, setShare] = useState<{ no: string; token: string | null } | null>(null);
 
@@ -100,7 +92,6 @@ export default function PresosPage() {
         </div>
       </div>
       {err && <div className="note err" style={{ marginBottom: 10 }}>{err}</div>}
-      {note && <div className="note ok small" style={{ marginBottom: 10, wordBreak: "break-all" }}>{note} <button className="link-btn small" onClick={() => setNote(null)}>ปิด</button></div>}
       {!rows && !err && <div className="ph" style={{ height: 120 }}>กำลังโหลด…</div>}
       {rows && (
         <div className="tbl-wrap card flat">
@@ -129,10 +120,7 @@ export default function PresosPage() {
                         <>
                           {p.quotation_no && <a href={docUrl(p, true)} target="_blank" rel="noreferrer" className="btn sm" title="เปิดดูใบเสนอราคาแบบมีรูปสินค้า (ดาวน์โหลดไฟล์ใช้ปุ่ม แชร์ / ดาวน์โหลด)">Preview มีรูป</a>}
                           {p.quotation_no && <a href={docUrl(p, false)} target="_blank" rel="noreferrer" className="btn sm" title="เปิดดูใบเสนอราคาแบบไม่มีรูปสินค้า">Preview ไม่มีรูป</a>}
-                          {p.quotation_no && <a href={exportUrl(p, "xlsx")} className="btn sm" title="ดาวน์โหลดเป็น Excel">Excel</a>}
-                          {p.quotation_no && <a href={exportUrl(p, "csv")} className="btn sm" title="ดาวน์โหลดเป็น CSV">CSV</a>}
                           {p.quotation_no && <button className="btn sm" title="ส่งเป็นไฟล์ PDF ทาง LINE/Messenger หรือดาวน์โหลด" onClick={() => setShare({ no: p.quotation_no!, token: p.quotation_token })}>แชร์ / ดาวน์โหลด</button>}
-                          {p.quotation_no && <button className="btn sm" title="เปิดเป็น Google Sheet ออนไลน์" onClick={() => openGoogleSheet(p.quotation_no!, p.quotation_token).then(setNote).catch((e) => setErr(errorMessage(e)))}>Google Sheets</button>}
                           {p.quotation_no && p.quotation_status === "issued" && <Link to={`/sales/quotations/${p.quotation_no}`} className="btn primary sm">ไปจ่ายเงิน</Link>}
                         </>
                       )}
@@ -147,7 +135,7 @@ export default function PresosPage() {
       )}
       <p className="small muted" style={{ marginTop: 10 }}>Preso = ใบร่างที่ยังแก้ได้ · Quotation = ล็อกราคา/โปร แล้วส่งต่อให้ระบบ SAP{quotes.length ? ` · ใบเสนอราคาทั้งหมดของฉัน ${quotes.length} ใบ` : ""}</p>
       <div className="row" style={{ marginTop: 6 }}><Icon name="arrow_back" size={16} /> <Link to="/sales">กลับไปตะกร้าที่กำลังดูแล</Link></div>
-      {share && <QuotationShare no={share.no} token={share.token} onClose={() => setShare(null)} />}
+      {share && <QuotationShare no={share.no} token={share.token} staff onClose={() => setShare(null)} />}
     </main>
   );
 }
