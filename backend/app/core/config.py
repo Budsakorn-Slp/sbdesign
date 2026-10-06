@@ -140,7 +140,12 @@ class Settings(BaseSettings):
     payment_expire_hours: int = 24
     kbank_base_url: str = ""       # sandbox: https://dev-kpaymentgateway.kasikornbank.com
     kbank_merchant_id: str = ""
-    kbank_public_key: str = ""     # ใช้กับ kpayment.js บนหน้าเว็บ (ไม่ลับ)
+    kbank_public_key: str = ""     # ใช้กับ kpayment.js บนหน้าเว็บ (ไม่ลับ — ฝังในหน้าเว็บได้)
+    # ที่อยู่ไฟล์ kpayment.js ของธนาคาร — ปุ่ม Pay Now โหลดสคริปต์นี้มาเปิดฟอร์มกรอกบัตร
+    # ไม่ตั้ง = ไม่แสดงปุ่ม (ดีกว่าโหลดสคริปต์จาก URL ที่เดาเอง)
+    kbank_script_url: str = ""
+    # เส้น Create Charge API — ยิงด้วย token ที่ kpayment.js คืนมา พร้อม source_type=card
+    kbank_charge_path: str = "/v1/charge"
     kbank_secret_key: str = ""     # ฝั่งเซิร์ฟเวอร์เท่านั้น ห้ามส่งไปหน้าเว็บ
     kbank_timeout_seconds: float = 20.0
 

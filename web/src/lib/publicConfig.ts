@@ -14,6 +14,11 @@ export type PublicConfig = {
   deposit_enabled: boolean;
   /** false = เซลล์กดลดราคาเองไม่ได้ ส่วนลดต้องมาจากโปรโมชั่นที่ตั้งไว้เท่านั้น */
   staff_discount_enabled: boolean;
+  /** mock = หน้าธนาคารจำลองของเรา · kbank = K-Payment Gateway ของจริง */
+  payment_provider: string;
+  /** คีย์ฝั่งหน้าเว็บของกสิกร (ไม่ลับโดยออกแบบ) · ว่าง = ยังไม่ได้คีย์ ไม่แสดงปุ่ม Pay Now */
+  kbank_public_key: string;
+  kbank_script_url: string;
   coming_soon_title: string;
   coming_soon_text: string;
 };
@@ -30,6 +35,9 @@ export function loadPublicConfig(): Promise<PublicConfig> {
       otp_enabled: false,
       deposit_enabled: false,
       staff_discount_enabled: false,
+      payment_provider: "mock",
+      kbank_public_key: "",
+      kbank_script_url: "",
       coming_soon_title: "เร็ว ๆ นี้",
       coming_soon_text: "เรากำลังเตรียมร้านค้าออนไลน์ให้พร้อมที่สุด อีกไม่นานเจอกันแน่นอน",
     }));

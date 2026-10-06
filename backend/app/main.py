@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, analytics, auth, cart, catalog, delivery, geo, health, payment, pdpa, promo, quotation, sales, ws
+from app.api import admin, analytics, auth, cart, catalog, delivery, geo, health, payment, payment_kbank, pdpa, promo, quotation, sales, ws
 from app.core.config import get_settings
 from app.realtime import manager, on_cart_event
 from app.services import cart_service
@@ -75,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(geo.router)
     app.include_router(quotation.router)
     app.include_router(payment.router)
+    app.include_router(payment_kbank.router)
     app.include_router(analytics.router)
     app.include_router(pdpa.router)
     app.include_router(ws.router)

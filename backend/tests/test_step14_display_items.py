@@ -107,7 +107,8 @@ def test_display_row_copies_name_image_and_price(monkeypatch, parents):
         d = db.get(Material, "20000001")
         price = db.scalar(select(MaterialPrice.price).where(MaterialPrice.matnr == "20000001", MaterialPrice.tier == "standard"))
     # ชื่อต้องบอกว่าเป็นตัวโชว์ เพราะชื่อคือตัวเดียวที่ติดไปถึงตะกร้า/ใบเสนอราคา
-    assert d.name_th == "โซฟาทดสอบ 0 (สินค้าตัวโชว์)" and d.image_url == "x.jpg"
+    # "ขายตามสภาพ" ต้องอยู่ในชื่อ ไม่ใช่ซ่อนในหน้ารายละเอียด — ลูกค้าต้องเห็นตั้งแต่ในผลค้นหา
+    assert d.name_th == "โซฟาทดสอบ 0 (สินค้าตัวโชว์ ขายตามสภาพ)" and d.image_url == "x.jpg"
     assert price == Decimal("1000.00")  # ราคาก๊อปจากตัวปกติ (ยังไม่มีราคาตัวโชว์จริง)
     # สัญญาณการขายของตัวปกติต้องไม่ติดมา ไม่งั้นตัวโชว์จะไปแย่งอันดับหน้า "มาใหม่/ขายดี"
     assert d.is_new is False and d.is_bestseller is False and d.sold_qty == 0

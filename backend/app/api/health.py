@@ -31,6 +31,11 @@ def public_config():
         "deposit_enabled": s.deposit_enabled,
         # เซลล์กดลดราคาเองได้ไหม — หน้าจอต้องไม่โชว์ช่องที่หลังบ้านตีกลับอยู่ดี
         "staff_discount_enabled": s.staff_discount_enabled,
+        # ปุ่ม Pay Now ของกสิกรต้องใช้ public key + ที่อยู่ kpayment.js
+        # ทั้งคู่ไม่ลับโดยออกแบบ (ฝังในหน้าเว็บอยู่แล้ว) ส่วน secret key ห้ามหลุดมาทางนี้เด็ดขาด
+        "payment_provider": s.payment_provider,
+        "kbank_public_key": s.kbank_public_key,
+        "kbank_script_url": s.kbank_script_url,
         "coming_soon_title": s.coming_soon_title,
         "coming_soon_text": s.coming_soon_text,
     }

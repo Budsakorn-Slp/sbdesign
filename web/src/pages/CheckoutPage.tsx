@@ -13,19 +13,12 @@ import { useContent } from "../lib/content";
 import { bahtWord } from "../lib/format";
 import type { Quotation, SavedAddress } from "../lib/types";
 
-const PAY_METHODS = [
-  { key: "card", icon: "credit_card", title: "บัตรเครดิต/เดบิต", note: "Visa, Mastercard, JCB" },
-  { key: "qr", icon: "qr_code_2", title: "QR Code Payment", note: "PromptPay, Thai QR" },
-  { key: "wallet", icon: "account_balance_wallet", title: "E-Wallet", note: "TrueMoney, LINE Pay" },
-  { key: "installment", icon: "schedule", title: "ผ่อน 0% 10 เดือน", note: "เฉพาะบัตรที่ร่วมรายการ" },
-];
 
 export default function CheckoutPage() {
   const auth = useAuth();
   const { cart, refresh, setCart } = useCart();
   const { shipTo } = useContent();
   const nav = useNavigate();
-  const [pay, setPay] = useState("card");
   const [promoOpen, setPromoOpen] = useState(false);
   const [taxSame, setTaxSame] = useState(true);
   const [placing, setPlacing] = useState(false);
@@ -103,21 +96,9 @@ export default function CheckoutPage() {
             </p>
           </section>
 
-          {/* เลือกวิธีชำระเงินบนหน้าเลย ไม่ต้องกางแผงสรุปก่อน — เป็นสิ่งที่ต้องเลือกจริงๆ
-              ไม่ใช่ข้อมูลไว้ตรวจทาน ส่วนแผงลอยด้านล่างเหลือแค่สรุปยอดกับปุ่มยืนยัน */}
-          <section className="card flat" style={{ marginTop: 16 }}>
-            <h3>วิธีการชำระเงิน</h3>
-            <div className="col" style={{ marginTop: 8 }}>
-              {PAY_METHODS.map((p) => (
-                <label key={p.key} className={"opt" + (pay === p.key ? " on" : "")}>
-                  <input type="radio" name="pay" checked={pay === p.key} onChange={() => setPay(p.key)} />
-                  <Icon name={p.icon} size={22} />
-                  <span className="grow">{p.title}<small>{p.note}</small></span>
-                  <Icon name="check_circle" size={20} style={{ color: pay === p.key ? "var(--ink)" : "var(--line-2)" }} fill={pay === p.key} />
-                </label>
-              ))}
-            </div>
-          </section>
+          {/* วิธีชำระเงินย้ายไปเลือกที่หน้าจ่ายเงินแล้ว — เลือกสองที่ทำให้ของที่เลือกตรงนี้
+              ไม่ได้ถูกใช้จริง (ไปเลือกใหม่อยู่ดี) และช่องทางที่เคยโชว์ตรงนี้อย่าง E-Wallet
+              ก็ไม่ตรงกับที่ระบบรับจริง */}
 
         </div>
 

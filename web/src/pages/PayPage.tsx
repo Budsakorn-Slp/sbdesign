@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon";
+import KPayNowButton from "../components/KPayNowButton";
 import { apiGet, apiPost, errorMessage } from "../lib/api";
 import { usePublicConfig } from "../lib/publicConfig";
 import { useAuth } from "../lib/auth";
@@ -19,6 +20,7 @@ export default function PayPage() {
   const token = params.get("t");
   const cfg = usePublicConfig();
   const nav = useNavigate();
+  const [payNo, setPayNo] = useState<string | null>(null);
   // ลิงก์เก่าที่ส่งให้ลูกค้าไปแล้วยังมี ?deposit=1 ติดอยู่ — ถ้าปิดรับมัดจำแล้วต้องไม่ยอมตาม
   // ไม่งั้นลูกค้าเปิดลิงก์เดิมมาเจอยอดมัดจำ กดจ่ายแล้วหลังบ้านตีกลับ งงทั้งคู่
   const wantDeposit = params.get("deposit") === "1" && cfg?.deposit_enabled === true;
@@ -28,11 +30,22 @@ export default function PayPage() {
   const [kind, setKind] = useState<"full" | "deposit">("full");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // ปุ่ม Pay Now ใช้ได้เฉพาะบัตร/ผ่อน — QR ของกสิกรเป็นคนละโฟลว์ (ยังไม่ได้ทำ)
+  const useKPay = cfg?.payment_provider === "kbank" && !!cfg?.kbank_public_key && (method === "card" || method === "installment");
   const qs = token ? `?t=${encodeURIComponent(token)}` : "";
 
   useEffect(() => {
     if (wantDeposit) setKind("deposit");
   }, [wantDeposit]);
+
+  // โฟลว์ของกสิกรต้องมีเลขรายการก่อนกดปุ่ม (ใช้เป็น order_id ที่ส่งให้ธนาคาร)
+  // จึงเปิดรายการไว้ล่วงหน้าแทนที่จะเปิดตอนกด เหมือนโฟลว์ mock
+  useEffect(() => {
+    if (!useKPay || !q || payNo) return;
+    apiPost<Payment>(`/quotations/${no}/payment-intent${qs}`, { method, kind })
+      .then((p) => setPayNo(p.payment_no))
+      .catch((e) => setErr(errorMessage(e)));
+  }, [useKPay, q, payNo, no, qs, method, kind]);
 
   useEffect(() => {
     if (auth.ready) apiGet<Quotation>(`/quotations/${no}${qs}`).then(setQ).catch((e) => setErr(errorMessage(e)));
@@ -100,9 +113,15 @@ export default function PayPage() {
             ))}
           </div>
 
-          <button className="btn primary lg block" disabled={busy} onClick={start}>
-            {busy ? "กำลังพาไปหน้าธนาคาร…" : `ชำระ ${bahtWord(amount)}`}
-          </button>
+          {/* ต่อกสิกรแล้วและเลือกจ่ายด้วยบัตร = ใช้ปุ่ม Pay Now ของธนาคาร (ข้อมูลบัตรไม่ผ่านมือเรา)
+              นอกนั้นใช้ปุ่มของเราซึ่งพาไปหน้าธนาคารจำลอง */}
+          {useKPay ? (
+            <KPayNowButton paymentNo={payNo || ""} amount={String(amount)} cfg={cfg} />
+          ) : (
+            <button className="btn primary lg block" disabled={busy} onClick={start}>
+              {busy ? "กำลังพาไปหน้าธนาคาร…" : `ชำระ ${bahtWord(amount)}`}
+            </button>
+          )}
           <p className="tiny muted" style={{ marginTop: 8 }}>
             <Icon name="lock" size={13} /> ระบบจะพาไปหน้าชำระเงินของธนาคารเพื่อยืนยันรายการ
           </p>

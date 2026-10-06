@@ -90,6 +90,8 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("GET", "/me/orders", AUTH, None),
     # รายการรอชำระของตัวเอง — ต้องล็อกอิน ไม่งั้นใครก็ดูของคนอื่นได้
     ("GET", "/me/pending-payments", AUTH, None),
+    # ส่ง token จากปุ่ม Pay Now มาเรียก Create Charge API — ลูกค้าที่ถือลิงก์ใบนั้นเรียกได้
+    ("POST", f"/payments/{BAD}/kbank/charge", ALL, None),
     ("GET", f"/me/orders/{BAD}", AUTH, None),
     ("GET", "/me/bought-again", AUTH, None),
     ("GET", "/me/privacy", AUTH, None),
@@ -151,7 +153,18 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
 ]
 
 # endpoint ที่ไม่ได้กันด้วย role แต่กันด้วยลายเซ็น HMAC จาก payment gateway
-SIGNATURE_ONLY = {("POST", "/webhooks/payment")}
+#
+# เส้นของกสิกรก็อยู่กลุ่มนี้ — ธนาคารยิงเข้ามาโดยไม่มี token ของเรา จะกันด้วย role ไม่ได้
+# ด่านจริงคือการยืนยันลายเซ็น ซึ่งตอนนี้ยังทำไม่ได้ (รอสเปก) จึงยังไม่ตัดสถานะใดๆ
+# ดู tests/test_step23_kbank_endpoints.py ที่เช็คว่ายิงเข้ามาแล้วใบต้องไม่กลายเป็นจ่ายแล้ว
+SIGNATURE_ONLY = {
+    ("POST", "/webhooks/payment"),
+    ("POST", "/payment/card/notify"),
+    ("POST", "/payment/qr/notify"),
+    ("GET", "/payment/card/callback"),
+    ("POST", "/payment/card/callback"),
+    ("GET", "/payment/kbank/status"),
+}
 
 # ผูกเลขสมาชิก — ตารางนี้เช็คได้แค่ "role ไหนเข้าได้" แต่ด่านจริงของกลุ่มนี้คือ
 # "ยืนยันเบอร์ด้วย OTP แล้วหรือยัง" ซึ่งลูกค้าที่ล็อกอินด้วยรหัสผ่านก็ยังโดน 403
