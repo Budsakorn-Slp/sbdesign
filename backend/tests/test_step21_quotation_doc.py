@@ -263,3 +263,40 @@ def test_พนักงานยังไม่ผูกสาขา_ต้อ�
     hs = auth_headers(client, "SA-104", "staff")
     q, _ = _quotation(client, hs)
     assert "สาขา" not in _doc(client, hs, q["quotation_no"]).split("<table>")[0]
+
+
+def test_ลูกค้ากดปุ่ม_pdf_ของใบตัวเองได้(client):
+    """ปุ่ม PDF เปิดแท็บใหม่ซึ่งไม่พก Authorization header ไปด้วย — ถ้าไม่ให้ token
+    ลูกค้าจะเจอ 401 "ต้องเข้าสู่ระบบ" ทั้งที่ล็อกอินอยู่"""
+    from tests.helpers import login
+
+    from tests.test_step8_quotation import _ready_cart
+
+    hs = auth_headers(client, "SA-104", "staff")
+    # ผูกกับสมาชิกที่ล็อกอินได้จริง (ลูกค้าที่มาจาก SAP mock ไม่มีรหัสผ่าน)
+    cart, _ = _ready_cart(client, hs, customer_key="0949164600")
+    p = client.post("/presos", json={"cart_id": cart["id"]}, headers=hs).json()
+    q = client.post(f"/presos/{p['preso_no']}/quotation", json={"force": True}, headers=hs).json()
+
+    hc = {"Authorization": "Bearer " + login(client, "0949164600")["access_token"]}
+    view = client.get(f"/quotations/{q['quotation_no']}", headers=hc).json()
+    assert view["link_token"], "เจ้าของใบต้องได้ token ไว้เปิดเอกสาร"
+
+    # เปิดได้จริงโดยไม่ต้องส่ง header (เหมือนแท็บใหม่)
+    r = client.get(f"/quotations/{q['quotation_no']}/document", params={"t": view["link_token"]})
+    assert r.status_code == 200 and "ใบเสนอราคา" in r.text
+
+
+def test_ลูกค้าคนอื่นไม่ได้_token_ของใบนี้(client):
+    """token เปิดเอกสารได้โดยไม่ต้องล็อกอิน จึงห้ามแจกให้คนที่ไม่ใช่เจ้าของ"""
+    from tests.helpers import login
+
+    from tests.test_step8_quotation import _ready_cart
+
+    hs = auth_headers(client, "SA-104", "staff")
+    cart, _ = _ready_cart(client, hs, customer_key="0949164600")
+    p = client.post("/presos", json={"cart_id": cart["id"]}, headers=hs).json()
+    q = client.post(f"/presos/{p['preso_no']}/quotation", json={"force": True}, headers=hs).json()
+    other = {"Authorization": "Bearer " + login(client, "0812223333")["access_token"]}
+    r = client.get(f"/quotations/{q['quotation_no']}", headers=other)
+    assert r.status_code == 403 or r.json().get("link_token") is None

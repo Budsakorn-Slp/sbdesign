@@ -28,6 +28,11 @@ web/*.tsbuildinfo
 # env
 .env
 .env.local
+# สำรอง .env ก็มีรหัสจริงเหมือนกัน — ของเดิมกันแค่ชื่อ ".env" เป๊ะๆ
+# ไฟล์อย่าง .env.bak.20261006 จึงหลุดเข้า git ได้ (เจอมาแล้ว)
+.env.bak*
+.env.*.bak
+*.env.backup
 
 # os / editor
 .DS_Store

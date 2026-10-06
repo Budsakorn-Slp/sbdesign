@@ -24,6 +24,9 @@ os.environ["APP_ENV"] = "dev"
 os.environ["DEPOSIT_ENABLED"] = "false"
 # ส่วนลดพนักงานปิดแล้วเช่นกัน — เทสที่ยังทดสอบกลไกนี้เปิดเองผ่าน fixture staff_discount_on
 os.environ["STAFF_DISCOUNT_ENABLED"] = "false"
+# เครื่องที่เปิดปุ่มจ่ายเงินจำลองไว้ให้ทีมลองบนเว็บทดสอบ ต้องไม่ลากเทสไปด้วย
+# เทสเรื่องด่าน prod ต้องวัดจากค่าตั้งต้นของระบบ (ปิด) ไม่ใช่ค่าที่เครื่องนี้ตั้งไว้
+os.environ["MOCK_PAYMENT_ENABLED"] = "false"
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402

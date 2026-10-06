@@ -37,6 +37,21 @@ def preso_out(db: Session, p: Preso, user: User | None = None) -> PresoOut:
     return PresoOut(**preso_summary(db, p, user).model_dump(), snapshot=p.snapshot_json or {})
 
 
+def _link_token_for(q: Quotation, user: User | None) -> str | None:
+    """token สำหรับเปิดเอกสารในแท็บใหม่ — แท็บใหม่ไม่พก Authorization header ไปด้วย
+    (token ของหน้าเว็บเก็บใน JS ไม่ใช่คุกกี้) ปุ่ม PDF จึงต้องพ่วง ?t= ไปเอง
+
+    เดิมให้เฉพาะพนักงาน ลูกค้ากดปุ่ม PDF ของใบตัวเองแล้วได้ 401 "ต้องเข้าสู่ระบบ"
+    ทั้งที่ล็อกอินอยู่ · ให้เจ้าของใบด้วยไม่ได้เปิดสิทธิ์อะไรเพิ่ม — เขาเปิดดูใบนี้ได้อยู่แล้ว
+    token นี้ผูกกับใบเดียวและไม่ได้ให้สิทธิ์อื่นนอกจากอ่านใบนั้น
+    """
+    if not user:
+        return None
+    if user.is_staff or (user.role == "customer" and q.customer_user_id == user.id):
+        return quotation_service.link_token(q.quotation_no)
+    return None
+
+
 def quotation_out(db: Session, q: Quotation, user: User | None) -> QuotationOut:
     discs = db.scalars(select(AppliedDiscount).where(AppliedDiscount.quotation_id == q.id)).all()
     return QuotationOut(
@@ -47,7 +62,7 @@ def quotation_out(db: Session, q: Quotation, user: User | None) -> QuotationOut:
         subtotal=q.subtotal, discount_total=q.discount_total, shipping_fee=q.shipping_fee, install_fee=q.install_fee, shipping_discount=q.shipping_discount, vat=q.vat, grand_total=q.grand_total,
         deposit_amount=q.deposit_amount, valid_until=q.valid_until, pdf_url=q.pdf_url, ship_address=q.ship_address, ship_postcode=q.ship_postcode, ship_zone=q.ship_zone, slot_date=q.slot_date,
         slot_period=q.slot_period, stock_warnings=q.stock_warnings, sap_so_no=q.sap_so_no, sap_sync_status=q.sap_sync_status, sap_sync_error=q.sap_sync_error, issued_at=q.issued_at, paid_at=q.paid_at,
-        cancelled_at=q.cancelled_at, cancel_reason=q.cancel_reason, link_token=quotation_service.link_token(q.quotation_no) if user and user.is_staff else None,
+        cancelled_at=q.cancelled_at, cancel_reason=q.cancel_reason, link_token=_link_token_for(q, user),
     )
 
 

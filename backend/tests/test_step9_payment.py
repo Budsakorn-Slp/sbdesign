@@ -141,7 +141,9 @@ def test_customer_online_checkout_then_pay(client):
     r = client.post("/checkout/quotation", json={"force": True}, headers=hs)
     assert r.status_code == 201, r.text
     quote = r.json()
-    assert quote["channel"] == "online" and quote["sales_name"] is None and quote["link_token"] is None
+    # เจ้าของใบได้ token ไว้เปิดเอกสารในแท็บใหม่ (ปุ่ม PDF ไม่พก Authorization header ไปด้วย)
+    # เดิมให้เฉพาะพนักงาน ลูกค้ากดปุ่มแล้วได้ 401 ทั้งที่ล็อกอินอยู่
+    assert quote["channel"] == "online" and quote["sales_name"] is None and quote["link_token"]
     pay = client.post(f"/quotations/{quote['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs).json()
     assert _webhook(client, pay["payment_no"]).json()["sap_so_no"]
     assert client.get(f"/quotations/{quote['quotation_no']}", headers=hs).json()["status"] == "converted"
