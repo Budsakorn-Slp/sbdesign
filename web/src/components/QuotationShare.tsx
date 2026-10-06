@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { API_BASE, errorMessage } from "../lib/api";
-import { downloadBlob, quotationImages, quotationPdf } from "../lib/quotationPdf";
+import { downloadBlob, quotationImage, quotationPdf } from "../lib/quotationPdf";
 import Icon from "./Icon";
 
 type Kind = "pdf" | "jpg";
@@ -11,7 +11,7 @@ type Kind = "pdf" | "jpg";
  * เพราะหน้าต่างแชร์ของมือถือ/iPad ต้องเปิดจากการแตะโดยตรง ถ้าสร้างไฟล์ไปก่อน
  * แล้วค่อยเรียกแชร์ในจังหวะเดียวกัน เครื่องจะปฏิเสธเพราะเลยจังหวะแตะไปแล้ว
  *
- * รูปภาพ: ส่งเข้า LINE แล้วลูกค้าเห็นใบในแชตทันที ไม่ต้องกดเปิดไฟล์ · ใบยาวได้หน้าละรูป
+ * รูปภาพ: รูปเดียวทั้งใบ ส่งเข้า LINE แล้วลูกค้าเห็นใบในแชตทันที ไม่ต้องกดเปิดไฟล์
  * ปุ่ม LINE/Facebook/WhatsApp/อีเมล ส่งเป็น "ลิงก์" (แอปพวกนี้รับไฟล์ผ่านลิงก์แชร์ไม่ได้)
  */
 export default function QuotationShare({ no, token, staff = false, onClose }: { no: string; token: string | null | undefined; staff?: boolean; onClose: () => void }) {
@@ -29,7 +29,7 @@ export default function QuotationShare({ no, token, staff = false, onClose }: { 
     setErr(null);
     const job = kind === "pdf"
       ? quotationPdf(no, token, withImages).then((b) => [new File([b], `${no}${withImages ? "" : "-no-images"}.pdf`, { type: "application/pdf" })])
-      : quotationImages(no, token, withImages);
+      : quotationImage(no, token, withImages).then((f) => [f]);
     job
       .then((f) => live && setFiles(f))
       .catch((e) => live && setErr(errorMessage(e)))
