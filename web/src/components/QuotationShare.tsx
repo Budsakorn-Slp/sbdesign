@@ -38,7 +38,7 @@ export default function QuotationShare({ no, token, staff = false, onClose }: { 
   const link = token ? `${location.origin}/q/${no}?t=${token}` : `${location.origin}/q/${no}`;
   const text = `ใบเสนอราคา ${no} จาก SB Design Square`;
   const enc = encodeURIComponent;
-  const exportUrl = (format: "xlsx" | "csv") => `${API_BASE}/quotations/${no}/export?format=${format}${token ? `&t=${token}` : ""}`;
+  const exportUrl = (format: "xlsx") => `${API_BASE}/quotations/${no}/export?format=${format}${token ? `&t=${token}` : ""}`;
 
   const shareFile = async () => {
     if (!file) return;
@@ -84,7 +84,6 @@ export default function QuotationShare({ no, token, staff = false, onClose }: { 
           <>
             <div className="qs-links" style={{ marginTop: 12 }}>
               <a className="qs-chip" href={exportUrl("xlsx")}><Icon name="table_view" size={16} /> Excel (.xlsx)</a>
-              <a className="qs-chip" href={exportUrl("csv")}><Icon name="download" size={16} /> CSV</a>
               <button className="qs-chip" onClick={() => openGoogleSheet(no, token).then(setMsg).catch((e) => setErr(errorMessage(e)))}><Icon name="grid_on" size={16} /> Google Sheets</button>
             </div>
           </>
