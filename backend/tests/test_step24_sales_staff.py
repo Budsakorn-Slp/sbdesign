@@ -536,10 +536,10 @@ def test_media_proxy_รับเฉพาะรูป(client, monkeypatch):
     assert client.get("/media-proxy", params={"url": "https://sbdesignsquare.com/page"}).status_code == 404
 
 
-def test_เอกสารมีปุ่มพิมพ์_และโหมด_proxy_ใช้รูปผ่านเซิร์ฟเวอร์(client):
+def test_เอกสารไม่มีปุ่มพิมพ์_และโหมด_proxy_ใช้รูปผ่านเซิร์ฟเวอร์(client):
     hs = auth_headers(client, "SA-104", "staff")
     q = _issued(client, hs)
     doc = client.get(f"/quotations/{q['quotation_no']}/document", params={"images": 1, "proxy": 1}, headers=hs).text
-    assert "window.print()" in doc and "no-print" in doc
+    assert "window.print()" not in doc and "SB Sales App" not in doc, "ไม่มีปุ่ม/คำอธิบายระบบติดในเอกสาร"
     if "<img src=" in doc.split("<tbody>")[1]:
         assert "../../media-proxy?url=" in doc
