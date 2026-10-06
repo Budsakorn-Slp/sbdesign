@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import CartStaffPanel from "../components/CartStaffPanel";
 import DeliveryPanel from "../components/DeliveryPanel";
 import StaffShippingCharge from "../components/StaffShippingCharge";
 import Icon from "../components/Icon";
@@ -206,6 +207,7 @@ export default function SalesPage() {
         </button>
         <div className="sess-acts">
           <Link to="/sales/presos" className="btn sm sess-act"><Icon name="folder_open" size={18} /> Preso ของฉัน</Link>
+          <Link to="/sales/template" className="btn sm sess-act" title="โลโก้ บัญชีธนาคาร เงื่อนไขท้ายบิลของฉัน"><Icon name="tune" size={18} /> Template ใบเสนอราคา</Link>
           <button className="btn sm sess-act" onClick={() => run("open", () => sales.openCart())} disabled={busy === "open"}><Icon name="add" size={18} /> เปิดตะกร้าใหม่</button>
           {/* จอเล็ก: ปุ่มเพิ่มสินค้าต้องอยู่นอกแผงที่พับเก็บ — งานหลักของหน้านี้คือหยิบของใส่ตะกร้า
               ถ้าซ่อนไว้หลังลูกศรกางแผง เซลล์ที่ยืนอยู่กับลูกค้าจะหาไม่เจอ
@@ -298,6 +300,7 @@ export default function SalesPage() {
                 </div>
               </>
             )}
+            {cart.items.length > 0 && <CartStaffPanel cart={cart} onChange={(c) => sales.setActive(c)} />}
           </div>
           {/* จอเล็ก: สรุปคำสั่งซื้อกลายเป็นแผงลอยจากขอบล่าง — เดิมต้องเลื่อนผ่านสินค้าทั้งตะกร้า
               ลงไปสุดหน้าถึงจะกดเช็คสต็อก/เช็คโปร/ออกใบเสนอราคาได้ ซึ่งเป็นงานที่เซลล์กดบ่อยสุด
@@ -494,11 +497,11 @@ function SalesRow({ it, busy, plantName, avail, availStale, onPick, onInc, onDec
         {/* ผลเช็คของมาจากการยิงทั้งตะกร้าครั้งเดียว (ปุ่มในสรุปคำสั่งซื้อ) — บรรทัดนี้แค่แสดงผลของตัวเอง */}
         {avail && <div className={availStale ? "avail-stale" : undefined}><AvailBadge a={avail} /></div>}
         <form className={"row cart-note" + (noteOpen ? " on" : "")} onSubmit={(e) => { e.preventDefault(); onNote(note); }}>
-          <input className="hdr-pop-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุ เช่น รอลูกค้าวัดห้อง" />
+          <input className="hdr-pop-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="หมายเหตุรายสินค้า เช่น เปลี่ยนผ้าเป็นสีเทา" />
           <button className="btn sm" type="submit" disabled={busy || note === (it.note || "")}>บันทึก</button>
         </form>
         {/* จอเล็กพับช่องหมายเหตุไว้ก่อน — ส่วนใหญ่ไม่ได้ใส่ ให้กดเปิดเมื่อจะใช้ (จอใหญ่โชว์ตลอด) */}
-        <button type="button" className="link-btn small cart-note-add" onClick={() => setNoteOpen(true)}>+ เพิ่มหมายเหตุ</button>
+        <button type="button" className="link-btn small cart-note-add" onClick={() => setNoteOpen(true)}>+ หมายเหตุรายสินค้า</button>
       </div>
       {/* ริมขวา: ถังขยะอยู่บนสุด · ยอดของบรรทัดนี้ · ปุ่มจำนวนอยู่ฝั่งเดียวกับราคา */}
       <div className="sales-side">

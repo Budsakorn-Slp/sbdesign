@@ -66,6 +66,12 @@ class Quotation(Base):
     paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    # หมายเหตุหลักจากตะกร้า ณ ตอนออกใบ (คัดลอกมา — แก้ตะกร้าทีหลังต้องไม่เปลี่ยนใบ)
+    overall_remark: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # พนักงานร่วมบิล Z1-ZK ณ ตอนออกใบ [{role_code, employee_code, employee_name}]
+    staff_snapshot: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # template ของ DS ที่ออกใบ ณ ตอนออก — แก้ template ทีหลังต้องไม่ไปเปลี่ยนใบที่ส่งลูกค้าแล้ว
+    template_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     lines: Mapped[list["QuotationLine"]] = relationship(back_populates="quotation", cascade="all, delete-orphan", order_by="QuotationLine.sort")
     preso = relationship("Preso")
@@ -90,6 +96,8 @@ class QuotationLine(Base):
     list_price: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     line_discount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     line_total: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    # หมายเหตุรายสินค้า เช่น "เปลี่ยนผ้าเป็นสีเทา" — มาจาก cart_items.note
+    item_remark: Mapped[str | None] = mapped_column(Text, nullable=True)
     supply_mode: Mapped[str] = mapped_column(String(16), nullable=False)
     plant_code: Mapped[str | None] = mapped_column(String(8), nullable=True)
     atp_date: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -97,3 +105,25 @@ class QuotationLine(Base):
     requires_install: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     quotation: Mapped[Quotation] = relationship(back_populates="lines")
+
+
+class QuotationTemplate(Base):
+    """template ใบเสนอราคาส่วนตัวของ DS แต่ละคน — ข้อมูลที่ต้องใช้ซ้ำทุกใบ
+
+    ผูกกับพนักงานหนึ่งคนต่อหนึ่ง template · แก้ได้เฉพาะของตัวเอง
+    ช่องไหนเว้นว่างใช้ค่ากลางของบริษัทแทน (config) ไม่ใช่พิมพ์ช่องว่างลงใบ
+    """
+
+    __tablename__ = "quotation_templates"
+
+    id: Mapped[str] = uuid_pk()
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    employee_code: Mapped[str] = mapped_column(String(32), nullable=False)
+    display_name: Mapped[str | None] = mapped_column(String(120), nullable=True)   # ชื่อที่พิมพ์บนใบ
+    phone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    logo_path: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    bank_accounts: Mapped[str | None] = mapped_column(Text, nullable=True)        # หลายบรรทัด
+    footer_terms: Mapped[str | None] = mapped_column(Text, nullable=True)         # รองรับ {month_end}
+    standard_remark: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+

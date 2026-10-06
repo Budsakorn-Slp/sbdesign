@@ -162,13 +162,17 @@ def test_เงื่อนไขท้ายใบครบทุกข้อ(c
     assert doc.index("รวมสุทธิ") < doc.index("แคชเชียร์เช็ค")
 
 
-def test_วันหมดอายุในเงื่อนไขต้องเป็นของใบนั้นจริง(client):
-    """เขียนวันที่ตายตัวไว้ ทุกใบจะบอกวันหมดอายุของใบแรกที่เคยออก"""
+def test_วันที่ในเงื่อนไขท้ายบิลคือวันสุดท้ายของเดือน(client):
+    """วันที่ในเงื่อนไขท้ายบิล = วันสุดท้ายของเดือนที่ออกใบ ไม่ใช่วันยืนราคา
+    (วันยืนราคายังอยู่บนหัวใบตามเดิม)"""
+    from app.services.sales_extras_service import month_end
+
     hs = auth_headers(client, "SA-104", "staff")
     q, _ = _quotation(client, hs)
     doc = _doc(client, hs, q["quotation_no"])
-    want = date.fromisoformat(q["valid_until"]).strftime("%d/%m/%Y")
-    assert f"มีกำหนดอายุถึงวันที่ {want}" in doc
+    issued = date.fromisoformat(q["issued_at"][:10])
+    assert f"มีกำหนดอายุถึงวันที่ {month_end(issued).strftime('%d/%m/%Y')}" in doc
+    assert f"ยืนราคาถึง <b>{date.fromisoformat(q['valid_until']).strftime('%d/%m/%Y')}</b>" in doc
 
 
 def test_เขียนทับเงื่อนไขจาก_env_ได้(client, monkeypatch):

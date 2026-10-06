@@ -290,7 +290,10 @@ def update_item(db: Session, cart: Cart, actor: User | None, item_id: str, qty: 
         item.note = note
     _history(db, cart, item.matnr, "update", before, item.qty, actor)
     cart.updated_at = utcnow()
-    bump_rev(cart, "แก้จำนวน/วิธีรับของหลังเช็ค")
+    # แก้แค่หมายเหตุรายสินค้า ไม่ได้เปลี่ยนของ/ราคา/สาขา — ผลเช็คสต็อกกับโปรฯ ยังใช้ได้
+    # ถ้าเดินเลขรุ่น เซลล์พิมพ์ "เปลี่ยนผ้าสีเทา" แล้วต้องวนกลับไปเช็คใหม่ทั้งบิลโดยไม่มีเหตุ
+    if qty is not None or supply_mode is not None or plant_code is not None:
+        bump_rev(cart, "แก้จำนวน/วิธีรับของหลังเช็ค")
     audit_service.log(db, actor, "cart.item_update", "cart", cart.id, {"item_id": item.id, "matnr": item.matnr, "qty_before": before, "qty_after": item.qty, "supply_mode": item.supply_mode})
     db.commit()
     db.refresh(item)

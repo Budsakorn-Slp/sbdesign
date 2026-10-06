@@ -9,6 +9,12 @@ import type { PresoSummary, Quotation } from "../lib/types";
 
 /** S5 · Preso ที่เซฟไว้ — ดึงกลับมาทำต่อ / สร้าง Quotation / ดูใบเสนอราคาที่ออกแล้ว */
 /** ลิงก์เอกสาร — เปิดแท็บใหม่จึงต้องพ่วง token มาเอง (แท็บใหม่ไม่มี Authorization header) */
+function exportUrl(p: PresoSummary, format: "xlsx" | "csv"): string {
+  const qs = new URLSearchParams({ format });
+  if (p.quotation_token) qs.set("t", p.quotation_token);
+  return `${API_BASE}/quotations/${p.quotation_no}/export?${qs.toString()}`;
+}
+
 function docUrl(p: PresoSummary, withImages: boolean): string {
   const qs = new URLSearchParams();
   if (p.quotation_token) qs.set("t", p.quotation_token);
@@ -118,6 +124,8 @@ export default function PresosPage() {
                         <>
                           {p.quotation_no && <a href={docUrl(p, true)} target="_blank" rel="noreferrer" className="btn sm" title="ใบเสนอราคาพร้อมรูปสินค้า — ใช้คุยกับลูกค้า">PDF มีรูป</a>}
                           {p.quotation_no && <a href={docUrl(p, false)} target="_blank" rel="noreferrer" className="btn sm" title="ไม่มีรูปสินค้า — แนบอีเมล/ปรินต์ ไฟล์เล็กกว่า">PDF ไม่มีรูป</a>}
+                          {p.quotation_no && <a href={exportUrl(p, "xlsx")} className="btn sm" title="ดาวน์โหลดเป็น Excel">Excel</a>}
+                          {p.quotation_no && <a href={exportUrl(p, "csv")} className="btn sm" title="ดาวน์โหลดเป็น CSV">CSV</a>}
                           {p.quotation_no && p.quotation_status === "issued" && <Link to={`/sales/quotations/${p.quotation_no}`} className="btn primary sm">ไปจ่ายเงิน</Link>}
                         </>
                       )}

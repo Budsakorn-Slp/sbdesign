@@ -9,3 +9,9 @@ httpx>=0.27
 psycopg[binary]>=3.2
 pymysql[rsa]>=1.1
 email-validator>=2.2
+# Excel export ของใบเสนอราคา (พนักงานเอาไปแก้ต่อได้)
+openpyxl>=3.1
+# ตรวจ+เข้ารหัสรูปที่พนักงานถ่ายใหม่ — ล้าง EXIF (มีพิกัด GPS ของสาขา) และกันไฟล์ปลอมนามสกุล
+Pillow>=11.0
+# FastAPI ต้องใช้ตัวนี้รับไฟล์อัปโหลด (UploadFile / Form)
+python-multipart>=0.0.20

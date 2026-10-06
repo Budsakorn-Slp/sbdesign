@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -47,6 +47,9 @@ class Cart(Base, TimestampMixin):
     # เซลล์เจอผลเช็คหายไปโดยไม่รู้ว่าเพราะอะไรแล้วคิดว่าระบบพัง (เคสที่เจอ: ผูกลูกค้า
     # ทีหลังแล้วของในตะกร้าออนไลน์ของลูกค้าไหลเข้ามา)
     rev_note: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # หมายเหตุหลักระดับทั้งตะกร้า — คนละช่องกับหมายเหตุรายสินค้า (cart_items.note)
+    # ห้ามใช้ช่องเดียวกัน: อันหนึ่งเป็นคำสั่งถึงคนจัดส่ง อีกอันเป็นสเปกของชิ้นนั้น
+    overall_remark: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     items: Mapped[list["CartItem"]] = relationship(back_populates="cart", cascade="all, delete-orphan", order_by="CartItem.added_at")
     customer = relationship("User", foreign_keys=[customer_user_id])
@@ -115,3 +118,35 @@ class CartItemHistory(Base):
     added_by: Mapped[str] = mapped_column(String(16), nullable=False)  # role ของคนทำ: guest|customer|sales|manager
     actor_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+# รหัสบทบาทพนักงานในบิล — ตรงกับ partner function ฝั่ง SAP
+STAFF_ROLES = {
+    "Z1": "Designer 1 (วัดพื้นที่)",
+    "Z2": "Designer 2 (ออกแบบ)",
+    "Z3": "Sales Employee 1 (พนักงานขาย)",
+    "Z4": "Sales Employee 2 (พนักงานขายร่วม)",
+    "ZK": "Cat Manager 1 (ส่งต่องาน)",
+}
+
+
+class CartStaff(Base):
+    """พนักงานที่เกี่ยวข้องกับบิลนี้ แยกตามบทบาท Z1/Z2/Z3/Z4/ZK — บทบาทละหนึ่งคน
+
+    ชื่อกับรหัสคัดลอกมาจากทะเบียนพนักงานตอนเลือก ไม่ได้ให้พิมพ์เอง · เก็บซ้ำไว้ (ไม่ join)
+    เพราะชื่อพนักงานเปลี่ยนได้ แต่บิลที่ออกไปแล้วต้องบอกชื่อ ณ วันนั้น
+    """
+
+    __tablename__ = "cart_staff"
+    # บทบาทละหนึ่งคนต่อบิล — กันที่ฐานด้วย ไม่ใช่เชื่อโค้ดอย่างเดียว
+    __table_args__ = (Index("ux_cart_staff_cart_role", "cart_id", "role_code", unique=True),)
+
+    id: Mapped[str] = uuid_pk()
+    cart_id: Mapped[str] = mapped_column(ForeignKey("carts.id", ondelete="CASCADE"), index=True, nullable=False)
+    role_code: Mapped[str] = mapped_column(String(4), nullable=False)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    employee_code: Mapped[str] = mapped_column(String(32), nullable=False)
+    employee_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    assigned_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+

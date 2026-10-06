@@ -18,6 +18,7 @@ AUTH = (C, S, M, A)
 CUST = (C,)  # ลูกค้าเท่านั้น (เซลล์ห้ามรับเงินเอง)
 STAFF = (S, M)  # เซลล์ + ผู้จัดการ (เครื่องมือขาย)
 MGR = (M, A)
+EMP = (S, M, A)  # ทุกบัญชีพนักงาน (get_current_employee) — สิทธิ์ละเอียดตรวจตาม permission ต่อ
 ADMIN = (A,)
 
 BAD = "NOPE"  # id ที่ไม่มีจริง → handler ตอบ 404 หลังผ่านด่านสิทธิ์
@@ -133,6 +134,21 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", "/sales/availability", STAFF, {"matnr": 123}),  # ผิด type → 422 ไม่ยิง SAP จริง
     ("POST", "/sales/availability/batch", STAFF, {"items": 1}),  # ผิด type → 422 ไม่ยิง SAP จริง
     ("GET", "/customers/search?q=สม", STAFF, None),
+    # ---------- หน้าพนักงานขาย: รูปตัวโชว์รายสาขา · พนักงานร่วมบิล · template ----------
+    ("GET", "/staff/me", EMP, None),
+    ("GET", f"/staff/materials/{BAD}/photos", EMP, None),
+    ("POST", f"/staff/materials/{BAD}/photos", EMP, {}),   # ไม่ใช่ multipart → 422 ไม่สร้างรูป
+    ("PUT", f"/staff/photos/{BAD}", EMP, {}),
+    ("DELETE", f"/staff/photos/{BAD}", EMP, None),
+    ("GET", "/staff/photos/audit", MGR, None),             # AUDIT_VIEW — พนักงานขายไม่มี
+    ("GET", "/staff/employees", EMP, None),
+    ("GET", "/staff/roles", EMP, None),
+    ("PUT", f"/sales/carts/{BAD}/staff", EMP, {"role_code": "Z1"}),
+    ("PUT", f"/sales/carts/{BAD}/remark", EMP, {"overall_remark": 123}),
+    ("GET", "/staff/quotation-template", EMP, None),
+    ("PUT", "/staff/quotation-template", EMP, {"display_name": 123}),  # ผิด type → 422 ไม่เขียนจริง
+    ("POST", "/staff/quotation-template/logo", EMP, {}),
+    ("GET", f"/quotations/{BAD}/export", ALL, None),       # สิทธิ์ชุดเดียวกับหน้าเอกสาร
     # ---------- ผู้จัดการ ----------
     ("GET", "/discount-approvals", MGR, None),
     ("POST", f"/discount-approvals/{BAD}/approve", (M,), None),

@@ -7,6 +7,7 @@
   ไม่มีรูป ใช้แนบอีเมล/ปรินต์ ไฟล์เล็กและกินหมึกน้อยกว่า
 """
 import html
+from datetime import date
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -26,10 +27,11 @@ STATUS_TXT = {"issued": "ออกแล้ว · รอชำระ", "paid": "
 #
 # เก็บเป็นโค้ดไม่ใช่ .env เพราะมันยาวหลายบรรทัดและมีเลขบัญชีที่ต้องถูกต้องเป๊ะ
 # ยัดลง .env แล้วจะอ่านไม่ออกและแก้ผิดง่าย · อยากเขียนทับทั้งก้อนใช้ QUOTATION_TERMS ได้
-# {valid_until} ถูกแทนด้วยวันยืนราคาของใบนั้นๆ ตอนพิมพ์ — ห้ามเขียนวันที่ตายตัว
-# ไม่งั้นทุกใบจะบอกวันหมดอายุของใบแรกที่เคยออก
+# {month_end} ถูกแทนด้วย "วันสุดท้ายของเดือนที่ออกใบ" ตอนพิมพ์ — ห้ามเขียนวันที่ตายตัว
+# ไม่งั้นทุกใบจะบอกวันของใบแรกที่เคยออก · คนละเรื่องกับวันยืนราคา (valid_until) บนหัวใบ
+# ยังใช้ {valid_until} ได้ถ้าอยากอ้างวันยืนราคา
 DEFAULT_TERMS = [
-    "ใบเสนอราคานี้มีกำหนดอายุถึงวันที่ {valid_until} หรือตามกำหนดเวลาที่ระบุในโปรโมชั่นของบริษัท",
+    "ใบเสนอราคานี้มีกำหนดอายุถึงวันที่ {month_end} หรือตามกำหนดเวลาที่ระบุในโปรโมชั่นของบริษัท",
     "บริษัทฯ อาจมีการเรียกเก็บค่าขนส่งสินค้า นอกเขตพื้นที่การให้บริการ สอบถามรายละเอียดได้จากพนักงานขาย",
     "การชำระเงิน : รับชำระเป็น เงินสด, แคชเชียร์เช็ค, บัตรเครดิต หรือ โอนเงิน\n"
     'ชื่อบัญชี "บริษัท เอสบี ดีไซน์สแควร์ จำกัด"\n'
@@ -42,10 +44,29 @@ DEFAULT_TERMS = [
 ]
 
 
-def _terms(valid_until: str) -> list[str]:
-    raw = get_settings().quotation_terms
-    items = [t.strip() for t in raw.replace(";", "\n").split("|") if t.strip()] if raw else DEFAULT_TERMS
-    return [t.format(valid_until=valid_until) if "{valid_until}" in t else t for t in items]
+def _fill(t: str, valid_until: str, month_end: str) -> str:
+    # replace ไม่ใช่ format — ข้อความที่ DS พิมพ์เองอาจมีปีกกาอื่นปนมา format จะพัง
+    return t.replace("{valid_until}", valid_until).replace("{month_end}", month_end)
+
+
+def _terms(valid_until: str, month_end: str, custom: str | None = None) -> list[str]:
+    """custom = เงื่อนไขจาก template ของ DS (บรรทัดละข้อ) · ว่าง = ค่ากลางของบริษัท"""
+    if custom and custom.strip():
+        items = [t.strip() for t in custom.splitlines() if t.strip()]
+    else:
+        raw = get_settings().quotation_terms
+        items = [t.strip() for t in raw.replace(";", "\n").split("|") if t.strip()] if raw else DEFAULT_TERMS
+    return [_fill(t, valid_until, month_end) for t in items]
+
+
+def month_end_of(q: Quotation) -> str:
+    """วันท้ายบิลของใบนี้ — ใบใหม่เก็บไว้ใน template_snapshot ใบเก่าคำนวณจากวันออก"""
+    from app.services.sales_extras_service import month_end
+
+    tp = q.template_snapshot or {}
+    if tp.get("month_end"):
+        return date.fromisoformat(tp["month_end"]).strftime("%d/%m/%Y")
+    return month_end(q.issued_at.date()).strftime("%d/%m/%Y")
 
 
 def _money(v) -> str:
@@ -92,6 +113,8 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
         # รหัสสินค้าแยกคอลัมน์ ไม่ใช่ตัวเล็กต่อท้ายชื่อ — คนคลังกับฝ่ายบัญชีไล่ทีละรหัส
         # การต้องกวาดตาหาเลขที่ซ่อนอยู่ท้ายชื่อยาวๆ ทำให้อ่านผิดบรรทัดได้ง่าย
         sub = f"<br><small class='muted'>{e(l.variant)}</small>" if l.variant else ""
+        if l.item_remark:
+            sub += f"<br><small class='rmk'>หมายเหตุ: {e(l.item_remark)}</small>"
         return (f"<tr><td>{i}</td>{cell}<td class='mono'>{e(l.matnr)}</td><td>{e(l.name)}{sub}</td>"
                 f"<td class='r'>{l.qty}</td><td class='r'>{price}</td><td class='r'>{disc}</td>"
                 f"<td class='r'>{_money(l.line_total)}</td><td>{e(SUPPLY_TXT.get(l.supply_mode, l.supply_mode))}</td></tr>")
@@ -123,12 +146,16 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
 
     # เบอร์พนักงานขาย ไม่ใช่คิวจัดส่ง — ลูกค้าถือใบนี้แล้วอยากโทรถามคนที่คุยด้วย
     # คิวจัดส่งเปลี่ยนได้หลังออกใบ เอาไปพิมพ์ค้างไว้จะกลายเป็นข้อมูลผิดในมือลูกค้า
-    sales_name = e(q.sales.name) if q.sales else "สั่งซื้อออนไลน์"
+    # template ของ DS (ถ้ามี) ทับค่าจากบัญชี — ชื่อที่อยากให้ลูกค้าเห็น เบอร์ที่ใช้ติดต่องาน
+    tp = q.template_snapshot or {}
+    sales_name = e(tp.get("employee_name") or (q.sales.name if q.sales else "สั่งซื้อออนไลน์"))
     sales_code = f" ({e(q.sales.staff_code)})" if q.sales and q.sales.staff_code else ""
     # ไม่มีเบอร์ก็ใช้อีเมล ไม่มีทั้งคู่ก็ไม่พิมพ์บรรทัดนั้น — "โทร -" คือช่องว่างที่กินที่
     # แล้วไม่ได้บอกอะไร ลูกค้าอ่านแล้วนึกว่าระบบพัง (ตั้งเบอร์ให้พนักงานด้วย cli.secure set-phone)
     contact = ""
-    if q.sales and q.sales.phone:
+    if tp.get("phone"):
+        contact = f"<span class='muted'>โทร {e(tp['phone'])}</span>"
+    elif q.sales and q.sales.phone:
         contact = f"<span class='muted'>โทร {e(q.sales.phone)}</span>"
     elif q.sales and q.sales.email:
         contact = f"<span class='muted'>{e(q.sales.email)}</span>"
@@ -143,30 +170,50 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
     # สาขาที่ออกใบ = สาขาที่พนักงานขายคนนั้นสังกัด (ตั้งด้วย cli.secure set-branch)
     # ใบรับคำสั่งซื้อของระบบเดิมพิมพ์ "319-DS. บางแค" ไว้มุมขวาบน ลูกค้าจะได้รู้ว่าติดต่อร้านไหน
     br = ""
-    if q.sales and q.sales.branch_name:
-        code = (q.sales.branch_id or "").lstrip("S")   # ของเดิมพิมพ์ 319 ไม่ใช่ S319
-        br = f"<div class='muted'>สาขา {e(code)} · {e(q.sales.branch_name)}</div>"
+    b_code = tp.get("branch_code") or (q.sales.branch_id if q.sales else None)
+    b_name = tp.get("branch_name") or (q.sales.branch_name if q.sales else None)
+    if b_name:
+        code = (b_code or "").lstrip("S")   # ของเดิมพิมพ์ 319 ไม่ใช่ S319
+        br = f"<div class='muted'>สาขา {e(code)} · {e(b_name)}</div>"
 
-    note = (q.preso.note if q.preso and q.preso.note else "").strip()
-    note_block = (f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note)}</div></div>" if note
+    # พนักงานร่วมบิล Z1-ZK
+    staff_block = ""
+    if q.staff_snapshot:
+        cells = "".join(f"<span><b>{e(r['role_code'])}</b> {e(r.get('role_name') or '')}: "
+                        f"{e(r['employee_code'])} – {e(r['employee_name'])}</span>" for r in q.staff_snapshot)
+        staff_block = f"<div class='staff'>{cells}</div>"
+
+    # โลโก้ของ DS · ลิงก์แบบ relative เพราะเอกสารนี้เปิดได้ทั้งตรงที่ API (/quotations/..)
+    # และผ่านหน้าเว็บ (/api/quotations/..) — "../../media" ไปถูกที่ทั้งสองทาง
+    logo = f"<img class='logo' src='../../media/{e(tp['logo_path'])}' alt=''>" if tp.get("logo_path") else ""
+
+    note = (q.overall_remark or (q.preso.note if q.preso and q.preso.note else "") or "").strip()
+    std = (tp.get("standard_remark") or "").strip()
+    if std:
+        note = f"{note}\n{std}" if note else std
+    note_block = (f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note).replace(chr(10), '<br>')}</div></div>" if note
                   else "<div class='note-box'><b>หมายเหตุ</b><div class='blank'></div></div>")
 
-    items = _terms(q.valid_until.strftime("%d/%m/%Y"))
+    items = _terms(q.valid_until.strftime("%d/%m/%Y"), month_end_of(q), tp.get("footer_terms"))
     lis = "".join(f"<li>{e(t).replace(chr(10), '<br>')}</li>" for t in items)
     terms_block = f"<div class='terms'><b>เงื่อนไข</b><ol>{lis}</ol></div>" if items else ""
+    bank = (tp.get("bank_accounts") or "").strip()
+    if bank:
+        terms_block += f"<div class='terms'><b>บัญชีสำหรับโอนชำระ</b><div>{e(bank).replace(chr(10), '<br>')}</div></div>"
 
     img_css = ".ph{width:72px}.ph img{width:64px;height:64px;object-fit:cover;border-radius:4px;background:#f2f2f0}" if with_images else ""
 
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}{img_css}@media print{{body{{margin:0}}}}</style></head>
-<body><div class="box"><div><h1>ใบเสนอราคา / Quotation</h1>
+<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{max-height:56px;max-width:180px;display:block;margin-bottom:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}@media print{{body{{margin:0}}}}</style></head>
+<body><div class="box"><div>{logo}<h1>ใบเสนอราคา / Quotation</h1>
 <div class="muted">{e(s.company_name_th)} · {e(s.company_name_en)}<br>{e(s.company_address_th)}<br>เลขประจำตัวผู้เสียภาษี {e(s.company_tax_id)}</div></div>
 <div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div>{br}</div></div>
 <div class="box three">
 <div><b>ชื่อ-ที่อยู่ลูกค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{bill_addr}</span><br><span class="muted">{e(c.get('phone') or '')}{(' · ' + e(c.get('email'))) if c.get('email') else ''}</span></div>
 <div><b>ชื่อ-สถานที่ส่งสินค้า</b><br>{e(c.get('name') or '')}<br><span class="muted">{ship_addr}</span></div>
 <div style="text-align:right"><b>พนักงานขาย</b><br>{sales_name}{sales_code}{f"<br>{contact}" if contact else ""}<br><span class="muted">รหัสลูกค้า {e(c.get('sap_customer_no') or '-')}</span></div></div>
+{staff_block}
 {note_block}
 <table><thead><tr><th>ลำดับ</th>{img_col}<th>รหัสสินค้า</th><th>รายการ</th><th class="r">จำนวน</th><th class="r">ราคาต่อหน่วย</th><th class="r">ส่วนลด</th><th class="r">จำนวนเงิน</th><th>รับสินค้า</th></tr></thead><tbody>{rows}
 <tr><td colspan="{span}" class="r">รวมสินค้า</td><td class="r">{_money(q.subtotal)}</td><td></td></tr>{disc_rows}

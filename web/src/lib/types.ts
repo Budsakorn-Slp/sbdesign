@@ -408,6 +408,29 @@ export type Cart = {
   delivery: CartDelivery | null;
   /** ด่านก่อนบันทึกใบ PRE — มาเฉพาะตะกร้าที่พนักงานถือ */
   preso: PresoReady | null;
+  /** หมายเหตุหลักทั้งตะกร้า — คนละช่องกับ note ของแต่ละรายการ */
+  overall_remark?: string | null;
+  /** พนักงานร่วมบิล Z1-ZK */
+  staff?: CartStaff[];
+};
+
+export type CartStaff = { role_code: string; role_name: string; user_id: string | null; employee_code: string; employee_name: string };
+export type StaffRole = { code: string; name: string };
+export type EmployeeRef = { user_id: string; employee_code: string; employee_name: string; branch_code: string | null; label: string };
+export type StaffMe = { employee_code: string; employee_name: string; branch_code: string | null; branch_name: string | null; role: string; permissions: string[] };
+export type StaffPhoto = {
+  id: string; matnr: string; branch_code: string; url: string; width: number; height: number;
+  owner_employee_code: string; owner_employee_name: string; created_at: string; updated_at: string | null;
+  can_edit: boolean; can_delete: boolean; mine: boolean;
+};
+export type StaffPhotoAudit = {
+  image_id: string; matnr: string; branch_code: string; image_owner_employee: string; action: "CREATE" | "UPDATE" | "DELETE";
+  action_by_employee: string; action_by_role: string; action_at: string; old_image_url: string | null; new_image_url: string | null;
+};
+export type QuotationTemplate = {
+  employee_code: string; employee_name: string; branch_code: string | null; branch_name: string | null;
+  display_name: string | null; phone: string | null; logo_url: string | null; bank_accounts: string | null;
+  footer_terms: string | null; standard_remark: string | null; updated_at: string | null; month_end_preview: string;
 };
 
 /** หนึ่งด่านในผังงานหน้าร้าน (ลูกค้า → ข้อมูล → สต็อก → โปรฯ → คิวส่ง) */

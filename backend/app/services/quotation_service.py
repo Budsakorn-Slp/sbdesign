@@ -23,6 +23,8 @@ from app.models.quotation import Preso, Quotation, QuotationLine
 from app.models.user import User
 from app.services import audit_service, availability_service, cart_service, catalog_service, delivery_service, promo_service
 from app.services import relationship_service
+from app.services import sales_extras_service
+from app.services.employee_provider import get_employee_provider
 
 log = logging.getLogger("sb.quotation")
 
@@ -308,13 +310,19 @@ def create_quotation(db: Session, preso: Preso, actor: User, force: bool = False
     db.add(q)
     db.flush()
     q.pdf_url = f"/quotations/{q.quotation_no}/document"
+    # หมายเหตุหลัก · พนักงานร่วมบิล · template ของคนออกใบ — คัดลอกเก็บ ณ วันออก
+    # หมายเหตุหลักว่าง ใช้หมายเหตุของ Preso แทน (ช่องเดิมที่พนักงานเคยใช้)
+    q.overall_remark = cart.overall_remark or preso.note or None
+    q.staff_snapshot = sales_extras_service.staff_snapshot(db, cart.id)
+    if actor.is_staff:
+        q.template_snapshot = sales_extras_service.template_snapshot(db, get_employee_provider().from_user(actor), q.issued_at.date() if q.issued_at else date.today())
     for i, it in enumerate(cart.selected_items):
         # ราคาตั้งกับส่วนลดต่อบรรทัด — ลูกค้าอยากเห็นว่าของชิ้นนี้ลดมาจากเท่าไร
         # ไม่มีราคาตั้งในแคตตาล็อก (เช่นบรรทัดค่าบริการที่เปิด Mat) ให้ถือว่าราคาตั้ง = ราคาขาย
         m = catalog_service.get_material(db, it.matnr)
         std = catalog_service.prices_of(m).get("standard") if m else None
         list_price = Decimal(std) if std and Decimal(std) > it.unit_price_snapshot else it.unit_price_snapshot
-        db.add(QuotationLine(quotation_id=q.id, sort=i, matnr=it.matnr, sku=it.sku, name=it.name_snapshot, variant=it.variant_snapshot, qty=it.qty, unit_price=it.unit_price_snapshot, list_price=list_price, line_discount=(list_price - it.unit_price_snapshot) * it.qty, line_total=it.line_total, supply_mode=it.supply_mode, plant_code=it.plant_code, atp_date=it.atp_date, added_by=it.added_by, requires_install=it.requires_install))
+        db.add(QuotationLine(quotation_id=q.id, sort=i, matnr=it.matnr, sku=it.sku, name=it.name_snapshot, variant=it.variant_snapshot, qty=it.qty, unit_price=it.unit_price_snapshot, list_price=list_price, line_discount=(list_price - it.unit_price_snapshot) * it.qty, line_total=it.line_total, supply_mode=it.supply_mode, plant_code=it.plant_code, atp_date=it.atp_date, added_by=it.added_by, requires_install=it.requires_install, item_remark=(it.note or None)))
     for l in t.lines:  # คัดลอกส่วนลดไปผูกกับ quotation (ล็อกค่า)
         if l["status"] == "applied":
             db.add(AppliedDiscount(cart_id=None, quotation_id=q.id, kind=l["kind"], promo_code=l["code"], title=l["title"], percent=l["percent"], amount=l["amount"], status="applied", applied_by_user_id=actor.id))

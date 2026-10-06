@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, analytics, auth, cart, catalog, delivery, geo, health, payment, payment_kbank, pdpa, promo, quotation, sales, ws
+from app.api import admin, analytics, auth, cart, catalog, delivery, geo, health, payment, payment_kbank, pdpa, promo, quotation, sales, staff_photos, staff_sales, ws
 from app.core.config import get_settings
 from app.realtime import manager, on_cart_event
 from app.services import cart_service
@@ -76,6 +76,17 @@ def create_app() -> FastAPI:
     app.include_router(quotation.router)
     app.include_router(payment.router)
     app.include_router(payment_kbank.router)
+    app.include_router(staff_photos.router)
+    app.include_router(staff_sales.router)
+
+    # ไฟล์ที่พนักงานอัปโหลด (รูปตัวโชว์รายสาขา / โลโก้ template) — ชื่อไฟล์สุ่มด้วย uuid เดา URL ไม่ได้
+    # สิทธิ์ "ใครเห็นรูปไหน" คุมที่ endpoint รายการรูป ไม่ใช่ที่ตัวไฟล์ (<img> แนบ token ไม่ได้)
+    from fastapi.staticfiles import StaticFiles
+
+    from app.services.photo_service import UPLOAD_ROOT
+
+    UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+    app.mount("/media", StaticFiles(directory=str(UPLOAD_ROOT)), name="media")
     app.include_router(analytics.router)
     app.include_router(pdpa.router)
     app.include_router(ws.router)

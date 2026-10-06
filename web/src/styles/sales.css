@@ -337,3 +337,39 @@
 .icon-btn.dark:hover:not(:disabled) { opacity: 0.88; }
 .icon-btn.dark:disabled { background: var(--line); color: var(--ink-3); cursor: not-allowed; }
 .icon-btn.dark.done { background: var(--green, #1a8a5a); }
+
+/* ---------- หมายเหตุหลัก + พนักงานร่วมบิล (ใต้รายการสินค้า) ---------- */
+.cart-extra { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+.ce-label { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px; }
+.ce-remark { width: 100%; box-sizing: border-box; border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; font: inherit; resize: vertical; }
+.ce-staff { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px 12px; }
+.ce-role { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ce-role select { width: 100%; padding: 7px 8px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; background: #fff; }
+
+/* ---------- รูปตัวโชว์รายสาขา (หน้าสินค้า ฝั่งพนักงาน) ---------- */
+.staff-photos { margin: 24px 0; padding: 16px; border: 1px dashed var(--line-2); border-radius: var(--radius); background: #fafaf8; }
+.sp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.sp-item { position: relative; margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.sp-item.mine { border-color: #111; }
+.sp-thumb { display: block; width: 100%; padding: 0; border: 0; background: #f2f2f0; cursor: zoom-in; aspect-ratio: 1; }
+.sp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sp-item figcaption { display: flex; flex-direction: column; padding: 4px 8px 6px; min-width: 0; }
+.sp-item figcaption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-acts { position: absolute; top: 4px; right: 4px; display: flex; gap: 4px; }
+.sp-acts .icon-btn { background: rgba(255, 255, 255, .92); border-radius: 6px; }
+.sp-full { display: block; max-width: 100%; max-height: 70vh; margin: 0 auto; border-radius: 8px; }
+.sp-audit { overflow-x: auto; }
+.sp-audit table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sp-audit th, .sp-audit td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; white-space: nowrap; }
+.sp-audit img { width: 44px; height: 44px; object-fit: cover; border-radius: 4px; }
+
+/* ---------- template ใบเสนอราคา ---------- */
+.tpl-page { max-width: 720px; }
+.tpl-card { display: flex; flex-direction: column; gap: 12px; }
+.tpl-logo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.tpl-logo img { max-height: 64px; max-width: 200px; object-fit: contain; }
+.tpl-logo-empty { width: 160px; height: 56px; display: grid; place-items: center; border: 1px dashed var(--line-2); border-radius: 8px; }
+.tpl-f { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.tpl-f input, .tpl-f textarea { font: inherit; font-weight: 400; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; width: 100%; box-sizing: border-box; }
+.tpl-f textarea { resize: vertical; }

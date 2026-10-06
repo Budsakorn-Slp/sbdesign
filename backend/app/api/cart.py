@@ -6,7 +6,7 @@ from app.core.config import get_settings
 from app.db.session import get_db
 from app.models.cart import Cart, CartItem
 from app.models.user import User
-from app.schemas.cart import CartSiteOut, AddItemIn, CartItemOut, CartOut, CartPersonOut, DeliveryInfoOut, MergeIn, PresoReadyOut, SelectIn, ShipToIn, UpdateItemIn
+from app.schemas.cart import CartSiteOut, AddItemIn, CartItemOut, CartOut, CartStaffOut, CartPersonOut, DeliveryInfoOut, MergeIn, PresoReadyOut, SelectIn, ShipToIn, UpdateItemIn
 from app.schemas.catalog import ProductStockOut
 from app.services import cart_service, catalog_service, product_stock_service, staff_shipping_service
 
@@ -61,11 +61,19 @@ def cart_out(cart: Cart, db: Session | None = None) -> CartOut:
     # ถามเฉพาะรหัสกลุ่มนี้ ไม่ใช่ทั้งตะกร้า — ของทั่วไปส่งถึงบ้าน ไม่ต้องรู้ว่าสาขาไหนมี
     display = [it.matnr for it in cart.items if catalog_service.pickup_only(it.matnr)]
     sites = product_stock_service.sites_for(db, display) if (db is not None and display) else {}
+    staff = []
+    if db is not None and cart.owner_sales_id:
+        from app.models.cart import STAFF_ROLES
+        from app.services import sales_extras_service
+
+        staff = [CartStaffOut(role_code=r.role_code, role_name=STAFF_ROLES.get(r.role_code, r.role_code), user_id=r.user_id,
+                              employee_code=r.employee_code, employee_name=r.employee_name)
+                 for r in sales_extras_service.list_staff(db, cart.id)]
     return CartOut(
         id=cart.id, no=cart.no, label=cart.label, status=cart.status, customer=person(cart.customer), owner_sales=person(cart.owner_sales),
         is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it, stock.get(it.matnr), sites.get(it.matnr)) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
         pending_count=t["pending_count"], all_count=t["all_count"], item_count=t["item_count"], selected_count=t["selected_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals, delivery=delivery,
-        preso=preso,
+        preso=preso, overall_remark=cart.overall_remark, staff=staff,
     )
 
 

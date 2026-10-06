@@ -135,6 +135,31 @@ export const apiGet = <T>(path: string) => api<T>("GET", path);
 export const apiPost = <T>(path: string, body?: unknown) => api<T>("POST", path, body ?? {});
 export const apiPatch = <T>(path: string, body?: unknown) => api<T>("PATCH", path, body ?? {});
 export const apiDelete = <T>(path: string, body?: unknown) => api<T>("DELETE", path, body);
+export const apiPut = <T>(path: string, body?: unknown) => api<T>("PUT", path, body ?? {});
+
+/** ส่งไฟล์แบบ multipart (รูปสินค้า/โลโก้) — ไม่ตั้ง Content-Type เอง ให้เบราว์เซอร์ใส่ boundary */
+export async function apiUpload<T>(method: "POST" | "PUT", path: string, form: FormData, retry = true): Promise<T> {
+  const auth = loadAuth();
+  const headers: Record<string, string> = {};
+  if (auth) headers["Authorization"] = `Bearer ${auth.access_token}`;
+  const res = await fetch(`${API_BASE}${path}`, { method, headers, credentials: "include", body: form });
+  if (res.status === 401 && auth && retry && (await tryRefresh())) return apiUpload<T>(method, path, form, false);
+  const text = await res.text();
+  let data: unknown = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+  if (!res.ok) {
+    const detail = data && typeof data === "object" && "detail" in data ? (data as { detail: unknown }).detail : data;
+    throw new ApiError(res.status, detail);
+  }
+  return data as T;
+}
+
+/** รูปที่ backend เสิร์ฟจาก /media — ต้องพ่วง API_BASE เพราะหน้าเว็บส่งต่อผ่าน /api */
+export const mediaUrl = (u: string | null | undefined) => (u ? `${API_BASE}${u}` : "");
 
 export function errorMessage(e: unknown): string {
   if (e instanceof ApiError) {
