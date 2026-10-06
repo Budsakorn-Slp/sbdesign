@@ -42,7 +42,8 @@ def list_staff(db: Session, cart_id: str) -> list[CartStaff]:
     return sorted(rows, key=lambda r: order.index(r.role_code) if r.role_code in order else 99)
 
 
-def set_staff(db: Session, emp: CurrentEmployee, cart: Cart, role_code: str, user_id: str | None) -> list[CartStaff]:
+def set_staff(db: Session, emp: CurrentEmployee, cart: Cart, role_code: str, user_id: str | None,
+              employee_code: str | None = None) -> list[CartStaff]:
     """ใส่/เปลี่ยน/ถอด พนักงานของบทบาทหนึ่ง — บทบาทละหนึ่งคน
 
     รับแค่ user_id แล้วไปเปิดทะเบียนพนักงานเอาชื่อกับรหัสมาเอง ไม่รับชื่อ/รหัสจากหน้าเว็บ
@@ -54,7 +55,7 @@ def set_staff(db: Session, emp: CurrentEmployee, cart: Cart, role_code: str, use
         raise HTTPException(status_code=422, detail=f"ไม่รู้จักบทบาท {role_code} (ใช้ได้: {', '.join(STAFF_ROLES)})")
 
     row = db.scalar(select(CartStaff).where(CartStaff.cart_id == cart.id, CartStaff.role_code == role_code))
-    if user_id is None:
+    if user_id is None and not (employee_code or "").strip():
         if row:
             db.delete(row)
             audit_service.log(db, None, "cart.staff_remove", "cart", cart.id,
@@ -62,9 +63,11 @@ def set_staff(db: Session, emp: CurrentEmployee, cart: Cart, role_code: str, use
         db.commit()
         return list_staff(db, cart.id)
 
-    ref = get_employee_provider().get(db, user_id)
+    prov = get_employee_provider()
+    ref = prov.get(db, user_id) if user_id else prov.get_by_code(db, employee_code or "")
     if not ref:
-        raise HTTPException(status_code=404, detail="ไม่พบพนักงานคนนี้ในทะเบียน")
+        raise HTTPException(status_code=404, detail=(f"ไม่พบรหัสพนักงาน {employee_code.strip()} ในทะเบียน" if employee_code
+                                                    else "ไม่พบพนักงานคนนี้ในทะเบียน"))
     if row is None:
         row = CartStaff(cart_id=cart.id, role_code=role_code)
         db.add(row)

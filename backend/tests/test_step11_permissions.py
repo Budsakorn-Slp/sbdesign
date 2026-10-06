@@ -140,6 +140,9 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", f"/staff/materials/{BAD}/photos", EMP, {}),   # ไม่ใช่ multipart → 422 ไม่สร้างรูป
     ("PUT", f"/staff/photos/{BAD}", EMP, {}),
     ("DELETE", f"/staff/photos/{BAD}", EMP, None),
+    ("POST", f"/staff/photos/{BAD}/share", EMP, {"public": True}),
+    ("GET", f"/materials/{BAD}/branch-photos", ALL, None),   # รูปที่แชร์แล้ว — หน้าสินค้าฝั่งลูกค้า
+    ("POST", f"/quotations/{BAD}/google-sheet", EMP, None),
     ("GET", "/staff/photos/audit", MGR, None),             # AUDIT_VIEW — พนักงานขายไม่มี
     ("GET", "/staff/employees", EMP, None),
     ("GET", "/staff/roles", EMP, None),

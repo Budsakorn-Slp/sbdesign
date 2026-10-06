@@ -21,7 +21,7 @@
 .sess-acts { display: flex; align-items: center; gap: 10px; }
 .sess-bar .sess-act { background: #fff; color: var(--ink); }
 .sess-panel { grid-column: 1 / -1; display: contents; }   /* แท็บกับแถวลูกค้าเป็นแถวเต็มของ grid เหมือนเดิม */
-.sess-tabs, .sess-cust { grid-column: 1 / -1; }
+.sess-tabs, .sess-cust, .sess-staff { grid-column: 1 / -1; }
 .sess-lbl, .sess-hint { opacity: .8; }
 .sess-detach { color: #fff; }
 .sess-newcust { font-size: 13px; opacity: .8; }
@@ -342,14 +342,24 @@
 .cart-extra { margin-top: 16px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
 .ce-label { display: flex; align-items: center; gap: 6px; font-weight: 600; margin-bottom: 4px; }
 .ce-remark { width: 100%; box-sizing: border-box; border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; font: inherit; resize: vertical; }
-.ce-staff { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px 12px; }
-.ce-role { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.ce-role select { width: 100%; padding: 7px 8px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; background: #fff; }
+/* พนักงานร่วมบิล — แถวในแถบลูกค้า (พื้นเข้ม) */
+.sess-staff { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.staff-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 10px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.3); font-size: 13px; }
+.staff-pill b { color: #c9d2ff; }
+.staff-pill button { border: none; background: transparent; color: inherit; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; opacity: .75; cursor: pointer; }
+.staff-pill button:hover { opacity: 1; background: rgba(255,255,255,.15); }
+.sess-staff-add { color: #fff; display: inline-flex; align-items: center; gap: 4px; }
+.staff-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.staff-add input, .staff-add select { padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; font: inherit; font-size: 13px; color: var(--ink); background: #fff; }
+.staff-add input { width: 130px; text-transform: uppercase; }
+.staff-add .link-btn { color: #fff; }
+.staff-hint { opacity: .85; }
+.staff-err { color: #ffb4b4; }
 
 /* ---------- รูปตัวโชว์รายสาขา (หน้าสินค้า ฝั่งพนักงาน) ---------- */
-.staff-photos { margin: 24px 0; padding: 16px; border: 1px dashed var(--line-2); border-radius: var(--radius); background: #fafaf8; }
+.staff-photos { margin: 12px 0 16px; padding: 14px; border: 1px dashed var(--line-2); border-radius: var(--radius); background: #fafaf8; }
 .sp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
-.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+.sp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
 .sp-item { position: relative; margin: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .sp-item.mine { border-color: #111; }
 .sp-thumb { display: block; width: 100%; padding: 0; border: 0; background: #f2f2f0; cursor: zoom-in; aspect-ratio: 1; }
@@ -373,3 +383,17 @@
 .tpl-f { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
 .tpl-f input, .tpl-f textarea { font: inherit; font-weight: 400; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; width: 100%; box-sizing: border-box; }
 .tpl-f textarea { resize: vertical; }
+
+/* สถานะแชร์บนรูปของพนักงาน */
+.sp-state { position: absolute; top: 4px; left: 4px; padding: 1px 6px; border-radius: 4px; font-size: 11px; background: rgba(0,0,0,.6); color: #fff; }
+.sp-state.on { background: var(--green); }
+
+/* รูปของจริงตามสาขา — ฝั่งลูกค้า */
+.branch-photos { margin: 12px 0 16px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius); }
+.branch-photos > b { display: inline-flex; align-items: center; gap: 6px; }
+.bp-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.bp-tab { flex: none; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--line-2); background: #fff; font: inherit; font-size: 13px; cursor: pointer; }
+.bp-tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin-top: 8px; }
+.bp-thumb { padding: 0; border: 0; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--bg-3); cursor: zoom-in; }
+.bp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }

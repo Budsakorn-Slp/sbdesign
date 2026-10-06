@@ -1,3 +1,4 @@
+import { openGoogleSheet } from "../lib/gsheet";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
@@ -30,6 +31,7 @@ export default function PresosPage() {
   const [rows, setRows] = useState<PresoSummary[] | null>(null);
   const [quotes, setQuotes] = useState<Quotation[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
   const load = useCallback(() => {
@@ -96,6 +98,7 @@ export default function PresosPage() {
         </div>
       </div>
       {err && <div className="note err" style={{ marginBottom: 10 }}>{err}</div>}
+      {note && <div className="note ok small" style={{ marginBottom: 10, wordBreak: "break-all" }}>{note} <button className="link-btn small" onClick={() => setNote(null)}>ปิด</button></div>}
       {!rows && !err && <div className="ph" style={{ height: 120 }}>กำลังโหลด…</div>}
       {rows && (
         <div className="tbl-wrap card flat">
@@ -126,6 +129,7 @@ export default function PresosPage() {
                           {p.quotation_no && <a href={docUrl(p, false)} target="_blank" rel="noreferrer" className="btn sm" title="ไม่มีรูปสินค้า — แนบอีเมล/ปรินต์ ไฟล์เล็กกว่า">PDF ไม่มีรูป</a>}
                           {p.quotation_no && <a href={exportUrl(p, "xlsx")} className="btn sm" title="ดาวน์โหลดเป็น Excel">Excel</a>}
                           {p.quotation_no && <a href={exportUrl(p, "csv")} className="btn sm" title="ดาวน์โหลดเป็น CSV">CSV</a>}
+                          {p.quotation_no && <button className="btn sm" title="เปิดเป็น Google Sheet ออนไลน์" onClick={() => openGoogleSheet(p.quotation_no!, p.quotation_token).then(setNote).catch((e) => setErr(errorMessage(e)))}>Google Sheets</button>}
                           {p.quotation_no && p.quotation_status === "issued" && <Link to={`/sales/quotations/${p.quotation_no}`} className="btn primary sm">ไปจ่ายเงิน</Link>}
                         </>
                       )}

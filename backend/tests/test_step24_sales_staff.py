@@ -282,3 +282,108 @@ def test_อัปโหลดโลโก้(client):
                                     (date(2028, 2, 3), date(2028, 2, 29)), (date(2026, 12, 31), date(2026, 12, 31))])
 def test_วันสุดท้ายของเดือน(d, want):
     assert month_end(d) == want
+
+
+# ---------- แชร์รูปให้ลูกค้าเห็น ----------
+def test_อัปโหลดแล้วลูกค้ายังไม่เห็นจนกว่าจะกดแชร์(client):
+    a = auth_headers(client, "SA-104", "staff")
+    pid = _upload(client, a).json()[0]["id"]
+    seen = lambda: [p["id"] for b in client.get(f"/materials/{MATNR}/branch-photos").json() for p in b["photos"]]
+    assert pid not in seen(), "รูปที่ยังไม่แชร์ต้องไม่หลุดถึงลูกค้า"
+    r = client.post(f"/staff/photos/{pid}/share", json={"public": True}, headers=a)
+    assert r.status_code == 200 and r.json()["is_public"]
+    assert pid in seen()
+    group = next(b for b in client.get(f"/materials/{MATNR}/branch-photos").json() if any(p["id"] == pid for p in b["photos"]))
+    assert group["branch_code"] == "BKN"
+    assert "owner_employee_code" not in str(group), "ไม่ส่งข้อมูลพนักงานให้ลูกค้า"
+    client.post(f"/staff/photos/{pid}/share", json={"public": False}, headers=a)
+    assert pid not in seen()
+    # ลบรูปที่แชร์อยู่ = ลูกค้าไม่เห็นทันที
+    client.post(f"/staff/photos/{pid}/share", json={"public": True}, headers=a)
+    client.delete(f"/staff/photos/{pid}", headers=a)
+    assert pid not in seen()
+    with SessionLocal() as db:
+        acts = [x.action for x in db.scalars(select(ProductPhotoAudit).where(ProductPhotoAudit.image_id == pid)
+                                              .order_by(ProductPhotoAudit.action_at)).all()]
+    assert acts == ["CREATE", "SHARE", "UNSHARE", "SHARE", "DELETE"]
+
+
+def test_แชร์รูปของเพื่อนไม่ได้(client):
+    a = auth_headers(client, "SA-104", "staff")
+    b = auth_headers(client, "SA-105", "staff")
+    pid = _upload(client, a).json()[0]["id"]
+    assert client.post(f"/staff/photos/{pid}/share", json={"public": True}, headers=b).status_code == 403
+
+
+def test_ใส่พนักงานร่วมบิลด้วยรหัส(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    cart = _new_cart(client, hs)
+    r = client.put(f"/sales/carts/{cart['id']}/staff", json={"role_code": "Z3", "employee_code": " sa-105 "}, headers=hs)
+    assert r.status_code == 200, r.text
+    assert r.json()["staff"][0]["employee_name"] == "สมหญิง ข."
+    r = client.put(f"/sales/carts/{cart['id']}/staff", json={"role_code": "Z4", "employee_code": "XX-999"}, headers=hs)
+    assert r.status_code == 404 and "XX-999" in r.text
+    r = client.put(f"/sales/carts/{cart['id']}/staff", json={"role_code": "Z3", "employee_code": "ADM-001"}, headers=hs)
+    assert r.status_code == 404, "แอดมินระบบไม่ใช่คนขาย"
+
+
+# ---------- Google Sheets ----------
+def _issued(client, hs):
+    from tests.test_step8_quotation import _ready_cart
+
+    cart, _ = _ready_cart(client, hs)
+    p = client.post("/presos", json={"cart_id": cart["id"]}, headers=hs).json()
+    r = client.post(f"/presos/{p['preso_no']}/quotation", json={"force": True}, headers=hs)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def test_google_sheet_ยังไม่ตั้งค่าตอบ501_และ_csv_ไม่มี_bom(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _issued(client, hs)
+    assert client.post(f"/quotations/{q['quotation_no']}/google-sheet", headers=hs).status_code == 501
+    r = client.get(f"/quotations/{q['quotation_no']}/export?format=csv&bom=0", headers=hs)
+    assert r.status_code == 200 and not r.content.startswith("﻿".encode())
+
+
+def test_google_sheet_สร้างชีตและแชร์ให้คนกด(client, tmp_path, monkeypatch):
+    import json
+
+    import httpx
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    from app.core.config import get_settings
+    from app.integrations.google import sheets
+
+    pem = rsa.generate_private_key(public_exponent=65537, key_size=2048).private_bytes(
+        serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption()).decode()
+    key = tmp_path / "sa.json"
+    key.write_text(json.dumps({"client_email": "bot@x.iam.gserviceaccount.com", "private_key": pem}))
+    s = get_settings()
+    monkeypatch.setattr(s, "google_sa_file", str(key))
+    monkeypatch.setattr(s, "google_sheets_folder_id", "FOLDER1")
+    calls = []
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        calls.append((req.method, req.url.path, req.content))
+        if req.url.path == "/token":
+            return httpx.Response(200, json={"access_token": "tok"})
+        if req.url.path == "/drive/v3/files":
+            assert json.loads(req.content)["parents"] == ["FOLDER1"]
+            return httpx.Response(200, json={"id": "SHEET1"})
+        return httpx.Response(200, json={})
+
+    monkeypatch.setattr(sheets, "_client", lambda: httpx.Client(transport=httpx.MockTransport(handler)))
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _issued(client, hs)
+    r = client.post(f"/quotations/{q['quotation_no']}/google-sheet", headers=hs)
+    assert r.status_code == 200, r.text
+    assert r.json()["url"] == "https://docs.google.com/spreadsheets/d/SHEET1/edit"
+    put = next(c for c in calls if c[0] == "PUT")
+    assert q["quotation_no"] in put[2].decode()
+    share = next(c for c in calls if c[1].endswith("/permissions"))
+    assert json.loads(share[2])["emailAddress"] == "somchai@sb.local"
+    # เซลล์คนอื่นที่ไม่ใช่เจ้าของใบ สร้างชีตของใบนี้ไม่ได้
+    other = auth_headers(client, "SA-900", "staff")
+    assert client.post(f"/quotations/{q['quotation_no']}/google-sheet", headers=other).status_code == 403

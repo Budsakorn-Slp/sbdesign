@@ -188,6 +188,28 @@ def delete_photo(db: Session, emp: CurrentEmployee, photo_id: str) -> None:
     db.commit()
 
 
+def set_public(db: Session, emp: CurrentEmployee, photo_id: str, public: bool) -> ProductPhoto:
+    """แชร์/เลิกแชร์ให้ลูกค้าเห็น — สิทธิ์เท่ากับการแก้รูป (ของตัวเอง หรือ UPDATE_ALL)"""
+    photo = _get(db, emp, photo_id)
+    if not can_update(emp, photo):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="แชร์ได้เฉพาะรูปของตัวเอง")
+    if photo.is_public != public:
+        photo.is_public = public
+        photo.shared_by_employee, photo.shared_at = (emp.employee_code, utcnow()) if public else (None, None)
+        _audit(db, emp, photo, "SHARE" if public else "UNSHARE", photo.file_path, photo.file_path)
+        db.commit()
+    return photo
+
+
+def public_photos(db: Session, matnr: str) -> list[ProductPhoto]:
+    """รูปที่แชร์แล้วของทุกสาขา — สำหรับหน้าสินค้าฝั่งลูกค้า (ไม่ต้องล็อกอิน)"""
+    if not catalog_service.is_display_item(matnr):
+        return []
+    q = select(ProductPhoto).where(ProductPhoto.matnr == matnr, ProductPhoto.is_public.is_(True),
+                                   ProductPhoto.is_deleted.is_(False))
+    return list(db.scalars(q.order_by(ProductPhoto.branch_code, ProductPhoto.created_at)).all())
+
+
 def audit_log(db: Session, emp: CurrentEmployee, matnr: str | None = None, limit: int = 200) -> list[ProductPhotoAudit]:
     if not emp.can(P.PRODUCT_IMAGE_AUDIT_VIEW):
         raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์ดูประวัติรูปสินค้า")

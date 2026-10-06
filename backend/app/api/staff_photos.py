@@ -33,6 +33,8 @@ class PhotoOut(BaseModel):
     can_edit: bool
     can_delete: bool
     mine: bool
+    is_public: bool = False          # แชร์ให้ลูกค้าเห็นแล้วหรือยัง
+    shared_at: datetime | None = None
 
 
 class PhotoAuditOut(BaseModel):
@@ -63,7 +65,7 @@ def _out(p: ProductPhoto, emp: CurrentEmployee) -> PhotoOut:
         width=p.width, height=p.height, owner_employee_code=p.owner_employee_code,
         owner_employee_name=p.owner_employee_name, created_at=p.created_at, updated_at=p.updated_at,
         can_edit=photo_service.can_update(emp, p), can_delete=photo_service.can_delete(emp, p),
-        mine=p.owner_user_id == emp.user_id,
+        mine=p.owner_user_id == emp.user_id, is_public=p.is_public, shared_at=p.shared_at,
     )
 
 
@@ -97,6 +99,50 @@ async def replace_photo(photo_id: str, file: UploadFile = File(...),
 @router.delete("/staff/photos/{photo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_photo(photo_id: str, db: Session = Depends(get_db), emp: CurrentEmployee = Depends(get_current_employee)):
     photo_service.delete_photo(db, emp, photo_id)
+
+
+class ShareIn(BaseModel):
+    public: bool
+
+
+@router.post("/staff/photos/{photo_id}/share", response_model=PhotoOut)
+def share_photo(photo_id: str, body: ShareIn, db: Session = Depends(get_db),
+                emp: CurrentEmployee = Depends(get_current_employee)):
+    """แชร์ (public=true) / เลิกแชร์ — ลูกค้าเห็นเฉพาะรูปที่แชร์แล้ว"""
+    return _out(photo_service.set_public(db, emp, photo_id, body.public), emp)
+
+
+class PublicPhotoOut(BaseModel):
+    id: str
+    url: str
+    width: int
+    height: int
+
+
+class BranchPhotosOut(BaseModel):
+    branch_code: str
+    branch_name: str
+    photos: list[PublicPhotoOut]
+
+
+@router.get("/materials/{matnr}/branch-photos", response_model=list[BranchPhotosOut])
+def branch_photos(matnr: str, db: Session = Depends(get_db)):
+    """รูปของจริงของตัวโชว์ แยกตามสาขา — เฉพาะรูปที่พนักงานกดแชร์แล้ว
+
+    ไม่ต้องล็อกอิน · ไม่ส่งชื่อ/รหัสพนักงานออกไป ลูกค้าไม่จำเป็นต้องรู้ว่าใครถ่าย
+    """
+    from app.models.catalog import Plant
+
+    groups: dict[str, list[ProductPhoto]] = {}
+    for p in photo_service.public_photos(db, matnr):
+        groups.setdefault(p.branch_code, []).append(p)
+    out = []
+    for code, rows in groups.items():
+        plant = db.get(Plant, code)
+        out.append(BranchPhotosOut(branch_code=code, branch_name=plant.name if plant else code,
+                                   photos=[PublicPhotoOut(id=p.id, url=photo_service.url_of(p.file_path),
+                                                          width=p.width, height=p.height) for p in rows]))
+    return out
 
 
 @router.get("/staff/photos/audit", response_model=list[PhotoAuditOut])

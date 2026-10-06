@@ -19,7 +19,7 @@ from functools import lru_cache
 from typing import Protocol
 
 from fastapi import Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
@@ -59,6 +59,7 @@ class EmployeeProvider(Protocol):
     def from_user(self, user: User) -> CurrentEmployee: ...
     def list_employees(self, db: Session) -> list[EmployeeRef]: ...
     def get(self, db: Session, user_id: str) -> EmployeeRef | None: ...
+    def get_by_code(self, db: Session, employee_code: str) -> EmployeeRef | None: ...
 
 
 class LocalAccountEmployeeProvider:
@@ -90,6 +91,14 @@ class LocalAccountEmployeeProvider:
         if not u or u.role not in ("sales", "manager") or not u.staff_code:
             return None
         return self._ref(u)
+
+    def get_by_code(self, db: Session, employee_code: str) -> EmployeeRef | None:
+        """หาจากรหัสพนักงานที่เซลล์พิมพ์ — ไม่สนตัวพิมพ์เล็ก/ใหญ่ และช่องว่างหัวท้าย"""
+        code = (employee_code or "").strip().upper()
+        if not code:
+            return None
+        u = db.scalar(select(User).where(func.upper(User.staff_code) == code))
+        return self.get(db, u.id) if u else None
 
     @staticmethod
     def _ref(u: User) -> EmployeeRef:

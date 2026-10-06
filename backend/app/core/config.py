@@ -149,6 +149,14 @@ class Settings(BaseSettings):
     kbank_secret_key: str = ""     # ฝั่งเซิร์ฟเวอร์เท่านั้น ห้ามส่งไปหน้าเว็บ
     kbank_timeout_seconds: float = 20.0
 
+    # ---------- ส่งใบเสนอราคาไป Google Sheets ----------
+    # ไฟล์กุญแจ JSON ของ service account (Google Cloud) — เก็บนอก repo เหมือน .env ห้าม commit
+    # เว้นว่าง = ปุ่ม Google Sheets ใช้ทางสำรอง (เปิดชีตเปล่า + สูตร IMPORTDATA ดึงข้อมูลใบ)
+    google_sa_file: str = ""
+    # โฟลเดอร์ใน Shared Drive ที่จะสร้างชีตลงไป (เพิ่ม service account เป็นสมาชิกของ Shared Drive นั้น)
+    # ต้องเป็น Shared Drive — service account ไม่มีพื้นที่ Drive ของตัวเอง สร้างไฟล์ใน My Drive จะโดนปฏิเสธ
+    google_sheets_folder_id: str = ""
+
     # ---------- ท้ายใบเสนอราคา ----------
     # เงื่อนไขการชำระเงิน + บัญชีบริษัท · เป็นข้อความที่ลูกค้าใช้โอนเงินจริง จึงไม่ฝังในโค้ด
     # ใส่ใน .env แล้วแก้ได้โดยไม่ต้อง deploy · เว้นว่าง = ไม่พิมพ์ส่วนนั้นในเอกสาร

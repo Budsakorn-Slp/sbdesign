@@ -422,9 +422,12 @@ export type StaffPhoto = {
   id: string; matnr: string; branch_code: string; url: string; width: number; height: number;
   owner_employee_code: string; owner_employee_name: string; created_at: string; updated_at: string | null;
   can_edit: boolean; can_delete: boolean; mine: boolean;
+  /** แชร์ให้ลูกค้าเห็นแล้ว — อัปโหลดใหม่ยังเป็น false (เห็นเฉพาะพนักงาน) */
+  is_public: boolean; shared_at: string | null;
 };
+export type BranchPhotos = { branch_code: string; branch_name: string; photos: { id: string; url: string; width: number; height: number }[] };
 export type StaffPhotoAudit = {
-  image_id: string; matnr: string; branch_code: string; image_owner_employee: string; action: "CREATE" | "UPDATE" | "DELETE";
+  image_id: string; matnr: string; branch_code: string; image_owner_employee: string; action: "CREATE" | "UPDATE" | "DELETE" | "SHARE" | "UNSHARE";
   action_by_employee: string; action_by_role: string; action_at: string; old_image_url: string | null; new_image_url: string | null;
 };
 export type QuotationTemplate = {

@@ -41,6 +41,11 @@ class ProductPhoto(Base):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_by_employee: Mapped[str | None] = mapped_column(String(32), nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # อัปโหลดแล้วเห็นเฉพาะพนักงานก่อน — ลูกค้าเห็นเมื่อพนักงานกด "แชร์" เท่านั้น
+    # (กันรูปที่ถ่ายพลาด/ยังไม่เรียบร้อยหลุดไปถึงลูกค้า)
+    is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    shared_by_employee: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    shared_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ProductPhotoAudit(Base):

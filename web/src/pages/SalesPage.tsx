@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import CartStaffPanel from "../components/CartStaffPanel";
+import { CartCoSellers, CartRemark } from "../components/CartStaffPanel";
 import DeliveryPanel from "../components/DeliveryPanel";
 import StaffShippingCharge from "../components/StaffShippingCharge";
 import Icon from "../components/Icon";
@@ -253,6 +253,8 @@ export default function SalesPage() {
             <button className="btn primary sess-add" onClick={() => setSearchOpen(true)}><Icon name="add_shopping_cart" size={18} /> เพิ่มสินค้าให้ลูกค้า</button>
           </div>
         )}
+        {/* พนักงานร่วมบิลเป็นข้อมูลระดับบิลเหมือนลูกค้า — อยู่แถวเดียวกับลูกค้า ไม่ใช่ต่อท้ายรายการสินค้า */}
+        {cart && <CartCoSellers cart={cart} onChange={(c) => sales.setActive(c)} />}
         </div>
       </div>
 
@@ -300,7 +302,7 @@ export default function SalesPage() {
                 </div>
               </>
             )}
-            {cart.items.length > 0 && <CartStaffPanel cart={cart} onChange={(c) => sales.setActive(c)} />}
+            {cart.items.length > 0 && <CartRemark cart={cart} onChange={(c) => sales.setActive(c)} />}
           </div>
           {/* จอเล็ก: สรุปคำสั่งซื้อกลายเป็นแผงลอยจากขอบล่าง — เดิมต้องเลื่อนผ่านสินค้าทั้งตะกร้า
               ลงไปสุดหน้าถึงจะกดเช็คสต็อก/เช็คโปร/ออกใบเสนอราคาได้ ซึ่งเป็นงานที่เซลล์กดบ่อยสุด

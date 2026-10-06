@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import BranchPhotos from "../components/BranchPhotos";
 import StaffPhotos from "../components/StaffPhotos";
 import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
@@ -429,6 +430,11 @@ export default function ProductPage() {
             </details>
           )}
 
+          {/* ตัวโชว์มีรอย/สีจริงต่างกันแต่ละสาขา — พนักงานถ่ายของจริงในสาขาตัวเองเก็บไว้ (ลูกค้าไม่เห็นส่วนนี้)
+              วางต่อจากรายชื่อสาขาที่มีของ เพราะเป็นเรื่องเดียวกัน: ของชิ้นนี้อยู่ที่ไหน หน้าตาจริงเป็นยังไง */}
+          {item.is_display && <BranchPhotos matnr={item.matnr} />}
+          {isStaff && item.is_display && <StaffPhotos matnr={item.matnr} />}
+
           {/* ต้นทางแยกทุกสีเป็นคนละ MATNR — กดสีอื่นคือเปลี่ยนหน้าสินค้า ไม่ใช่เปลี่ยนตัวเลือกในหน้าเดิม */}
           {item.colors.length > 1 && (
             <div className="colors">
@@ -556,9 +562,6 @@ export default function ProductPage() {
       {/* คำบรรยายเต็ม (LONG_DESC) — วางเป็นบล็อกกว้างเต็มใต้ส่วนบน เหมือนหน้าสินค้าของเว็บจริง
           ไม่ยัดลงในกล่อง "ข้อมูลสินค้า" เพราะข้อความยาวกว่าช่องขวามาก อ่านในคอลัมน์แคบแล้วอึดอัด
           เนื้อหาถูกล้าง script/style ตั้งแต่ตอน import แล้ว (ดู etl/html_clean.py) */}
-      {/* ตัวโชว์มีรอย/สีจริงต่างกันแต่ละสาขา — พนักงานถ่ายของจริงในสาขาตัวเองเก็บไว้ (ลูกค้าไม่เห็นส่วนนี้) */}
-      {isStaff && item.is_display && <StaffPhotos matnr={item.matnr} />}
-
       {item.description_long && (
         <section className="product-long">
           <div dangerouslySetInnerHTML={{ __html: item.description_long }} />

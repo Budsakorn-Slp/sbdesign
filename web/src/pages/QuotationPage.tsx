@@ -1,3 +1,4 @@
+import { openGoogleSheet } from "../lib/gsheet";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon";
@@ -113,6 +114,7 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
             <a className="btn sm" href={docUrl} target="_blank" rel="noreferrer"><Icon name="picture_as_pdf" size={18} /> PDF</a>
             {isStaff && <a className="btn sm" href={exportUrl("xlsx")}><Icon name="table_view" size={18} /> Excel</a>}
             {isStaff && <a className="btn sm" href={exportUrl("csv")}><Icon name="download" size={18} /> CSV</a>}
+            {isStaff && <button className="btn sm" onClick={() => openGoogleSheet(q.quotation_no, tk).then(setMsg).catch((e) => setMsg(errorMessage(e)))}><Icon name="grid_on" size={18} /> Google Sheets</button>}
             {isStaff && <button className="btn sm" disabled={busy !== null} onClick={() => send("email")}><Icon name="mail" size={18} /> ส่งอีเมล</button>}
             {isStaff && <button className="btn sm" disabled={busy !== null} onClick={() => send("sms")}><Icon name="sms" size={18} /> ส่ง SMS</button>}
             {isStaff && shareLink && <button className="btn sm" onClick={() => { navigator.clipboard?.writeText(shareLink); setMsg("คัดลอกลิงก์แล้ว: " + shareLink); }}><Icon name="link" size={18} /> คัดลอกลิงก์</button>}
