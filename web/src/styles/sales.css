@@ -348,11 +348,11 @@
 .staff-pill b { color: #c9d2ff; }
 .staff-pill button { border: none; background: transparent; color: inherit; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; opacity: .75; cursor: pointer; }
 .staff-pill button:hover { opacity: 1; background: rgba(255,255,255,.15); }
-.sess-staff-add { color: #fff; display: inline-flex; align-items: center; gap: 4px; }
+.sess-bar .sess-staff-add, .sess-bar .staff-add .link-btn { color: #fff; opacity: 1; display: inline-flex; align-items: center; gap: 4px; }
 .staff-add { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .staff-add input, .staff-add select { padding: 6px 8px; border-radius: 8px; border: 1px solid transparent; font: inherit; font-size: 13px; color: var(--ink); background: #fff; }
 .staff-add input { width: 130px; text-transform: uppercase; }
-.staff-add .link-btn { color: #fff; }
+
 .staff-hint { opacity: .85; }
 .staff-err { color: #ffb4b4; }
 
