@@ -68,31 +68,33 @@ async function renderCanvas(no: string, token: string | null | undefined, withIm
     await Promise.all(Array.from(doc.images).map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = () => r(null); }))));
     doc.querySelectorAll<HTMLElement>(".no-print").forEach((el) => (el.style.display = "none"));
 
-    // ขยายกรอบให้สูงเท่าเนื้อหาก่อนวาด — ตัววาดจับภาพสูงเท่ากรอบหน้าต่าง ไม่ใช่เท่าเนื้อหา
-    // ปล่อยกรอบสูง 1400 ไว้ ใบสั้นได้ที่ว่างขาวท้ายรูปครึ่งภาพ ใบยาวโดนตัดหาย
-    // และอัตราส่วนภาพ:หน้าเพี้ยน ทำให้จุดตัดหน้า PDF ไปผ่ากลางบรรทัด
-    const fullH = Math.ceil(doc.documentElement.scrollHeight);
-    frame.style.height = `${fullH}px`;
+    // กรอบต้องสูงพอให้เนื้อหาทั้งใบอยู่ในกรอบ — ตัววาดจับภาพไม่เกินความสูงกรอบ
+    // เผื่อไว้อีก 600px เพราะตัววาดสร้างสำเนาหน้าของมันเองแล้วจัดหน้าใหม่ ความสูงอาจไม่เท่าที่วัดได้ที่นี่
+    const winH = Math.ceil(doc.documentElement.scrollHeight) + 600;
+    frame.style.height = `${winH}px`;
     void doc.body.offsetHeight;   // บังคับจัดหน้าใหม่ทันที (ไม่ใช้รอเฟรม — แท็บที่ไม่ได้แสดงอยู่จะไม่มีเฟรม ค้างตลอด)
 
-    const body = doc.body;
-    const box = body.getBoundingClientRect();
-    const canvas = await html2canvas(body, {
+    // วัดจุดตัดหน้าและท้ายเนื้อหาจาก "สำเนาที่ถูกวาดจริง" ไม่ใช่จากหน้าของเรา
+    // (รอบก่อนวัดจากหน้าของเรา ฟอนต์ในสำเนายังไม่พร้อม เนื้อหายาวกว่าที่วัด → ท้ายใบโดนตัดหาย)
+    let cuts: number[] = [];
+    let contentBottom = 0;
+    const canvas = await html2canvas(doc.body, {
       scale: SCALE, useCORS: true, backgroundColor: "#ffffff", logging: false,
-      windowWidth: 900, windowHeight: fullH, height: Math.ceil(box.height),
+      windowWidth: 900, windowHeight: winH,
+      onclone: async (cdoc: Document) => {
+        await cdoc.fonts?.ready;
+        await Promise.all(["400", "600", "700"].map((w) => cdoc.fonts?.load(`${w} 16px "${DOC_FONT}"`, "กขค").catch(() => null)));
+        const cb = cdoc.body;
+        const top = cb.getBoundingClientRect().top;
+        cuts = Array.from(cb.querySelectorAll("tr, li, .hdr, .parties, .who, .note-box, .terms > b, p"))
+          .map((el) => Math.round((el.getBoundingClientRect().bottom - top) * SCALE) + 2)
+          .sort((a, b) => a - b);
+        contentBottom = Math.max(0, ...Array.from(cb.children).map((el) => el.getBoundingClientRect().bottom - top));
+      },
     });
 
-    // จุดตัดหน้าที่ปลอดภัย = ขอบล่างของแถวตาราง/ข้อเงื่อนไข/กล่อง
-    // คูณด้วยอัตราส่วนจริง (ความสูงภาพ ÷ ความสูงหน้า) ไม่ใช่ค่า scale ตายตัว
-    // ภาพจริงสูงไม่เท่าหน้า × scale พอดี ใช้ค่าตายตัวแล้วจุดตัดเลื่อนไปผ่ากลางบรรทัดข้างล่าง
-    const ratio = canvas.height / Math.max(box.height, 1);
-    const cuts = Array.from(body.querySelectorAll("tr, li, .hdr, .parties, .who, .note-box, .terms > b, p"))
-      .map((el) => Math.round((el.getBoundingClientRect().bottom - box.top) * ratio) + 2)
-      .sort((a, b) => a - b);
-
-    // ตัดที่ท้ายเนื้อหาจริง — body สูงเต็มกรอบ iframe ไม่งั้นท้ายรูปเป็นที่ว่างขาวยาวครึ่งภาพ
-    const contentBottom = Math.max(...Array.from(body.children).map((el) => el.getBoundingClientRect().bottom)) - box.top;
-    const keep = Math.min(canvas.height, Math.ceil((contentBottom + 12) * ratio));
+    // ตัดที่ว่างท้ายรูป — ไม่ตัดต่ำกว่าหมึกแถวสุดท้ายที่เห็นในภาพจริงเด็ดขาด (กันพลาดอีกชั้น)
+    const keep = Math.min(canvas.height, Math.max(Math.ceil((contentBottom + 12) * SCALE), lastInkRow(canvas) + 24));
     if (keep < canvas.height - 4) {
       const [trim, ctx] = blank(canvas.width, keep);
       ctx.drawImage(canvas, 0, 0, canvas.width, keep, 0, 0, canvas.width, keep);
@@ -102,6 +104,21 @@ async function renderCanvas(no: string, token: string | null | undefined, withIm
   } finally {
     frame.remove();
   }
+}
+
+/** แถวล่างสุดที่มีสีไม่ใช่ขาว — ใช้ยืนยันว่าตัดท้ายรูปแล้วไม่โดนเนื้อหา */
+function lastInkRow(canvas: HTMLCanvasElement): number {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return canvas.height;
+  const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  for (let y = height - 1; y >= 0; y -= 2) {
+    const row = y * width * 4;
+    for (let x = 0; x < width; x += 3) {
+      const i = row + x * 4;
+      if (data[i] < 235 || data[i + 1] < 235 || data[i + 2] < 235) return y;
+    }
+  }
+  return 0;
 }
 
 function blank(w: number, h: number): [HTMLCanvasElement, CanvasRenderingContext2D] {
