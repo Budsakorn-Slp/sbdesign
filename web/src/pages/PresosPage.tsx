@@ -127,8 +127,8 @@ export default function PresosPage() {
                         </>
                       ) : (
                         <>
-                          {p.quotation_no && <a href={docUrl(p, true)} target="_blank" rel="noreferrer" className="btn sm" title="ใบเสนอราคาพร้อมรูปสินค้า — ใช้คุยกับลูกค้า">PDF มีรูป</a>}
-                          {p.quotation_no && <a href={docUrl(p, false)} target="_blank" rel="noreferrer" className="btn sm" title="ไม่มีรูปสินค้า — แนบอีเมล/ปรินต์ ไฟล์เล็กกว่า">PDF ไม่มีรูป</a>}
+                          {p.quotation_no && <a href={docUrl(p, true)} target="_blank" rel="noreferrer" className="btn sm" title="เปิดดูใบเสนอราคาแบบมีรูปสินค้า (ดาวน์โหลดไฟล์ใช้ปุ่ม แชร์ / ดาวน์โหลด)">Preview มีรูป</a>}
+                          {p.quotation_no && <a href={docUrl(p, false)} target="_blank" rel="noreferrer" className="btn sm" title="เปิดดูใบเสนอราคาแบบไม่มีรูปสินค้า">Preview ไม่มีรูป</a>}
                           {p.quotation_no && <a href={exportUrl(p, "xlsx")} className="btn sm" title="ดาวน์โหลดเป็น Excel">Excel</a>}
                           {p.quotation_no && <a href={exportUrl(p, "csv")} className="btn sm" title="ดาวน์โหลดเป็น CSV">CSV</a>}
                           {p.quotation_no && <button className="btn sm" title="ส่งเป็นไฟล์ PDF ทาง LINE/Messenger หรือดาวน์โหลด" onClick={() => setShare({ no: p.quotation_no!, token: p.quotation_token })}>แชร์ / ดาวน์โหลด</button>}

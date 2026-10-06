@@ -113,7 +113,8 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
             </tbody>
           </table>
           <div className="row wrap" style={{ marginTop: 14, gap: 8 }}>
-            <a className="btn sm" href={docUrl} target="_blank" rel="noreferrer"><Icon name="picture_as_pdf" size={18} /> PDF</a>
+            <a className="btn sm" href={`${docUrl}${docUrl.includes("?") ? "&" : "?"}images=1`} target="_blank" rel="noreferrer"><Icon name="visibility" size={18} /> Preview มีรูป</a>
+            <a className="btn sm" href={docUrl} target="_blank" rel="noreferrer"><Icon name="visibility" size={18} /> Preview ไม่มีรูป</a>
             {/* แชร์/ดาวน์โหลดเป็นไฟล์ — ทั้งพนักงานและลูกค้าที่เปิดใบอยู่ใช้ได้ */}
             <button className="btn sm" onClick={() => setShareOpen(true)}><Icon name="ios_share" size={18} /> แชร์ / ดาวน์โหลด</button>
             {isStaff && <a className="btn sm" href={exportUrl("xlsx")}><Icon name="table_view" size={18} /> Excel</a>}
