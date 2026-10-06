@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import PageErrorBoundary from "../PageErrorBoundary";
 import { Link, Outlet } from "react-router-dom";
 
 /** โครงหน้าเปล่า — ไม่มีหัวเว็บ เมนูหมวด ตะกร้า หรือ footer การตลาดของฝั่งลูกค้า
@@ -15,9 +16,11 @@ export default function BareLayout() {
           <img src="https://media.sbdesignsquare.com/media/logo/stores/2/Logo_header_newsb_1.png" alt="SB Design Square" />
         </Link>
       </header>
-      <Suspense fallback={<div className="ph" style={{ height: 320, margin: 24, borderRadius: 12 }} />}>
-        <Outlet />
-      </Suspense>
+      <PageErrorBoundary>
+        <Suspense fallback={<div className="ph" style={{ height: 320, margin: 24, borderRadius: 12 }} />}>
+          <Outlet />
+        </Suspense>
+      </PageErrorBoundary>
       <footer className="bare-foot">
         <small>© SB Design Square · ระบบภายในสำหรับพนักงาน</small>
       </footer>

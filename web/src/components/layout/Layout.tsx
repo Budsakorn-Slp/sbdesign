@@ -1,4 +1,5 @@
 import { Suspense, useEffect } from "react";
+import PageErrorBoundary from "../PageErrorBoundary";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import BackToTop from "../BackToTop";
@@ -61,9 +62,11 @@ export default function Layout() {
       {/* Suspense อยู่ตรงนี้ ไม่ใช่ครอบทั้งแอป — หัวเว็บกับเมนูจึงขึ้นทันทีระหว่างรอโค้ดของหน้า
           ที่เพิ่งกดเข้าไป (ดู route ที่แยกไฟล์ใน App.tsx) ผู้ใช้ไม่เห็นจอขาวทั้งหน้า */}
       <div className="app-body">
-        <Suspense fallback={<PageFallback />}>
-          <Outlet />
-        </Suspense>
+        <PageErrorBoundary resetKey={loc.pathname}>
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
+        </PageErrorBoundary>
       </div>
       <Footer />
       <BackToTop />
