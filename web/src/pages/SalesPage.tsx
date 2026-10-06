@@ -7,14 +7,14 @@ import Icon from "../components/Icon";
 import Placeholder from "../components/Placeholder";
 import { imageSources } from "../lib/images";
 import PromoPanel from "../components/PromoPanel";
-import { apiGet, apiPost, errorMessage } from "../lib/api";
+import { ApiError, apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { SUPPLY_LABEL, shipNeedsReview } from "../lib/cart";
 import { useContent } from "../lib/content";
 import { baht, bahtWord, thDate, thTime } from "../lib/format";
 import { useCartSocket } from "../lib/realtime";
 import { useSales, type CustomerHit } from "../lib/sales";
-import type { Availability, AvailabilityItem, CartItem, MaterialCard } from "../lib/types";
+import type { Availability, AvailabilityItem, Cart, CartItem, MaterialCard } from "../lib/types";
 
 /** สีของป้ายสถานะ — แยกไว้ตรงนี้เพราะใช้ทั้งในตะกร้าและในหน้าค้นหา */
 const AVAIL_TONE: Record<string, string> = { full: "green", split: "amber", short: "amber", none: "red", unknown: "red" };
@@ -53,6 +53,7 @@ export default function SalesPage() {
   const [deliveryOpen, setDeliveryOpen] = useState(false);
   const [presoNo, setPresoNo] = useState<string | null>(null);
   const [sessOpen, setSessOpen] = useState(false); // แผงตะกร้า/ลูกค้าบนจอเล็ก (จอใหญ่กางเสมอ)
+  const [join, setJoin] = useState<JoinInfo | null>(null); // ลูกค้ามีพนักงานคนอื่นดูแลอยู่ → กล่องขอเข้าร่วม
   const [sheet, setSheet] = useState(false); // แผงสรุปบนจอเล็กกางอยู่ไหม (จอใหญ่ไม่ใช้ค่านี้)
   const nav = useNavigate();
 
@@ -239,11 +240,24 @@ export default function SalesPage() {
             {cart.customer ? (
               <>
                 <span className="cust-pill"><Icon name="how_to_reg" size={18} /> <b>{cart.customer.name}</b> · CUST {cart.customer.sap_customer_no || "-"} · {(cart.customer.points || 0).toLocaleString()} พ้อยท์</span>
-                <button className="link-btn small sess-detach" onClick={() => run("detach", () => sales.detach())} disabled={busy === "detach"}>ตัดการเชื่อมต่อ</button>
+                {cart.owner_sales?.id === auth.user?.id
+                  ? <button className="link-btn small sess-detach" onClick={() => run("detach", () => sales.detach())} disabled={busy === "detach"}>ตัดการเชื่อมต่อ</button>
+                  : <span className="small sess-lbl">ร่วมดูแล · เจ้าของ {cart.owner_sales?.staff_code} {cart.owner_sales?.name}</span>}
+                {(cart.handlers || []).length > 0 && (
+                  <span className="small sess-lbl">ดูแลร่วม: {(cart.handlers || []).map((h) => `${h.staff_code || ""} ${h.name}`.trim()).join(", ")}</span>
+                )}
               </>
             ) : (
               <>
-                <CustomerSearch onPick={(hit) => run("attach", () => sales.attach(hit.sap_customer_no || hit.email || hit.phone || ""))} search={sales.searchCustomers} />
+                <CustomerSearch onPick={(hit) => run("attach", async () => {
+                  try {
+                    await sales.attach(hit.sap_customer_no || hit.email || hit.phone || "");
+                  } catch (e) {
+                    const d = e instanceof ApiError ? (e.detail as JoinInfo | null) : null;
+                    if (d && typeof d === "object" && d.code === "cart_owned_by_other") return setJoin(d);
+                    throw e;
+                  }
+                })} search={sales.searchCustomers} />
                 <span className="sess-newcust">
                   <span className="sess-ic"><Icon name="person_add" size={22} /></span>
                   <span><b>ลูกค้าใหม่ยังไม่มีในระบบ</b><small>ใส่สินค้าไปก่อนได้ ค่อยผูกลูกค้าตอนจะออกใบเสนอราคา</small></span>
@@ -259,6 +273,7 @@ export default function SalesPage() {
       </div>
 
       {msg && <div className="note err" style={{ margin: "12px 0" }}>{msg}</div>}
+      {join && <JoinBox info={join} onClose={() => setJoin(null)} onJoined={async (c) => { setJoin(null); await sales.reload(); sales.setActiveId(c.id); }} />}
 
       {cart ? (
         <div className="cart-grid has-sheet">
@@ -616,3 +631,41 @@ function MaterialSearchModal({ onClose, target, search, onAdd }: { onClose: () =
 }
 
 type SearchOutLike = { items: MaterialCard[] };
+
+type JoinInfo = { code: string; message: string; owner_name: string | null; owner_branch: string | null; cart_no: string; customer_key: string };
+
+/** ลูกค้ามีพนักงานคนอื่นดูแลตะกร้าอยู่ — บอกว่าใคร แล้วให้ใส่รหัสพนักงานของคนนั้นเพื่อเข้าร่วมดูแลตะกร้าใบเดียวกัน */
+function JoinBox({ info, onClose, onJoined }: { info: JoinInfo; onClose: () => void; onJoined: (c: Cart) => void }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setErr(null);
+    try {
+      onJoined(await apiPost<Cart>("/sales/carts/join", { customer_key: info.customer_key, join_code: code.trim() }));
+    } catch (x) {
+      setErr(errorMessage(x));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="join-box">
+      <div className="join-head">
+        <Icon name="group_add" size={20} />
+        <div className="grow">
+          <b>ลูกค้ารายนี้อยู่ในความดูแลของ {info.owner_name}{info.owner_branch ? ` (${info.owner_branch})` : ""}</b>
+          <small>ตะกร้า {info.cart_no} · ขอรหัสพนักงานจากคนนั้น แล้วใส่ด้านล่างเพื่อช่วยดูแลตะกร้าเดียวกัน</small>
+        </div>
+        <button className="icon-btn" onClick={onClose} aria-label="ปิด"><Icon name="close" size={18} /></button>
+      </div>
+      <form className="row join-form" onSubmit={submit}>
+        <input className="hdr-pop-input" value={code} onChange={(e) => setCode(e.target.value)} placeholder="รหัสพนักงานของคนที่ดูแลอยู่" autoFocus maxLength={32} />
+        <button className="btn primary sm" type="submit" disabled={busy || !code.trim()}>{busy ? "กำลังเข้าร่วม…" : "เข้าร่วมดูแล"}</button>
+      </form>
+      {err && <div className="note err small" style={{ marginTop: 6 }}>{err}</div>}
+    </div>
+  );
+}

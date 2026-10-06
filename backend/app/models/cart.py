@@ -54,6 +54,8 @@ class Cart(Base, TimestampMixin):
     items: Mapped[list["CartItem"]] = relationship(back_populates="cart", cascade="all, delete-orphan", order_by="CartItem.added_at")
     customer = relationship("User", foreign_keys=[customer_user_id])
     owner_sales = relationship("User", foreign_keys=[owner_sales_id])
+    # พนักงานที่เข้ามาช่วยดูแลตะกร้าใบนี้ (นอกจากเจ้าของ) — โหลดมาด้วยเสมอเพราะ can_access ใช้ทุกคำขอ
+    handlers: Mapped[list["CartHandler"]] = relationship(cascade="all, delete-orphan", lazy="selectin")
 
     @property
     def is_open(self) -> bool:
@@ -150,3 +152,19 @@ class CartStaff(Base):
     assigned_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
     assigned_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
+
+class CartHandler(Base):
+    """พนักงานที่เข้าร่วมดูแลตะกร้าของเพื่อน (ใส่รหัสเข้าร่วมแล้ว)
+
+    เจ้าของตะกร้ายังเป็นคนเดียว (carts.owner_sales_id) — คนร่วมแก้ของในตะกร้าได้เหมือนเจ้าของ
+    แต่ปิดตะกร้า/ถอดลูกค้าไม่ได้ กด "ปิด" ฝั่งคนร่วม = ออกจากการดูแลเฉยๆ
+    """
+
+    __tablename__ = "cart_handlers"
+    __table_args__ = (Index("ux_cart_handlers_cart_user", "cart_id", "user_id", unique=True),)
+
+    id: Mapped[str] = uuid_pk()
+    cart_id: Mapped[str] = mapped_column(ForeignKey("carts.id", ondelete="CASCADE"), index=True, nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+    user = relationship("User", lazy="joined")

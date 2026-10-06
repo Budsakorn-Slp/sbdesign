@@ -422,3 +422,11 @@
   .staff-err { color: var(--red); }
   .staff-add input, .staff-add select { border-color: var(--line-2); }
 }
+
+/* กล่องขอเข้าร่วมดูแลตะกร้าของเพื่อน */
+.join-box { margin: 12px 0; padding: 14px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--brand-soft); }
+.join-head { display: flex; align-items: flex-start; gap: 10px; color: var(--brand-dark); }
+.join-head b { display: block; }
+.join-head small { display: block; color: var(--ink-3); margin-top: 2px; }
+.join-form { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.join-form input { flex: 1 1 180px; min-width: 0; letter-spacing: .1em; }

@@ -127,6 +127,7 @@ class CartOut(BaseModel):
     preso: PresoReadyOut | None = None  # เฉพาะตะกร้าที่เซลล์ถือ — ด่านก่อนบันทึกใบ PRE
     overall_remark: str | None = None   # หมายเหตุหลักทั้งตะกร้า (คนละช่องกับ note รายสินค้า)
     staff: list[CartStaffOut] = []      # พนักงานร่วมบิล Z1-ZK — เฉพาะตะกร้าที่เซลล์ถือ
+    handlers: list[CartPersonOut] = []  # พนักงานที่เข้าร่วมดูแลตะกร้านี้ (นอกจากเจ้าของ)
 
 
 class AddItemIn(BaseModel):

@@ -147,6 +147,41 @@ def cmd_set_staff(args) -> int:
     return 0
 
 
+def cmd_add_staff(args) -> int:
+    """สร้างบัญชีพนักงาน (หรืออัปเดตถ้ารหัสนี้มีอยู่แล้ว)
+
+    รหัสผ่านอ่านจากตัวแปรแวดล้อม STAFF_PASSWORD หรือถามตอนรัน — ไม่รับเป็นอาร์กิวเมนต์
+    จะได้ไม่ค้างอยู่ใน history ของ shell
+    """
+    import getpass
+    import os
+
+    pw = os.environ.get("STAFF_PASSWORD") or getpass.getpass("รหัสผ่าน: ")
+    if len(pw) < 4:
+        print("! รหัสผ่านสั้นเกินไป")
+        return 1
+    code = args.staff_code.strip().upper()
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.staff_code == code))
+        new = u is None
+        if new:
+            u = User(role=args.role, name=args.name, staff_code=code, is_guest=False)
+            db.add(u)
+        u.role, u.name = args.role, args.name
+        if args.email:
+            u.email = args.email.lower()
+        if args.branch:
+            u.branch_id = args.branch
+            u.branch_name = args.branch_name or u.branch_name
+        u.password_hash = hash_password(pw)
+        u.updated_at = utcnow()
+        db.commit()
+    print(f"{'สร้าง' if new else 'อัปเดต'}บัญชี {code} ({args.name}) role={args.role} แล้ว")
+    if code in {c.strip().upper() for c in get_settings().all_access_staff_codes.split(",")}:
+        print("  อยู่ในรายชื่อ ALL_ACCESS_STAFF_CODES — เห็นรูป/ประวัติได้ทุกสาขา")
+    return 0
+
+
 def cmd_set_phone(args) -> int:
     """ตั้งเบอร์โทรให้พนักงานรายคน — เบอร์นี้ไปโผล่บนใบเสนอราคาที่ลูกค้าถือกลับบ้าน
 
@@ -228,6 +263,14 @@ def main(argv=None) -> int:
     ss = sub.add_parser("set-staff", help="ตั้งรหัสพนักงานทุกบัญชีเป็นค่าเดียวกัน (เครื่องทดสอบเท่านั้น)")
     ss.add_argument("--password", required=True)
     ss.set_defaults(fn=cmd_set_staff)
+    ad = sub.add_parser("add-staff", help="สร้าง/อัปเดตบัญชีพนักงาน (รหัสผ่านจาก STAFF_PASSWORD หรือถามตอนรัน)")
+    ad.add_argument("staff_code")
+    ad.add_argument("--name", required=True)
+    ad.add_argument("--role", default="sales", choices=["sales", "manager", "admin"])
+    ad.add_argument("--email", default=None)
+    ad.add_argument("--branch", default=None, help="รหัสสาขา เช่น S319")
+    ad.add_argument("--branch-name", default=None)
+    ad.set_defaults(fn=cmd_add_staff)
     sp = sub.add_parser("set-phone", help="ตั้งเบอร์โทรพนักงาน (ขึ้นบนใบเสนอราคา)")
     sp.add_argument("staff_code", help="รหัสพนักงาน เช่น SA-104")
     sp.add_argument("phone", help="เบอร์โทร 9-10 หลัก")

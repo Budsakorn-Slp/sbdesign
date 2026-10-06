@@ -1,4 +1,5 @@
 """โหมดเซลล์: ถือหลายตะกร้า · ค้นหา/ผูกลูกค้า · merge ตะกร้าออนไลน์ของลูกค้าเข้าใบที่ถือ"""
+import hmac
 import logging
 
 from fastapi import HTTPException, status
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.integrations.sap import get_sap_client
 from app.integrations.sap.base import SapError
-from app.models.cart import Cart
+from app.models.cart import Cart, CartHandler
 from app.models.common import utcnow
 from app.models.user import User
 from app.services import audit_service, cart_service, relationship_service
@@ -44,7 +45,8 @@ def list_my_carts(db: Session, sales: User) -> list[Cart]:
     return list(
         db.scalars(
             select(Cart).options(selectinload(Cart.items), selectinload(Cart.customer), selectinload(Cart.owner_sales))
-            .where(Cart.owner_sales_id == sales.id, Cart.status == "open")
+            .where(Cart.status == "open", Cart.owner_sales_id.is_not(None),
+                   or_(Cart.owner_sales_id == sales.id, Cart.handlers.any(CartHandler.user_id == sales.id)))
             .order_by(Cart.created_at)
         ).all()
     )
@@ -164,7 +166,17 @@ def attach_customer(db: Session, sales: User, cart: Cart, customer_key: str) -> 
         raise HTTPException(status_code=409, detail="ตะกร้านี้ผูกลูกค้าคนอื่นอยู่แล้ว — ตัดการเชื่อมต่อก่อน")
     other = db.scalar(select(Cart).where(Cart.customer_user_id == customer.id, Cart.status == "open", Cart.owner_sales_id.is_not(None), Cart.owner_sales_id != sales.id, Cart.id != cart.id))
     if other and other.is_open:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="ลูกค้ารายนี้มีพนักงานคนอื่นดูแลตะกร้าอยู่")
+        # บอกให้ชัดว่าใครดูแลอยู่ — พนักงานจะได้ไปขอรหัสเข้าร่วม แทนที่จะเดาเอาเอง
+        # บอกชื่อกับสาขาของคนที่ดูแลอยู่ (ไม่บอกรหัส) — ต้องไปขอรหัสพนักงานจากเจ้าตัวมาใส่ถึงเข้าร่วมได้
+        # เป็นการยืนยันว่าคุยกันแล้ว ไม่ใช่ใครก็กดแย่งตะกร้าเพื่อนได้
+        o = other.owner_sales
+        who = (f"{o.name}" + (f" ({o.branch_name})" if o.branch_name else "")) if o else "พนักงานอีกคน"
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail={
+            "message": f"ลูกค้ารายนี้อยู่ในความดูแลของ {who} — ขอรหัสพนักงานจากเจ้าตัวเพื่อเข้าร่วมดูแลตะกร้าเดียวกัน",
+            "code": "cart_owned_by_other",
+            "owner_name": o.name if o else None, "owner_branch": o.branch_name if o else None,
+            "cart_no": other.no, "customer_key": customer_key,
+        })
     cart.customer = customer
     cart.customer_user_id = customer.id
     cart.label = customer.name
@@ -234,3 +246,37 @@ def detach_customer(db: Session, sales: User, cart: Cart) -> Cart:
     cart = cart_service.load_cart(db, cart.id)
     cart_service.emit(cart, "customer_detached", {"customer_id": customer_id})
     return cart
+
+
+# ---------- ร่วมดูแลตะกร้า ----------
+def join_cart(db: Session, sales: User, customer_key: str, join_code: str) -> Cart:
+    """เข้าร่วมดูแลตะกร้าที่เพื่อนถือลูกค้ารายนี้อยู่ — ต้องใส่รหัสพนักงานของคนที่ดูแลอยู่"""
+    customer = resolve_customer(db, customer_key)
+    cart = db.scalar(select(Cart).where(Cart.customer_user_id == customer.id, Cart.status == "open",
+                                        Cart.owner_sales_id.is_not(None)).order_by(Cart.updated_at.desc()))
+    if not cart or not cart.is_open:
+        raise HTTPException(status_code=404, detail="ลูกค้ารายนี้ไม่มีตะกร้าที่พนักงานดูแลอยู่")
+    owner_code = (cart.owner_sales.staff_code or "") if cart.owner_sales else ""
+    if not owner_code or not hmac.compare_digest((join_code or "").strip().upper(), owner_code.upper()):
+        audit_service.log(db, sales, "sales.cart_join_denied", "cart", cart.id, {"customer_key": customer_key})
+        db.commit()
+        raise HTTPException(status_code=403, detail="รหัสพนักงานไม่ตรงกับคนที่ดูแลตะกร้านี้")
+    if cart.owner_sales_id != sales.id and not any(h.user_id == sales.id for h in cart.handlers):
+        cart.handlers.append(CartHandler(user_id=sales.id))
+        audit_service.log(db, sales, "sales.cart_join", "cart", cart.id, {"owner_sales_id": cart.owner_sales_id})
+        db.commit()
+        cart_service.emit(cart, "handler_joined", {"name": sales.name, "staff_code": sales.staff_code})
+    return cart_service.load_cart(db, cart.id)
+
+
+def leave_cart(db: Session, sales: User, cart: Cart) -> dict:
+    """คนร่วมดูแลกดปิด = ออกจากการดูแล ตะกร้ายังอยู่กับเจ้าของ"""
+    cart.handlers[:] = [h for h in cart.handlers if h.user_id != sales.id]
+    audit_service.log(db, sales, "sales.cart_leave", "cart", cart.id, {})
+    db.commit()
+    return {"cart_id": cart.id, "outcome": "left"}
+
+
+def require_owner(cart: Cart, sales: User, what: str) -> None:
+    if cart.owner_sales_id != sales.id:
+        raise HTTPException(status_code=403, detail=f"{what}ได้เฉพาะพนักงานเจ้าของตะกร้า")

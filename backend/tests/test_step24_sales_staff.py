@@ -401,3 +401,75 @@ def test_ลูกค้าเห็นได้ไม่เกิน_5_รู�
     client.post(f"/staff/photos/{ids[0]}/share", json={"public": False}, headers=a)
     assert client.post(f"/staff/photos/{ids[5]}/share", json={"public": True}, headers=a).status_code == 200
     assert sum(len(b["photos"]) for b in client.get(f"/materials/{m}/branch-photos").json()) == 5
+
+
+# ---------- ร่วมดูแลตะกร้า ----------
+def _cleanup_customer_carts(key):
+    from app.models.cart import Cart
+
+    with SessionLocal() as db:
+        u = db.scalar(select(User).where(User.sap_customer_no == key))
+        if u:
+            for c in db.scalars(select(Cart).where(Cart.customer_user_id == u.id, Cart.status == "open")).all():
+                c.status = "abandoned"
+            db.commit()
+
+
+def test_ผูกลูกค้าที่เพื่อนดูแลอยู่_บอกชื่อคนดูแล_แล้วใส่รหัสเข้าร่วมได้(client):
+    key = "1100440310"
+    _cleanup_customer_carts(key)
+    owner = auth_headers(client, "SA-104", "staff")
+    mate = auth_headers(client, "SA-105", "staff")
+    c1 = _new_cart(client, owner)
+    assert client.post(f"/sales/carts/{c1['id']}/attach-customer", json={"customer_key": key}, headers=owner).status_code == 200
+
+    c2 = client.post("/sales/carts", json={}, headers=mate).json()
+    r = client.post(f"/sales/carts/{c2['id']}/attach-customer", json={"customer_key": key}, headers=mate)
+    assert r.status_code == 409
+    d = r.json()["detail"]
+    assert d["code"] == "cart_owned_by_other" and d["owner_name"] == "สมชาย ก." and "สมชาย ก." in d["message"]
+    assert "SA-104" not in r.text, "ไม่บอกรหัสเจ้าของ — ต้องไปขอจากเจ้าตัว"
+
+    assert client.post("/sales/carts/join", json={"customer_key": key, "join_code": "SA-105"}, headers=mate).status_code == 403
+    r = client.post("/sales/carts/join", json={"customer_key": key, "join_code": "sa-104"}, headers=mate)
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == c1["id"]
+    assert [h["staff_code"] for h in r.json()["handlers"]] == ["SA-105"]
+
+    # คนร่วมเห็นในรายการตะกร้าของตัวเอง และแก้ของได้
+    assert c1["id"] in [s["id"] for s in client.get("/sales/carts", headers=mate).json()]
+    r = client.post(f"/sales/carts/{c1['id']}/items", json={"matnr": "10031002", "qty": 1, "supply_mode": "takeaway", "plant_code": "BKN"}, headers=mate)
+    assert r.status_code == 201, r.text
+    # แต่ถอดลูกค้าไม่ได้ และกดปิด = ออกจากการดูแลเท่านั้น
+    assert client.delete(f"/sales/carts/{c1['id']}/attach-customer", headers=mate).status_code == 403
+    assert client.delete(f"/sales/carts/{c1['id']}", headers=mate).json()["outcome"] == "left"
+    assert client.get(f"/sales/carts/{c1['id']}", headers=mate).status_code == 403
+    assert client.get(f"/sales/carts/{c1['id']}", headers=owner).status_code == 200, "ตะกร้ายังอยู่กับเจ้าของ"
+    _cleanup_customer_carts(key)
+
+
+def test_เจ้าของปิดตะกร้าแล้ว_คนร่วมหมดสิทธิ์ด้วย(client):
+    key = "1100440310"
+    _cleanup_customer_carts(key)
+    owner = auth_headers(client, "SA-104", "staff")
+    mate = auth_headers(client, "SA-105", "staff")
+    c1 = _new_cart(client, owner)
+    client.post(f"/sales/carts/{c1['id']}/attach-customer", json={"customer_key": key}, headers=owner)
+    client.post("/sales/carts/join", json={"customer_key": key, "join_code": "sa-104"}, headers=mate)
+    client.delete(f"/sales/carts/{c1['id']}", headers=owner)    # คืนใบให้ลูกค้า
+    assert client.get(f"/sales/carts/{c1['id']}", headers=mate).status_code == 403
+    _cleanup_customer_carts(key)
+
+
+def test_รหัสในรายชื่อเห็นทุกอย่าง_ได้สิทธิ์ทุกสาขา(client):
+    with SessionLocal() as db:
+        if not db.scalar(select(User).where(User.staff_code == "4670008")):
+            db.add(User(role="manager", name="บุษกร", staff_code="4670008", email="it@sb.local",
+                        password_hash=hash_password("1122"), is_guest=False))
+            db.commit()
+    it = auth_headers(client, "4670008", "staff")
+    perms = client.get("/staff/me", headers=it).json()["permissions"]
+    assert "PRODUCT_IMAGE_VIEW_ALL_BRANCH" in perms and "PRODUCT_IMAGE_AUDIT_VIEW" in perms
+    assert client.get("/sales/carts", headers=it).status_code == 200, "ขายได้ด้วย"
+    # ผู้จัดการทั่วไปไม่ได้สิทธิ์ทุกสาขา
+    assert "PRODUCT_IMAGE_VIEW_ALL_BRANCH" not in client.get("/staff/me", headers=auth_headers(client, "MG-001", "staff")).json()["permissions"]

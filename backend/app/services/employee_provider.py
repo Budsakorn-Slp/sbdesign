@@ -62,6 +62,17 @@ class EmployeeProvider(Protocol):
     def get_by_code(self, db: Session, employee_code: str) -> EmployeeRef | None: ...
 
 
+def _permissions(user: User) -> frozenset[str]:
+    """สิทธิ์ตาม role + คนที่อยู่ในรายชื่อ "เห็นทุกอย่าง" ได้ชุดเดียวกับแอดมิน"""
+    from app.core.config import get_settings
+
+    perms = set(permissions_for_role(user.role))
+    codes = {c.strip().upper() for c in get_settings().all_access_staff_codes.split(",") if c.strip()}
+    if user.staff_code and user.staff_code.upper() in codes:
+        perms |= permissions_for_role("admin")
+    return frozenset(perms)
+
+
 class LocalAccountEmployeeProvider:
     """ตัวจำลองระหว่างรอ Employee Login API — อ่านจากบัญชีพนักงานในฐานเรา
 
@@ -76,7 +87,7 @@ class LocalAccountEmployeeProvider:
             branch_code=user.branch_id,
             branch_name=user.branch_name,
             role=user.role,
-            permissions=permissions_for_role(user.role),
+            permissions=_permissions(user),
         )
 
     def list_employees(self, db: Session) -> list[EmployeeRef]:

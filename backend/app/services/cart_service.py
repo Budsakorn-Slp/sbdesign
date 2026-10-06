@@ -170,7 +170,10 @@ def can_access(cart: Cart, user: User | None, anon_token: str | None) -> bool:
     if user.role == "customer":
         return cart.customer_user_id == user.id
     if user.role in ("sales", "manager"):
-        return cart.owner_sales_id == user.id  # เซลล์เห็นตะกร้าลูกค้าได้เฉพาะตอนถือใบนั้น
+        if cart.owner_sales_id == user.id:  # เซลล์เห็นตะกร้าลูกค้าได้เฉพาะตอนถือใบนั้น
+            return True
+        # คนที่ใส่รหัสเข้าร่วมดูแล — ใช้ได้ตราบที่ยังมีเจ้าของถืออยู่ เจ้าของปิด/คืนใบแล้วสิทธิ์หมดด้วย
+        return cart.owner_sales_id is not None and any(h.user_id == user.id for h in cart.handlers)
     return False
 
 

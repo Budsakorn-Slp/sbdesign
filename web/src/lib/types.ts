@@ -412,6 +412,8 @@ export type Cart = {
   overall_remark?: string | null;
   /** พนักงานร่วมบิล Z1-ZK */
   staff?: CartStaff[];
+  /** พนักงานที่เข้าร่วมดูแลตะกร้านี้ (นอกจากเจ้าของ owner_sales) */
+  handlers?: CartPerson[];
 };
 
 export type CartStaff = { role_code: string; role_name: string; user_id: string | null; employee_code: string; employee_name: string };

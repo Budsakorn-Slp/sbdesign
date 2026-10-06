@@ -35,6 +35,11 @@ class AttachIn(BaseModel):
     customer_key: str = Field(min_length=1, description="เลขสมาชิก / เบอร์โทร / อีเมล")
 
 
+class JoinIn(BaseModel):
+    customer_key: str = Field(min_length=1)
+    join_code: str = Field(min_length=1, max_length=32)
+
+
 class SalesCartSummary(BaseModel):
     id: str
     no: str
@@ -75,6 +80,8 @@ def get_cart(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sal
 @router.delete("/sales/carts/{cart_id}")
 def close_cart(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
     cart = sales_service.require_my_cart(db, me, cart_id)
+    if cart.owner_sales_id != me.id:   # คนร่วมดูแลกดปิด = ออกจากการดูแล ไม่ใช่ปิดตะกร้าของเพื่อน
+        return sales_service.leave_cart(db, me, cart)
     return sales_service.close_cart(db, me, cart)
 
 
@@ -123,9 +130,16 @@ def attach_customer(cart_id: str, body: AttachIn, db: Session = Depends(get_db),
     return cart_out(cart, db)
 
 
+@router.post("/sales/carts/join", response_model=CartOut)
+def join_cart(body: JoinIn, db: Session = Depends(get_db), me: User = Depends(sales_only)):
+    """เข้าร่วมดูแลตะกร้าที่เพื่อนถือลูกค้ารายนี้อยู่ (ใส่รหัสเข้าร่วม)"""
+    return cart_out(sales_service.join_cart(db, me, body.customer_key, body.join_code), db)
+
+
 @router.delete("/sales/carts/{cart_id}/attach-customer", response_model=CartOut)
 def detach_customer(cart_id: str, db: Session = Depends(get_db), me: User = Depends(sales_only)):
     cart = sales_service.require_my_cart(db, me, cart_id)
+    sales_service.require_owner(cart, me, "ถอดลูกค้า")
     return cart_out(sales_service.detach_customer(db, me, cart), db)
 
 

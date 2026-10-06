@@ -74,6 +74,7 @@ def cart_out(cart: Cart, db: Session | None = None) -> CartOut:
         is_guest=cart.customer_user_id is None and cart.owner_sales_id is None, items=[item_out(it, stock.get(it.matnr), sites.get(it.matnr)) for it in cart.items], count=t["count"], subtotal=t["subtotal"],
         pending_count=t["pending_count"], all_count=t["all_count"], item_count=t["item_count"], selected_count=t["selected_count"], expires_at=cart.expires_at, updated_at=cart.updated_at, totals=totals, delivery=delivery,
         preso=preso, overall_remark=cart.overall_remark, staff=staff,
+        handlers=[person(h.user) for h in cart.handlers] if cart.owner_sales_id else [],
     )
 
 

@@ -116,6 +116,7 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", f"/sales/carts/{BAD}/items", STAFF, {}),
     ("PATCH", f"/sales/carts/{BAD}/items/{BAD}", STAFF, {}),
     ("DELETE", f"/sales/carts/{BAD}/items/{BAD}", STAFF, None),
+    ("POST", "/sales/carts/join", STAFF, {}),   # body ไม่ครบ → 422 ไม่เข้าร่วมจริง
     ("POST", f"/sales/carts/{BAD}/attach-customer", STAFF, {}),
     ("DELETE", f"/sales/carts/{BAD}/attach-customer", STAFF, None),
     # ค่าขนส่งแบบ "เปิด Mat" — พนักงานขาย/ผู้จัดการเท่านั้น ลูกค้าแตะค่าขนส่งตัวเองไม่ได้
