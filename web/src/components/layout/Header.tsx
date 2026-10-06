@@ -9,6 +9,15 @@ import type { Province } from "../../lib/types";
 import Icon from "../Icon";
 import SearchBox from "../SearchBox";
 
+/** ซ่อนตัวเลือก "รับที่สาขา" บนหัวเว็บไว้ก่อน
+ *
+ *  ของทั้งหมดยังอยู่ครบ — รายชื่อสาขาจริง 32 แห่งจาก SAP, ตัวกรองสินค้าตัวโชว์ตามสาขา,
+ *  และ /plants ที่หน้าอื่นใช้ · เปลี่ยนเป็น true เมื่อไรก็กลับมาทั้งชุด ไม่ต้องเขียนใหม่
+ *
+ *  (หน้าสินค้ากับตะกร้ายังบอก "มีของที่สาขาไหน" เหมือนเดิม ไม่ได้ขึ้นกับตัวเลือกนี้)
+ */
+const SHOW_BRANCH_PICKER = false;
+
 export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCount?: number; cartHref?: string }) {
   const auth = useAuth();
   const { lang, setLang, t } = useLang();
@@ -123,11 +132,13 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
             <small>{t("ที่อยู่จัดส่ง")}</small>
             <span><Icon name="location_on" size={18} /> {shipTo ? `${shipTo.name_th} ${shipTo.postcode}` : postcode ? `${t("รหัสไปรษณีย์")} ${postcode}` : t("เลือกที่อยู่จัดส่ง")} <Icon name="expand_more" size={16} /></span>
           </button>
-          <span className="hdr-loc-sep" />
-          <button className="hdr-loc" onClick={() => setPop(pop === "branch" ? null : "branch")}>
-            <small>{t("รับที่สาขา")}</small>
-            <span><Icon name="storefront" size={18} /> {plant ? plant.name : t("เลือกสาขา")} <Icon name="expand_more" size={16} /></span>
-          </button>
+          {SHOW_BRANCH_PICKER && <>
+            <span className="hdr-loc-sep" />
+            <button className="hdr-loc" onClick={() => setPop(pop === "branch" ? null : "branch")}>
+              <small>{t("รับที่สาขา")}</small>
+              <span><Icon name="storefront" size={18} /> {plant ? plant.name : t("เลือกสาขา")} <Icon name="expand_more" size={16} /></span>
+            </button>
+          </>}
           {pop === "address" && (
             <div className="hdr-pop">
               <div className="strong" style={{ marginBottom: 6 }}>ส่งไปที่จังหวัดไหน</div>
@@ -159,7 +170,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
               )}
             </div>
           )}
-          {pop === "branch" && (() => {
+          {SHOW_BRANCH_PICKER && pop === "branch" && (() => {
             // สาขาจริงมี 32 แห่ง รายการยาวเกินจอ — ต้องมีทั้งช่องพิมพ์หาและแถบเลื่อน
             // ตอนมีแค่สาขาสมมติ 3 แห่งไม่เจอปัญหานี้
             const stores = plants.filter((p) => p.type === "store");
