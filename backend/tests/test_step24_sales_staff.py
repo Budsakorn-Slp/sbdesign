@@ -232,7 +232,8 @@ def test_หมายเหตุหลักกับหมายเหตุ�
     q = r.json()
     doc = client.get(f"/quotations/{q['quotation_no']}/document", headers=hs).text
     assert "ส่งก่อน 10 โมง" in doc and "เปลี่ยนผ้าเป็นสีเทา" in doc and "ราคารวม VAT" in doc
-    assert "SA-105 – สมหญิง ข." in doc and "สมชาย (DS)" in doc and "กสิกร 111-1-11111-1" in doc
+    assert "สมชาย (DS)" in doc and "กสิกร 111-1-11111-1" in doc
+    assert "SA-105 – สมหญิง ข." not in doc, "แถวพนักงานร่วมบิลไม่พิมพ์บนใบ (อยู่ใน export แทน)"
     issued = date.fromisoformat(q["issued_at"][:10])
     assert f"ราคานี้ถึง {month_end(issued).strftime('%d/%m/%Y')}" in doc
 

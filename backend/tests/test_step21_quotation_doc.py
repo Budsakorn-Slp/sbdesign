@@ -313,3 +313,9 @@ def test_หัวใบแบบใบรับคำสั่งซื้อ�
     doc = _doc(client, hs, q["quotation_no"])
     assert "class='logo'" in doc.split('class="hdr-doc"')[0], "โลโก้อยู่หัวใบ"
     assert doc.index("ชื่อ-ที่อยู่ลูกค้า") < doc.index("ชื่อ-สถานที่ส่งสินค้า") < doc.index("<b>รหัสลูกค้า</b>") < doc.index("<b>พนักงานขาย</b>") < doc.index("<table><thead>")
+
+
+def test_ไม่มีหมายเหตุ_ไม่โชว์กล่อง(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    q, _ = _quotation(client, hs, note="")
+    assert "note-box'" not in _doc(client, hs, q["quotation_no"])

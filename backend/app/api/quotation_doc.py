@@ -182,12 +182,8 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
         code = (b_code or "").lstrip("S")   # ของเดิมพิมพ์ 319 ไม่ใช่ S319
         br = f"{e(code)} · {e(b_name)}"
 
-    # พนักงานร่วมบิล Z1-ZK
-    staff_block = ""
-    if q.staff_snapshot:
-        cells = "".join(f"<span><b>{e(r['role_code'])}</b> {e(r.get('role_name') or '')}: "
-                        f"{e(r['employee_code'])} – {e(r['employee_name'])}</span>" for r in q.staff_snapshot)
-        staff_block = f"<div class='staff'>{cells}</div>"
+    # พนักงานร่วมบิล Z1-ZK ไม่พิมพ์บนใบ — เป็นข้อมูลภายใน (ค่าคอม/ส่งต่องาน) ลูกค้าไม่ต้องเห็น
+    # ยังเก็บไว้กับใบ (staff_snapshot) และออกใน Excel/CSV/Google Sheets
 
     # โลโก้ของ DS · ลิงก์แบบ relative เพราะเอกสารนี้เปิดได้ทั้งตรงที่ API (/quotations/..)
     # และผ่านหน้าเว็บ (/api/quotations/..) — "../../media" ไปถูกที่ทั้งสองทาง
@@ -202,8 +198,8 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
     std = (tp.get("standard_remark") or "").strip()
     if std:
         note = f"{note}\n{std}" if note else std
-    note_block = (f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note).replace(chr(10), '<br>')}</div></div>" if note
-                  else "<div class='note-box'><b>หมายเหตุ</b><div class='blank'></div></div>")
+    # ไม่มีหมายเหตุ = ไม่โชว์กล่อง (กล่องว่างกินที่และดูเหมือนข้อมูลหาย)
+    note_block = f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note).replace(chr(10), '<br>')}</div></div>" if note else ""
 
     items = _terms(q.valid_until.strftime("%d/%m/%Y"), month_end_of(q), tp.get("footer_terms"))
     lis = "".join(f"<li>{e(t).replace(chr(10), '<br>')}</li>" for t in items)
@@ -216,7 +212,7 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
 
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{width:110px;max-height:70px;object-fit:contain;flex:none}}.hdr{{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #111}}.hdr-co{{display:flex;gap:14px;align-items:flex-start}}.co-txt{{font-size:11.5px;line-height:1.55;color:#333}}.co-txt b{{color:#111;font-size:12.5px}}.hdr-doc{{text-align:right;min-width:250px}}.hdr-doc h1{{font-size:26px;line-height:1.1}}.hdr-doc .sub{{color:#777;font-size:12px;margin-bottom:8px}}.meta{{width:auto;margin:0 0 0 auto}}.meta th,.meta td{{padding:2px 0 2px 14px;border:0;background:none;font-size:12.5px;text-align:right;white-space:nowrap}}.meta th{{color:#777;font-weight:400}}.parties{{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:16px;font-size:13px;line-height:1.6}}.parties .ttl{{display:block;margin-bottom:2px;font-size:13.5px}}.who{{display:flex;flex-wrap:wrap;gap:6px 40px;margin-top:14px;padding:8px 0;border-top:1px solid #e0e0de;border-bottom:1px solid #e0e0de;font-size:13px}}.who b{{margin-right:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}@media print{{body{{margin:0}}.no-print{{display:none!important}}}}</style></head>
+<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{width:110px;max-height:70px;object-fit:contain;flex:none}}.hdr{{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #111}}.hdr-co{{display:flex;gap:14px;align-items:flex-start}}.co-txt{{font-size:11.5px;line-height:1.55;color:#333}}.co-txt b{{color:#111;font-size:12.5px}}.hdr-doc{{text-align:right;min-width:250px}}.hdr-doc h1{{font-size:26px;line-height:1.1}}.hdr-doc .sub{{color:#777;font-size:12px;margin-bottom:8px}}.meta{{width:auto;margin:0 0 0 auto}}.meta th,.meta td{{padding:2px 0 2px 14px;border:0;background:none;font-size:12.5px;text-align:right;white-space:nowrap}}.meta th{{color:#777;font-weight:400}}.parties{{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:16px;font-size:13px;line-height:1.6}}.parties .ttl{{display:block;margin-bottom:2px;font-size:13.5px}}.who{{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 48px;margin-top:14px;padding:8px 0;border-top:1px solid #e0e0de;border-bottom:1px solid #e0e0de;font-size:13px}}.who b{{margin-right:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}@media print{{body{{margin:0}}.no-print{{display:none!important}}}}</style></head>
 <body><div class="hdr">
 <div class="hdr-co">{logo}<div class="co-txt"><b>{e(s.company_name_th)}</b><br><b>{e(s.company_name_en)}</b><br>{e(s.company_address_th)}<br>{e(s.company_address_en)}<br>เลขประจำตัวผู้เสียภาษี TAX ID {e(s.company_tax_id)}</div></div>
 <div class="hdr-doc"><h1>ใบเสนอราคา</h1><div class="sub">Quotation</div>
@@ -227,7 +223,6 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
 <div><b class="ttl">ชื่อ-สถานที่ส่งสินค้า</b><div>{e(c.get('name') or '')}</div><div>{ship_addr}</div>{f"<div>Tel. {e(c.get('phone'))}</div>" if c.get('phone') else ""}</div>
 </div>
 <div class="who"><span><b>รหัสลูกค้า</b> {e(c.get('sap_customer_no') or '-')}</span><span><b>พนักงานขาย</b> {sales_name}{sales_code}{f" · {contact}" if contact else ""}</span></div>
-{staff_block}
 {note_block}
 <table><thead><tr><th>ลำดับ</th>{img_col}<th>รหัสสินค้า</th><th>รายการ</th><th class="r">จำนวน</th><th class="r">ราคาต่อหน่วย</th><th class="r">ส่วนลด</th><th class="r">จำนวนเงิน</th><th>รับสินค้า</th></tr></thead><tbody>{rows}
 <tr><td colspan="{span}" class="r">รวมสินค้า</td><td class="r">{_money(q.subtotal)}</td><td></td></tr>{disc_rows}
