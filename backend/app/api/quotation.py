@@ -130,6 +130,7 @@ def quotation_document(
     no: str,
     t: str | None = Query(default=None),
     images: bool = Query(default=False, description="ใส่รูปสินค้าในเอกสาร"),
+    proxy: bool = Query(default=False, description="ดึงรูปผ่าน /media-proxy (ใช้ตอนสร้าง PDF ในเบราว์เซอร์)"),
     db: Session = Depends(get_db),
     user: User | None = Depends(get_current_user_optional),
 ):
@@ -139,7 +140,7 @@ def quotation_document(
     """
     q = quotation_service.get_quotation(db, no)
     quotation_service.check_access(q, user, t)
-    return HTMLResponse(render_document(db, q, with_images=images))
+    return HTMLResponse(render_document(db, q, with_images=images, proxy_images=proxy))
 
 
 @router.post("/quotations/{no}/send")

@@ -152,7 +152,8 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("GET", "/staff/quotation-template", EMP, None),
     ("PUT", "/staff/quotation-template", EMP, {"display_name": 123}),  # ผิด type → 422 ไม่เขียนจริง
     ("POST", "/staff/quotation-template/logo", EMP, {}),
-    ("GET", f"/quotations/{BAD}/export", ALL, None),       # สิทธิ์ชุดเดียวกับหน้าเอกสาร
+    ("GET", f"/quotations/{BAD}/export", ALL, None),
+    ("GET", "/media-proxy?url=https://evil.example/x.jpg", ALL, None),   # รูปสาธารณะ · ที่อยู่นอกรายชื่อ → 400       # สิทธิ์ชุดเดียวกับหน้าเอกสาร
     # ---------- ผู้จัดการ ----------
     ("GET", "/discount-approvals", MGR, None),
     ("POST", f"/discount-approvals/{BAD}/approve", (M,), None),

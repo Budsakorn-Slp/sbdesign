@@ -2,6 +2,7 @@ import { openGoogleSheet } from "../lib/gsheet";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Icon from "../components/Icon";
+import QuotationShare from "../components/QuotationShare";
 import { API_BASE, apiGet, apiPost, errorMessage } from "../lib/api";
 import { usePublicConfig } from "../lib/publicConfig";
 import { useAuth } from "../lib/auth";
@@ -22,6 +23,7 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const path = `/quotations/${no}${token ? `?t=${encodeURIComponent(token)}` : ""}`;
   const load = useCallback(() => {
@@ -112,6 +114,8 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
           </table>
           <div className="row wrap" style={{ marginTop: 14, gap: 8 }}>
             <a className="btn sm" href={docUrl} target="_blank" rel="noreferrer"><Icon name="picture_as_pdf" size={18} /> PDF</a>
+            {/* แชร์/ดาวน์โหลดเป็นไฟล์ — ทั้งพนักงานและลูกค้าที่เปิดใบอยู่ใช้ได้ */}
+            <button className="btn sm" onClick={() => setShareOpen(true)}><Icon name="ios_share" size={18} /> แชร์ / ดาวน์โหลด</button>
             {isStaff && <a className="btn sm" href={exportUrl("xlsx")}><Icon name="table_view" size={18} /> Excel</a>}
             {isStaff && <a className="btn sm" href={exportUrl("csv")}><Icon name="download" size={18} /> CSV</a>}
             {isStaff && <button className="btn sm" onClick={() => openGoogleSheet(q.quotation_no, tk).then(setMsg).catch((e) => setMsg(errorMessage(e)))}><Icon name="grid_on" size={18} /> Google Sheets</button>}
@@ -146,6 +150,7 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
           </div>
         </aside>
       </div>
+      {shareOpen && <QuotationShare no={q.quotation_no} token={tk} onClose={() => setShareOpen(false)} />}
     </main>
   );
 }

@@ -437,3 +437,15 @@
 .it-test-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
 .it-test-row label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; font-size: 13px; font-weight: 600; }
 .it-test-row select { padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; font-weight: 400; background: #fff; width: 100%; }
+
+/* แชร์/ดาวน์โหลดใบเสนอราคา */
+.qs-file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; color: var(--red); }
+.qs-file b { display: block; color: var(--ink); font-size: 14px; word-break: break-all; }
+.qs-file small { color: var(--ink-3); }
+.qs-main { display: flex; flex-direction: column; gap: 8px; }
+.qs-label { margin: 14px 0 6px; }
+.qs-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.qs-chip { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.qs-chip.line { background: #06c755; border-color: #06c755; color: #fff; }
+.qs-chip.fb { background: #1877f2; border-color: #1877f2; color: #fff; }
+.qs-chip.wa { background: #25d366; border-color: #25d366; color: #fff; }

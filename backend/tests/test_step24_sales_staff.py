@@ -502,3 +502,44 @@ def test_บัญชีทั่วไปใช้โหมดทดสอบ�
     a = auth_headers(client, "SA-104", "staff")
     assert client.get("/it-test/profile", headers=a).status_code == 403
     assert client.put("/it-test/profile", json={"role": "admin"}, headers=a).status_code == 403
+
+
+# ---------- ส่งต่อรูปสำหรับทำ PDF ----------
+@pytest.mark.parametrize("url", [
+    "http://sbdesignsquare.com/a.jpg",                 # ไม่ใช่ https
+    "https://evil.com/a.jpg",
+    "https://sbdesignsquare.com.evil.com/a.jpg",       # ลงท้ายหลอก
+    "https://user@sbdesignsquare.com/a.jpg",
+    "https://sbdesignsquare.com:8443/a.jpg",
+    "https://169.254.169.254/latest/meta-data",
+])
+def test_media_proxy_ไม่ยอมไปที่อื่น(client, url):
+    assert client.get("/media-proxy", params={"url": url}).status_code == 400
+
+
+def test_media_proxy_รับเฉพาะรูป(client, monkeypatch):
+    import httpx
+
+    from app.api import media_proxy
+
+    def handler(req):
+        if req.url.path.endswith(".jpg"):
+            return httpx.Response(200, content=_jpeg(), headers={"content-type": "image/jpeg"})
+        if req.url.path.endswith(".svg"):
+            return httpx.Response(200, content=b"<svg onload=alert(1)>", headers={"content-type": "image/svg+xml"})
+        return httpx.Response(200, content=b"<html>", headers={"content-type": "text/html"})
+
+    monkeypatch.setattr(media_proxy, "_client", lambda: httpx.Client(transport=httpx.MockTransport(handler)))
+    r = client.get("/media-proxy", params={"url": "https://sbdesignsquare.com/media/a.jpg"})
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+    assert client.get("/media-proxy", params={"url": "https://sbdesignsquare.com/x.svg"}).status_code == 404
+    assert client.get("/media-proxy", params={"url": "https://sbdesignsquare.com/page"}).status_code == 404
+
+
+def test_เอกสารมีปุ่มพิมพ์_และโหมด_proxy_ใช้รูปผ่านเซิร์ฟเวอร์(client):
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _issued(client, hs)
+    doc = client.get(f"/quotations/{q['quotation_no']}/document", params={"images": 1, "proxy": 1}, headers=hs).text
+    assert "window.print()" in doc and "no-print" in doc
+    if "<img src=" in doc.split("<tbody>")[1]:
+        assert "../../media-proxy?url=" in doc

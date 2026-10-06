@@ -2,6 +2,7 @@ import { openGoogleSheet } from "../lib/gsheet";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
+import QuotationShare from "../components/QuotationShare";
 import { API_BASE, apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { bahtWord, relTime } from "../lib/format";
@@ -33,6 +34,7 @@ export default function PresosPage() {
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [share, setShare] = useState<{ no: string; token: string | null } | null>(null);
 
   const load = useCallback(() => {
     if (!sales.enabled) return;
@@ -129,6 +131,7 @@ export default function PresosPage() {
                           {p.quotation_no && <a href={docUrl(p, false)} target="_blank" rel="noreferrer" className="btn sm" title="ไม่มีรูปสินค้า — แนบอีเมล/ปรินต์ ไฟล์เล็กกว่า">PDF ไม่มีรูป</a>}
                           {p.quotation_no && <a href={exportUrl(p, "xlsx")} className="btn sm" title="ดาวน์โหลดเป็น Excel">Excel</a>}
                           {p.quotation_no && <a href={exportUrl(p, "csv")} className="btn sm" title="ดาวน์โหลดเป็น CSV">CSV</a>}
+                          {p.quotation_no && <button className="btn sm" title="ส่งเป็นไฟล์ PDF ทาง LINE/Messenger หรือดาวน์โหลด" onClick={() => setShare({ no: p.quotation_no!, token: p.quotation_token })}>แชร์ / ดาวน์โหลด</button>}
                           {p.quotation_no && <button className="btn sm" title="เปิดเป็น Google Sheet ออนไลน์" onClick={() => openGoogleSheet(p.quotation_no!, p.quotation_token).then(setNote).catch((e) => setErr(errorMessage(e)))}>Google Sheets</button>}
                           {p.quotation_no && p.quotation_status === "issued" && <Link to={`/sales/quotations/${p.quotation_no}`} className="btn primary sm">ไปจ่ายเงิน</Link>}
                         </>
@@ -144,6 +147,7 @@ export default function PresosPage() {
       )}
       <p className="small muted" style={{ marginTop: 10 }}>Preso = ใบร่างที่ยังแก้ได้ · Quotation = ล็อกราคา/โปร แล้วส่งต่อให้ระบบ SAP{quotes.length ? ` · ใบเสนอราคาทั้งหมดของฉัน ${quotes.length} ใบ` : ""}</p>
       <div className="row" style={{ marginTop: 6 }}><Icon name="arrow_back" size={16} /> <Link to="/sales">กลับไปตะกร้าที่กำลังดูแล</Link></div>
+      {share && <QuotationShare no={share.no} token={share.token} onClose={() => setShare(null)} />}
     </main>
   );
 }

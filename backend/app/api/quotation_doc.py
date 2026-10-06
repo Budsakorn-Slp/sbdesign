@@ -7,6 +7,7 @@
   ไม่มีรูป ใช้แนบอีเมล/ปรินต์ ไฟล์เล็กและกินหมึกน้อยกว่า
 """
 import html
+from urllib.parse import quote
 from datetime import date
 from decimal import Decimal
 
@@ -80,7 +81,7 @@ def _image_map(db: Session, matnrs: list[str]) -> dict[str, str]:
     return {m: u for m, u in rows if u}
 
 
-def render_document(db: Session, q: Quotation, with_images: bool = False) -> str:
+def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_images: bool = False) -> str:
     e = html.escape
     s = get_settings()
     c = q.customer_snapshot or {}
@@ -103,7 +104,10 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
         cell = ""
         if with_images:
             u = imgs.get(l.matnr)
-            pic = f'<img src="{e(u)}" alt="">' if u else ""
+            # proxy = ดึงรูปผ่านเซิร์ฟเวอร์เรา — ตอนสร้างไฟล์ PDF ในเบราว์เซอร์ รูปจากเว็บหลัก (ไม่เปิด CORS)
+            # จะวาดลงไฟล์ไม่ได้ ต้องเป็นรูปจากโดเมนเดียวกัน · ลิงก์ relative ไปถูกทั้ง /api และตรงที่ API
+            src = f"../../media-proxy?url={quote(u, safe='')}" if (proxy_images and u) else u
+            pic = f'<img src="{e(src)}" alt="">' if u else ""
             cell = f"<td class='ph'>{pic}</td>"
         # ส่วนลดต่อบรรทัด = ราคาตั้ง − ราคาที่จ่ายจริง · เท่ากันแปลว่าไม่ได้ลด ไม่ต้องรก
         off = Decimal(l.list_price) - Decimal(l.unit_price)
@@ -205,8 +209,9 @@ def render_document(db: Session, q: Quotation, with_images: bool = False) -> str
 
     return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{max-height:56px;max-width:180px;display:block;margin-bottom:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}@media print{{body{{margin:0}}}}</style></head>
-<body><div class="box"><div>{logo}<h1>ใบเสนอราคา / Quotation</h1>
+<style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding-left:20px}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{max-height:56px;max-width:180px;display:block;margin-bottom:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}.doc-tools{{display:flex;align-items:center;gap:10px;margin:-16px 0 18px;padding:8px 10px;border-radius:8px;background:#f2f2f0;font-size:12px;color:#777}}.doc-tools button{{font:inherit;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:0;background:#111;color:#fff;cursor:pointer}}@media print{{body{{margin:0}}.no-print{{display:none!important}}}}</style></head>
+<body><div class="doc-tools no-print"><button onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button><span>ปุ่มนี้ไม่ติดไปในเอกสาร</span></div>
+<div class="box"><div>{logo}<h1>ใบเสนอราคา / Quotation</h1>
 <div class="muted">{e(s.company_name_th)} · {e(s.company_name_en)}<br>{e(s.company_address_th)}<br>เลขประจำตัวผู้เสียภาษี {e(s.company_tax_id)}</div></div>
 <div style="text-align:right"><div><b>{e(q.quotation_no)}</b> <span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></div><div class="muted">ออกเมื่อ {q.issued_at.strftime('%d/%m/%Y %H:%M')} · ยืนราคาถึง <b>{q.valid_until.strftime('%d/%m/%Y')}</b></div>{br}</div></div>
 <div class="box three">
