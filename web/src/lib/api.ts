@@ -74,7 +74,7 @@ type Method = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
 let refreshing: Promise<boolean> | null = null;
 
-async function tryRefresh(): Promise<boolean> {
+export async function tryRefresh(): Promise<boolean> {
   const cur = loadAuth();
   if (!cur) return false;
   if (!refreshing) {

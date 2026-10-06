@@ -1,4 +1,4 @@
-import { API_BASE, loadAuth } from "./api";
+import { API_BASE, loadAuth, tryRefresh } from "./api";
 
 /** ใบเสนอราคาเป็นไฟล์ PDF / รูปภาพ — สร้างในเบราว์เซอร์
  *
@@ -45,11 +45,18 @@ async function renderCanvas(no: string, token: string | null | undefined, withIm
   if (withImages) qs.set("images", "1");
   qs.set("proxy", "1");   // โลโก้/รูปสินค้าผ่านเซิร์ฟเวอร์เรา ไม่งั้นวาดลงไฟล์ไม่ได้
   const docPath = `${API_BASE}/quotations/${no}/document`;
-  const auth = loadAuth();
-  const res = await fetch(`${docPath}?${qs.toString()}`, {
-    headers: auth ? { Authorization: `Bearer ${auth.access_token}` } : {},
-    credentials: "include",
-  });
+  // มีลิงก์ token ของใบ = เปิดได้ด้วย token อย่างเดียว ไม่ต้องส่งตั๋วล็อกอิน
+  // (ส่งตั๋วที่หมดอายุไปด้วย หลังบ้านปฏิเสธ 401 ก่อนจะได้ดู token ของใบ — เจอจริงหลังเปิดหน้าทิ้งไว้เกิน 30 นาที)
+  // ไม่มี token = ใช้ตั๋วล็อกอิน และต่ออายุให้เองหนึ่งครั้งถ้าหมดอายุ แบบเดียวกับทุกปุ่มในเว็บ
+  const get = () => {
+    const auth = token ? null : loadAuth();
+    return fetch(`${docPath}?${qs.toString()}`, {
+      headers: auth ? { Authorization: `Bearer ${auth.access_token}` } : {},
+      credentials: "include",
+    });
+  };
+  let res = await get();
+  if (res.status === 401 && !token && (await tryRefresh())) res = await get();
   if (!res.ok) throw new Error(res.status === 401 || res.status === 403 ? "ไม่มีสิทธิ์เปิดใบนี้" : "โหลดใบเสนอราคาไม่สำเร็จ");
   const html = (await res.text()).replace("<head>", `<head><base href="${location.origin}${docPath}">`);
 
