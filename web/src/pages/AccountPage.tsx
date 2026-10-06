@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import AddressBook from "../components/AddressBook";
 import Icon from "../components/Icon";
+import ItTestPanel from "../components/ItTestPanel";
 import MemberLink from "../components/MemberLink";
 import ProductCard from "../components/ProductCard";
 import { apiGet, apiPatch, apiPost, errorMessage } from "../lib/api";
@@ -451,6 +452,7 @@ export default function AccountPage() {
       {!auth.user && tab !== "recent" && <p className="muted">เข้าสู่ระบบเพื่อดู{TABS.find((t) => t.key === tab)?.label}ของคุณ</p>}
 
       {tab === "pending" && <PendingPanel />}
+      {tab === "profile" && <ItTestPanel />}
       {tab === "profile" && <ProfilePanel />}
       {tab === "addresses" && auth.user && <AddressPanel />}
       {tab === "orders" && auth.user && (

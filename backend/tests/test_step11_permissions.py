@@ -172,6 +172,10 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("GET", f"/admin/users/{BAD}/data-export", ADMIN, None),
 ]
 
+# โหมดทดสอบ IT — กันด้วยรหัสพนักงาน (IT_TEST_STAFF_CODES) ไม่ใช่ role ทุก role ในตารางจึงได้ 401/403
+# ตัวที่ผ่านได้ทดสอบใน tests/test_step24_sales_staff.py
+IT_TEST_ONLY = {("GET", "/it-test/profile"), ("PUT", "/it-test/profile")}
+
 # endpoint ที่ไม่ได้กันด้วย role แต่กันด้วยลายเซ็น HMAC จาก payment gateway
 #
 # เส้นของกสิกรก็อยู่กลุ่มนี้ — ธนาคารยิงเข้ามาโดยไม่มี token ของเรา จะกันด้วย role ไม่ได้
@@ -232,7 +236,7 @@ def test_permission_matrix(client, method, path, allowed, body):
 
 def test_matrix_covers_every_endpoint():
     """กันลืม: endpoint ใหม่ที่ยังไม่มีในตารางต้องทำให้ test พัง"""
-    covered = {(m, p.split("?")[0]) for m, p, _, _ in MATRIX} | SIGNATURE_ONLY | PHONE_VERIFIED_ONLY
+    covered = {(m, p.split("?")[0]) for m, p, _, _ in MATRIX} | SIGNATURE_ONLY | PHONE_VERIFIED_ONLY | IT_TEST_ONLY
     covered = {(m, p.replace(BAD, "{}")) for m, p in covered}
     actual = set()
     for path, ops in app.openapi()["paths"].items():

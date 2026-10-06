@@ -430,3 +430,10 @@
 .join-head small { display: block; color: var(--ink-3); margin-top: 2px; }
 .join-form { gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 .join-form input { flex: 1 1 180px; min-width: 0; letter-spacing: .1em; }
+
+/* โหมดทดสอบ IT (หน้าข้อมูลส่วนตัว) */
+.it-test { border: 1px dashed var(--brand); background: var(--brand-soft); margin-bottom: 16px; }
+.it-test h2 { display: flex; align-items: center; gap: 6px; }
+.it-test-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.it-test-row label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; font-size: 13px; font-weight: 600; }
+.it-test-row select { padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; font-weight: 400; background: #fff; width: 100%; }

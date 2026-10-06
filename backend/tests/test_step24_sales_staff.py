@@ -473,3 +473,32 @@ def test_รหัสในรายชื่อเห็นทุกอย่�
     assert client.get("/sales/carts", headers=it).status_code == 200, "ขายได้ด้วย"
     # ผู้จัดการทั่วไปไม่ได้สิทธิ์ทุกสาขา
     assert "PRODUCT_IMAGE_VIEW_ALL_BRANCH" not in client.get("/staff/me", headers=auth_headers(client, "MG-001", "staff")).json()["permissions"]
+
+
+# ---------- โหมดทดสอบ IT ----------
+def test_บัญชี_IT_สลับ_role_และสาขาของตัวเองได้(client):
+    from app.models.catalog import Plant
+
+    with SessionLocal() as db:
+        if not db.get(Plant, "S315"):
+            db.add(Plant(plant_code="S315", name="DS-ราชพฤกษ์", type="store"))
+        if not db.scalar(select(User).where(User.staff_code == "4680012")):
+            db.add(User(role="sales", name="รัตนากร", staff_code="4680012", password_hash=hash_password("1122"), is_guest=False))
+        db.commit()
+    it = auth_headers(client, "4680012", "staff")
+    r = client.put("/it-test/profile", json={"role": "manager", "branch_code": "S315"}, headers=it)
+    assert r.status_code == 200, r.text
+    assert r.json()["role"] == "manager" and r.json()["branch_name"] == "DS-ราชพฤกษ์"
+    assert client.get("/discount-approvals", headers=it).status_code == 200, "เป็นผู้จัดการแล้วจริง"
+    # เป็นแอดมินแล้วก็ยังกลับมาเป็นเซลล์ได้เอง
+    client.put("/it-test/profile", json={"role": "admin"}, headers=it)
+    r = client.put("/it-test/profile", json={"role": "sales"}, headers=it)
+    assert r.json()["role"] == "sales"
+    assert client.put("/it-test/profile", json={"role": "customer"}, headers=it).status_code == 422
+    assert client.put("/it-test/profile", json={"branch_code": "NOPE"}, headers=it).status_code == 404
+
+
+def test_บัญชีทั่วไปใช้โหมดทดสอบไม่ได้(client):
+    a = auth_headers(client, "SA-104", "staff")
+    assert client.get("/it-test/profile", headers=a).status_code == 403
+    assert client.put("/it-test/profile", json={"role": "admin"}, headers=a).status_code == 403
