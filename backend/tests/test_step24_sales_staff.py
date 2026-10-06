@@ -549,3 +549,20 @@ def test_เอกสารไม่มีปุ่มพิมพ์_และ�
     assert "window.print()" not in doc and "SB Sales App" not in doc, "ไม่มีปุ่ม/คำอธิบายระบบติดในเอกสาร"
     if "<img src=" in doc.split("<tbody>")[1]:
         assert "../../media-proxy?url=" in doc
+
+
+def test_export_word(client):
+    from docx import Document
+
+    hs = auth_headers(client, "SA-104", "staff")
+    q = _issued(client, hs)
+    r = client.get(f"/quotations/{q['quotation_no']}/export", params={"format": "docx"}, headers=hs)
+    assert r.status_code == 200 and r.content[:2] == b"PK"
+    assert r.headers["content-disposition"].endswith(f'{q["quotation_no"]}.docx"')
+    doc = Document(io.BytesIO(r.content))
+    text = "\n".join(p.text for p in doc.paragraphs)
+    cells = "\n".join(c.text for t in doc.tables for row in t.rows for c in row.cells)
+    allt = text + cells
+    for must in (q["quotation_no"], "ชื่อ-ที่อยู่ลูกค้า", "ชื่อ-สถานที่ส่งสินค้า", "รหัสลูกค้า", "พนักงานขาย", "เงื่อนไข", "รวมสุทธิ"):
+        assert must in allt, must
+    assert "A534" not in cells, "บรรทัดค่าบริการไม่อยู่ในตารางสินค้า"

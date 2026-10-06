@@ -1,4 +1,4 @@
-"""ใบเสนอราคาเป็นไฟล์ตาราง — Excel (.xlsx) · CSV · Google Sheets
+"""ใบเสนอราคาเป็นไฟล์ — Excel (.xlsx) · Word (.docx) · CSV · Google Sheets
 
 เนื้อหาชุดเดียวกับใบ PDF (api/quotation_doc.py) ทุกอย่าง:
   หัวใบ (โลโก้ บริษัท เลขที่/วันที่/สาขา) · ลูกค้ากับสถานที่ส่งคู่กัน · รหัสลูกค้า/พนักงานขาย
@@ -289,4 +289,163 @@ def xlsx_bytes(q: Quotation) -> bytes:
     ws.sheet_view.showGridLines = False
     out = io.BytesIO()
     wb.save(out)
+    return out.getvalue()
+
+
+# ---------- Word ----------
+def docx_bytes(q: Quotation) -> bytes:
+    """Word เปิดแก้ข้อความต่อได้ (Word / Pages บน iPad) — เนื้อหาชุดเดียวกับใบ PDF"""
+    from docx import Document
+    from docx.enum.table import WD_TABLE_ALIGNMENT
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.shared import Cm, Pt, RGBColor
+
+    d = build(q)
+    doc = Document()
+    sec = doc.sections[0]
+    sec.page_width, sec.page_height = Cm(21), Cm(29.7)
+    sec.left_margin = sec.right_margin = Cm(1.5)
+    sec.top_margin = sec.bottom_margin = Cm(1.3)
+
+    # ฟอนต์ไทยต้องตั้งทั้ง ascii และ cs (complex script) ไม่งั้น Word ใช้ฟอนต์อื่นกับตัวไทย
+    st = doc.styles["Normal"]
+    st.font.name, st.font.size = "Tahoma", Pt(9.5)
+    rpr = st.element.get_or_add_rPr()
+    fonts = rpr.find(qn("w:rFonts"))
+    if fonts is None:
+        fonts = OxmlElement("w:rFonts")
+        rpr.append(fonts)
+    for k in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        fonts.set(qn(k), "Tahoma")
+    st.paragraph_format.space_after = Pt(0)
+    gray = RGBColor(0x77, 0x77, 0x77)
+
+    def para(cell_or_doc, text="", bold=False, size=None, color=None, align=None, after=0):
+        p = cell_or_doc.add_paragraph() if hasattr(cell_or_doc, "add_paragraph") else cell_or_doc
+        r = p.add_run(text)
+        r.bold = bold
+        if size:
+            r.font.size = Pt(size)
+        if color:
+            r.font.color.rgb = color
+        if align:
+            p.alignment = align
+        p.paragraph_format.space_after = Pt(after)
+        return p
+
+    def borders(table, inner=True, color="D6D6D4"):
+        tbl = table._tbl
+        b = OxmlElement("w:tblBorders")
+        for edge in ("top", "left", "bottom", "right") + (("insideH", "insideV") if inner else ()):
+            el = OxmlElement(f"w:{edge}")
+            el.set(qn("w:val"), "single")
+            el.set(qn("w:sz"), "4")
+            el.set(qn("w:color"), color)
+            b.append(el)
+        tbl.tblPr.append(b)
+
+    def shade(cell, hex_):
+        sh = OxmlElement("w:shd")
+        sh.set(qn("w:val"), "clear")
+        sh.set(qn("w:fill"), hex_)
+        cell._tc.get_or_add_tcPr().append(sh)
+
+    # ---- หัวใบ ----
+    head = doc.add_table(rows=1, cols=2)
+    left, right = head.rows[0].cells
+    left.width, right.width = Cm(11.5), Cm(6.5)
+    logo = sales_extras_service.logo_file(d.logo_path) or _company_logo()
+    p0 = left.paragraphs[0]
+    if logo:
+        try:
+            p0.add_run().add_picture(str(logo), width=Cm(3.2))
+        except Exception as e:  # noqa: BLE001
+            log.info("ใส่โลโก้ใน Word ไม่ได้: %s", e)
+    for i, line in enumerate(d.company):
+        para(left, line, bold=i < 2, size=9.5 if i < 2 else 8.5, color=None if i < 2 else gray)
+    para(right.paragraphs[0], "ใบเสนอราคา", bold=True, size=16, align=WD_ALIGN_PARAGRAPH.RIGHT)
+    para(right, "Quotation", size=8.5, color=gray, align=WD_ALIGN_PARAGRAPH.RIGHT, after=4)
+    for k, v in d.meta:
+        p = right.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        r1 = p.add_run(f"{k}  ")
+        r1.font.size, r1.font.color.rgb = Pt(8.5), gray
+        r2 = p.add_run(v)
+        r2.font.size, r2.bold = Pt(8.5), k in ("เลขที่ใบเสนอราคา", "ยืนราคาถึง")
+    para(doc, "", after=2)
+
+    # ---- ลูกค้า · สถานที่ส่ง ----
+    parties = doc.add_table(rows=1, cols=2)
+    borders(parties, inner=False, color="FFFFFF")
+    for cell, title, lines in ((parties.rows[0].cells[0], "ชื่อ-ที่อยู่ลูกค้า", d.bill),
+                               (parties.rows[0].cells[1], "ชื่อ-สถานที่ส่งสินค้า", d.ship)):
+        para(cell.paragraphs[0], title, bold=True)
+        for ln in lines:
+            if ln:
+                para(cell, ln)
+    para(doc, "", after=2)
+    para(doc, d.who.replace("          ", "      "), align=WD_ALIGN_PARAGRAPH.CENTER, after=6)
+
+    if d.remark:
+        rt = doc.add_table(rows=1, cols=1)
+        borders(rt, inner=False)
+        c = rt.rows[0].cells[0]
+        para(c.paragraphs[0], "หมายเหตุ", bold=True)
+        for ln in d.remark.split("\n"):
+            para(c, ln)
+        para(doc, "", after=4)
+
+    # ---- ตารางสินค้า ----
+    cols = HEAD[:8]   # หมายเหตุรายสินค้าพิมพ์ใต้ชื่อสินค้าแทน (หน้ากระดาษแนวตั้งไม่พอ 9 คอลัมน์)
+    t = doc.add_table(rows=1, cols=len(cols))
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    borders(t)
+    widths = [Cm(1.1), Cm(2.0), Cm(6.4), Cm(1.2), Cm(2.0), Cm(1.6), Cm(2.1), Cm(1.6)]
+    for j, h in enumerate(cols):
+        c = t.rows[0].cells[j]
+        c.width = widths[j]
+        shade(c, "F2F2F0")
+        para(c.paragraphs[0], h, bold=True, size=8.5, align=WD_ALIGN_PARAGRAPH.RIGHT if j in (3, 4, 5, 6) else None)
+    for it in d.items:
+        cells = t.add_row().cells
+        vals = [str(it[0]), it[1], it[2], str(it[3]), f"{it[4]:,.2f}", f"{it[5]:,.2f}" if it[5] else "-", f"{it[6]:,.2f}", it[7]]
+        for j, v in enumerate(vals):
+            cells[j].width = widths[j]
+            para(cells[j].paragraphs[0], v, size=9, align=WD_ALIGN_PARAGRAPH.RIGHT if j in (3, 4, 5, 6) else None)
+        if it[8]:
+            para(cells[2], f"หมายเหตุ: {it[8]}", size=8, color=RGBColor(0xA1, 0x5C, 0x00))
+
+    # ---- ยอดรวม ชิดขวา ----
+    for k, v in d.totals:
+        last = k.startswith("รวมสุทธิ")
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.paragraph_format.space_before = Pt(4 if last else 2)
+        r1 = p.add_run(f"{k}    ")
+        r1.bold = last
+        r2 = p.add_run(f"{v:,.2f}")
+        r2.bold = last
+        if last:
+            r1.font.size = r2.font.size = Pt(10.5)
+
+    if d.bank:
+        para(doc, "", after=4)
+        para(doc, "บัญชีสำหรับโอนชำระ", bold=True, size=9)
+        for ln in d.bank.split("\n"):
+            para(doc, ln, size=8.5)
+    para(doc, "", after=4)
+    para(doc, "เงื่อนไข", bold=True, size=9, after=2)
+    for i, term in enumerate(d.terms, 1):
+        lines = term.split("\n")
+        p = para(doc, f"{i}. {lines[0]}", size=8.5)
+        for ln in lines[1:]:
+            p.add_run().add_break()
+            r = p.add_run(f"    {ln}")
+            r.font.size = Pt(8.5)
+        p.paragraph_format.space_after = Pt(3)
+
+    out = io.BytesIO()
+    doc.save(out)
     return out.getvalue()

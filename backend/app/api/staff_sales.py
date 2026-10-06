@@ -142,7 +142,7 @@ async def upload_logo(file: UploadFile = File(...), db: Session = Depends(get_db
 
 # ---------- export ----------
 @router.get("/quotations/{no}/export")
-def export_quotation(no: str, format: str = Query(default="xlsx", pattern="^(xlsx|csv)$"),
+def export_quotation(no: str, format: str = Query(default="xlsx", pattern="^(xlsx|docx|csv)$"),
                      t: str | None = Query(default=None), bom: bool = Query(default=True),
                      db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
     """ใช้สิทธิ์ชุดเดียวกับหน้าเอกสาร — ใครเปิดใบได้ export ได้"""
@@ -150,6 +150,8 @@ def export_quotation(no: str, format: str = Query(default="xlsx", pattern="^(xls
     quotation_service.check_access(q, user, t)
     if format == "csv":
         body, mime = quotation_export.csv_bytes(q, bom), "text/csv; charset=utf-8"
+    elif format == "docx":
+        body, mime = quotation_export.docx_bytes(q), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     else:
         body, mime = quotation_export.xlsx_bytes(q), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     return Response(body, media_type=mime,

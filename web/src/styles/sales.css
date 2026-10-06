@@ -449,3 +449,7 @@
 .qs-chip.line { background: #06c755; border-color: #06c755; color: #fff; }
 .qs-chip.fb { background: #1877f2; border-color: #1877f2; color: #fff; }
 .qs-chip.wa { background: #25d366; border-color: #25d366; color: #fff; }
+.qs-kind { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: var(--bg-3); }
+.qs-kind button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 10px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-3); cursor: pointer; }
+.qs-kind button.on { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
+.qs-kind button:disabled { cursor: wait; }
