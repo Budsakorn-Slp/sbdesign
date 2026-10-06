@@ -78,15 +78,11 @@ export default function QuotationShare({ no, token, staff = false, onClose }: { 
             <Icon name="download" size={18} /> ดาวน์โหลด PDF
           </button>
         </div>
-        {!canShareFile && file && (
-          <p className="tiny muted" style={{ margin: "6px 0 0" }}>เครื่องนี้ส่งไฟล์เข้าแอปโดยตรงไม่ได้ — ดาวน์โหลดแล้วแนบเอง หรือส่งเป็นลิงก์ด้านล่าง</p>
-        )}
 
         {/* ไฟล์ตาราง — เครื่องมือพนักงาน (แก้ตัวเลข/แนบระบบอื่นต่อ) ลูกค้าใช้ PDF พอ */}
         {staff && (
           <>
-            <div className="qs-label small muted">ไฟล์ตาราง (แก้ไขต่อได้)</div>
-            <div className="qs-links">
+            <div className="qs-links" style={{ marginTop: 12 }}>
               <a className="qs-chip" href={exportUrl("xlsx")}><Icon name="table_view" size={16} /> Excel (.xlsx)</a>
               <a className="qs-chip" href={exportUrl("csv")}><Icon name="download" size={16} /> CSV</a>
               <button className="qs-chip" onClick={() => openGoogleSheet(no, token).then(setMsg).catch((e) => setErr(errorMessage(e)))}><Icon name="grid_on" size={16} /> Google Sheets</button>
