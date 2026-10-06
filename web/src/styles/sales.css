@@ -402,3 +402,23 @@
 .bp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; margin-top: 8px; }
 .bp-thumb { padding: 0; border: 0; border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: var(--bg-3); cursor: zoom-in; }
 .bp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* แถวพนักงานร่วมบิลบนแถบสีเข้ม — ตัวหนังสือต้องสว่างชัด
+   (.link-btn ตั้งต้นเป็นสีเข้ม และ .sess-lbl จางลงอีก วางบนพื้นน้ำเงินเข้มแล้วแทบมองไม่เห็น) */
+.sess-bar .sess-staff .sess-lbl { color: #fff; opacity: .9; font-weight: 600; }
+.sess-bar .sess-staff .sess-staff-add { color: #fff; opacity: 1; font-weight: 600; text-decoration: none;
+  padding: 3px 10px; border: 1px dashed rgba(255,255,255,.6); border-radius: 999px; }
+.sess-bar .sess-staff .sess-staff-add:hover { background: rgba(255,255,255,.12); }
+.sess-bar .sess-staff .tiny.sess-lbl { font-weight: 400; opacity: .7; }
+.sess-bar .sess-cust .sess-detach { color: #fff; opacity: .9; }
+/* จอเล็กแผงเป็นพื้นขาว — กลับเป็นตัวหนังสือเข้ม */
+@media (max-width: 767px) {
+  .sess-bar .sess-cust .sess-detach { color: var(--brand); opacity: 1; }
+  .sess-bar .sess-staff .sess-lbl { color: var(--ink-2); }
+  .sess-bar .sess-staff .sess-staff-add, .sess-bar .staff-add .link-btn { color: var(--brand); border-color: var(--brand); }
+  .staff-pill { background: var(--brand-soft); border-color: var(--line); color: var(--brand-dark); }
+  .staff-pill b { color: var(--brand); }
+  .staff-hint { color: var(--ink-3); }
+  .staff-err { color: var(--red); }
+  .staff-add input, .staff-add select { border-color: var(--line-2); }
+}
