@@ -248,16 +248,21 @@ def test_หมายเหตุหลักกับหมายเหตุ�
     text = r.content.decode("utf-8-sig")
     rows = list(csv.reader(io.StringIO(text)))
     flat = " ".join(" ".join(x) for x in rows)
-    for must in ("เปลี่ยนผ้าเป็นสีเทา", "ส่งก่อน 10 โมง", "กสิกร 111-1-11111-1", "SA-105 – สมหญิง ข.",
-                 month_end(issued).strftime("%d/%m/%Y"), item["matnr"]):
+    for must in ("เปลี่ยนผ้าเป็นสีเทา", "ส่งก่อน 10 โมง", "กสิกร 111-1-11111-1", "ชื่อ-สถานที่ส่งสินค้า",
+                 month_end(issued).strftime("%d/%m/%Y"), item["matnr"], "รหัสลูกค้า", "พนักงานขาย"):
         assert must in flat, must
+    assert "SA-105 – สมหญิง ข." not in flat and "Z2" not in flat, "ไม่มีแถวพนักงานร่วมบิลในไฟล์"
+    # บรรทัดค่าบริการ (A534) ไม่อยู่ในตารางสินค้า — ยอดอยู่ช่องค่าขนส่งแล้ว
+    item_rows = [x for x in rows if x and x[0].isdigit() and len(x) >= 7]
+    assert all(x[1] != "A534" for x in item_rows)
     r = client.get(f"/quotations/{q['quotation_no']}/export?format=xlsx", headers=hs)
     assert r.status_code == 200 and r.content[:2] == b"PK"
     from openpyxl import load_workbook
 
     ws = load_workbook(io.BytesIO(r.content)).active
     cells = " ".join(str(c.value) for row in ws.iter_rows() for c in row if c.value is not None)
-    assert "เปลี่ยนผ้าเป็นสีเทา" in cells and "สมชาย (DS)" in cells
+    assert "เปลี่ยนผ้าเป็นสีเทา" in cells and "สมชาย (DS)" in cells and "ชื่อ-ที่อยู่ลูกค้า" in cells
+    assert "สมหญิง" not in cells and "A534" not in cells
     # คนที่เปิดใบไม่ได้ ก็ export ไม่ได้
     assert client.get(f"/quotations/{q['quotation_no']}/export?format=csv",
                       headers=auth_headers(client, "SA-900", "staff")).status_code == 403

@@ -5,10 +5,7 @@
 """
 from __future__ import annotations
 
-import csv
-import io
 from datetime import datetime
-from decimal import Decimal
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -18,13 +15,12 @@ from sqlalchemy.orm import Session
 
 from app.api.cart import cart_out
 from app.api.deps import get_current_user_optional
-from app.api.quotation_doc import SUPPLY_TXT, _terms, month_end_of
 from app.db.session import get_db
 from app.models.cart import STAFF_ROLES
 from app.models.quotation import QuotationTemplate
 from app.models.user import User
 from app.schemas.cart import CartOut
-from app.services import audit_service, quotation_service, sales_extras_service, sales_service
+from app.services import audit_service, quotation_export, quotation_service, sales_extras_service, sales_service
 from app.services.employee_provider import CurrentEmployee, get_current_employee, get_employee_provider
 
 router = APIRouter(tags=["staff-sales"])
@@ -145,143 +141,6 @@ async def upload_logo(file: UploadFile = File(...), db: Session = Depends(get_db
 
 
 # ---------- export ----------
-def _export_rows(q) -> tuple[dict, list[list], list[str]]:
-    """ข้อมูลชุดเดียวกันทั้ง xlsx และ csv — หัวใบ · ตารางสินค้า · ท้ายใบ"""
-    tp = q.template_snapshot or {}
-    c = q.customer_snapshot or {}
-    head = {
-        "เลขที่ใบเสนอราคา": q.quotation_no,
-        "วันที่ออก": q.issued_at.strftime("%d/%m/%Y %H:%M"),
-        "ยืนราคาถึง": q.valid_until.strftime("%d/%m/%Y"),
-        "วันที่ในเงื่อนไขท้ายบิล": month_end_of(q),
-        "ลูกค้า": c.get("name") or "",
-        "รหัสลูกค้า": c.get("sap_customer_no") or "",
-        "พนักงานขาย": f"{tp.get('employee_code') or (q.sales.staff_code if q.sales else '') or ''} – "
-                       f"{tp.get('employee_name') or (q.sales.name if q.sales else 'สั่งซื้อออนไลน์')}",
-        "สาขา": " · ".join(x for x in [tp.get("branch_code") or (q.sales.branch_id if q.sales else None),
-                                       tp.get("branch_name") or (q.sales.branch_name if q.sales else None)] if x),
-    }
-    for r in q.staff_snapshot or []:
-        head[f"{r['role_code']} {r.get('role_name') or ''}".strip()] = f"{r['employee_code']} – {r['employee_name']}"
-    lines = [["ลำดับ", "รหัสสินค้า", "รายการ", "จำนวน", "ราคาต่อหน่วย", "ส่วนลด", "จำนวนเงิน", "รับสินค้า", "หมายเหตุรายสินค้า"]]
-    for i, l in enumerate(q.lines, 1):
-        off = (Decimal(l.list_price) - Decimal(l.unit_price)) * l.qty
-        lines.append([i, l.matnr, l.name + (f" ({l.variant})" if l.variant else ""), l.qty, float(l.unit_price),
-                      float(off) if off > 0 else 0.0, float(l.line_total), SUPPLY_TXT.get(l.supply_mode, l.supply_mode or ""),
-                      l.item_remark or ""])
-    remark = "\n".join(x for x in [(q.overall_remark or (q.preso.note if q.preso else None) or "").strip(),
-                                   (tp.get("standard_remark") or "").strip()] if x)
-    foot = [
-        ("รวมสินค้า", float(q.subtotal)),
-        ("ส่วนลด", float(q.discount_total)),
-        ("ค่าขนส่ง/ติดตั้ง", float(q.shipping_fee) + float(q.install_fee) - float(q.shipping_discount)),
-        ("VAT 7% (รวมในยอด)", float(q.vat)),
-        ("รวมสุทธิ", float(q.grand_total)),
-    ]
-    terms = _terms(q.valid_until.strftime("%d/%m/%Y"), month_end_of(q), tp.get("footer_terms"))
-    return {"head": head, "foot": foot, "remark": remark, "bank": (tp.get("bank_accounts") or "").strip(),
-            "logo": tp.get("logo_path")}, lines, terms
-
-
-def _flat_rows(q) -> list[list]:
-    """ใบทั้งใบเป็นแถวเรียงลงมา — ใช้ร่วมกันระหว่าง CSV กับ Google Sheets"""
-    meta, lines, terms = _export_rows(q)
-    rows: list[list] = [[k, v] for k, v in meta["head"].items()]
-    rows.append([])
-    rows.extend(lines)
-    rows.append([])
-    rows.extend(["", "", "", "", "", "", k, round(v, 2)] for k, v in meta["foot"])
-    rows.append([])
-    rows.append(["หมายเหตุ", meta["remark"]])
-    if meta["bank"]:
-        rows.append(["บัญชีสำหรับโอนชำระ", meta["bank"]])
-    rows.append(["เงื่อนไข"])
-    rows.extend([i, t] for i, t in enumerate(terms, 1))
-    return rows
-
-
-def _csv(q, bom: bool = True) -> bytes:
-    buf = io.StringIO()
-    w = csv.writer(buf)
-    for r in _flat_rows(q):
-        w.writerow([f"{v:.2f}" if isinstance(v, float) else v for v in r])
-    # BOM ให้ Excel ภาษาไทยเปิดแล้วไม่เป็นตัวต่างดาว · IMPORTDATA ของ Google ไม่ต้องใช้ (จะติดมาเป็นอักษรล่องหน)
-    return (("﻿" if bom else "") + buf.getvalue()).encode("utf-8")
-
-
-def _xlsx(q) -> bytes:
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
-
-    meta, lines, terms = _export_rows(q)
-    wb = Workbook()
-    ws = wb.active
-    ws.title = q.quotation_no[:31]
-    bold = Font(bold=True)
-    wrap = Alignment(wrap_text=True, vertical="top")
-    row = 1
-    logo = sales_extras_service.logo_file(meta["logo"])
-    if logo:
-        from openpyxl.drawing.image import Image as XLImage
-
-        img = XLImage(str(logo))
-        ratio = 60 / max(img.height, 1)        # สูงราว 60px ไม่บังข้อมูล
-        img.height, img.width = int(img.height * ratio), int(img.width * ratio)
-        ws.add_image(img, "A1")
-        row = 5
-    ws.cell(row=row, column=1, value="ใบเสนอราคา / Quotation").font = Font(bold=True, size=14)
-    row += 1
-    s_tp = q.template_snapshot or {}
-    ws.cell(row=row, column=1, value=s_tp.get("company_name_th") or "")
-    row += 2
-    for k, v in meta["head"].items():
-        ws.cell(row=row, column=1, value=k).font = bold
-        ws.cell(row=row, column=2, value=v)
-        row += 1
-    row += 1
-    fill = PatternFill("solid", fgColor="F2F2F0")
-    for j, h in enumerate(lines[0], 1):
-        c = ws.cell(row=row, column=j, value=h)
-        c.font, c.fill = bold, fill
-    row += 1
-    for ln in lines[1:]:
-        for j, v in enumerate(ln, 1):
-            c = ws.cell(row=row, column=j, value=v)
-            if j in (5, 6, 7):
-                c.number_format = "#,##0.00"
-            if j in (3, 9):
-                c.alignment = wrap
-        row += 1
-    row += 1
-    for k, v in meta["foot"]:
-        ws.cell(row=row, column=6, value=k).font = bold
-        c = ws.cell(row=row, column=7, value=v)
-        c.number_format = "#,##0.00"
-        if k == "รวมสุทธิ":
-            c.font = bold
-        row += 1
-    row += 1
-    ws.cell(row=row, column=1, value="หมายเหตุ").font = bold
-    ws.cell(row=row, column=2, value=meta["remark"]).alignment = wrap
-    row += 1
-    if meta["bank"]:
-        ws.cell(row=row, column=1, value="บัญชีสำหรับโอนชำระ").font = bold
-        ws.cell(row=row, column=2, value=meta["bank"]).alignment = wrap
-        row += 1
-    row += 1
-    ws.cell(row=row, column=1, value="เงื่อนไข").font = bold
-    row += 1
-    for i, t in enumerate(terms, 1):
-        ws.cell(row=row, column=1, value=i)
-        ws.cell(row=row, column=2, value=t).alignment = wrap
-        row += 1
-    for col, wdt in zip("ABCDEFGHI", (22, 14, 44, 8, 14, 12, 16, 12, 30)):
-        ws.column_dimensions[col].width = wdt
-    out = io.BytesIO()
-    wb.save(out)
-    return out.getvalue()
-
-
 @router.get("/quotations/{no}/export")
 def export_quotation(no: str, format: str = Query(default="xlsx", pattern="^(xlsx|csv)$"),
                      t: str | None = Query(default=None), bom: bool = Query(default=True),
@@ -290,9 +149,9 @@ def export_quotation(no: str, format: str = Query(default="xlsx", pattern="^(xls
     q = quotation_service.get_quotation(db, no)
     quotation_service.check_access(q, user, t)
     if format == "csv":
-        body, mime = _csv(q, bom), "text/csv; charset=utf-8"
+        body, mime = quotation_export.csv_bytes(q, bom), "text/csv; charset=utf-8"
     else:
-        body, mime = _xlsx(q), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        body, mime = quotation_export.xlsx_bytes(q), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     return Response(body, media_type=mime,
                     headers={"Content-Disposition": f'attachment; filename="{q.quotation_no}.{format}"'})
 
@@ -315,7 +174,7 @@ def to_google_sheet(no: str, db: Session = Depends(get_db), emp: CurrentEmployee
     quotation_service.check_access(q, user, None)
     try:
         url = sheets.create_sheet(f"{q.quotation_no} · {(q.customer_snapshot or {}).get('name') or ''}".strip(" ·"),
-                                  _flat_rows(q), user.email if user else None)
+                                  quotation_export.flat_rows(q), user.email if user else None)
     except sheets.SheetsNotConfigured:
         raise HTTPException(status_code=501, detail="ยังไม่ได้ตั้งค่า Google service account")
     except (sheets.SheetsError, httpx.HTTPError) as e:
