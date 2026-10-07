@@ -26,9 +26,10 @@ _SALES = frozenset({
     PRODUCT_IMAGE_UPDATE_OWN, PRODUCT_IMAGE_DELETE_OWN,
     QUOTATION_TEMPLATE_OWN, CART_STAFF_ASSIGN,
 })
-_MANAGER = _SALES | {
-    PRODUCT_IMAGE_UPDATE_ALL, PRODUCT_IMAGE_DELETE_ALL, PRODUCT_IMAGE_AUDIT_VIEW,
-}
+# กติกา: แต่ละคนจัดการ (แทน/ลบ/แชร์) ได้เฉพาะรูปของตัวเอง — รวมผู้จัดการและแอดมิน
+# ผู้จัดการ/แอดมินได้แค่ "ดูประวัติ" (และแอดมินดูได้ทุกสาขา) ไม่ได้ UPDATE_ALL / DELETE_ALL
+# สิทธิ์สองตัวนั้นยังมีชื่อไว้ เผื่อวันหลังตกลงให้ตำแหน่งไหนจัดการรูปของคนอื่นได้ แก้ที่ตารางนี้ที่เดียว
+_MANAGER = _SALES | {PRODUCT_IMAGE_AUDIT_VIEW}
 _ADMIN = _MANAGER | {PRODUCT_IMAGE_VIEW_ALL_BRANCH}
 
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {

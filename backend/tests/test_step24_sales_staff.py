@@ -140,15 +140,21 @@ def test_เจ้าของแทนรูปและลบได้_ลบ�
     assert acts == ["CREATE", "UPDATE", "DELETE"]
 
 
-def test_ผู้จัดการลบรูปคนอื่นได้_ประวัติแยกเจ้าของกับคนทำ(client):
+def test_ผู้จัดการก็แก้ลบแชร์รูปคนอื่นไม่ได้_ดูประวัติได้(client):
+    """กติกา: แต่ละคนจัดการได้เฉพาะรูปของตัวเอง — ผู้จัดการ/แอดมินได้แค่ดูประวัติ"""
     a = auth_headers(client, "SA-104", "staff")
     m = auth_headers(client, "MG-001", "staff")
     pid = _upload(client, a).json()[0]["id"]
-    assert client.delete(f"/staff/photos/{pid}", headers=m).status_code == 204
+    seen = {p["id"]: p for p in client.get(f"/staff/materials/{MATNR}/photos", headers=m).json()}
+    assert not seen[pid]["can_edit"] and not seen[pid]["can_delete"], "หน้าเว็บต้องไม่โชว์ปุ่ม"
+    assert client.delete(f"/staff/photos/{pid}", headers=m).status_code == 403
+    assert client.put(f"/staff/photos/{pid}", files={"file": ("x.jpg", _jpeg(), "image/jpeg")}, headers=m).status_code == 403
+    assert client.post(f"/staff/photos/{pid}/share", json={"public": True}, headers=m).status_code == 403
+    # เจ้าของลบเอง → ประวัติแยกเจ้าของกับคนทำ ผู้จัดการเปิดดูได้
+    assert client.delete(f"/staff/photos/{pid}", headers=a).status_code == 204
     log = [x for x in client.get(f"/staff/photos/audit?matnr={MATNR}", headers=m).json()
            if x["image_id"] == pid and x["action"] == "DELETE"]
-    assert log and log[0]["image_owner_employee"] == "SA-104"
-    assert log[0]["action_by_employee"] == "MG-001" and log[0]["action_by_role"] == "manager"
+    assert log and log[0]["image_owner_employee"] == "SA-104" and log[0]["action_by_employee"] == "SA-104"
 
 
 def test_พนักงานขายดูประวัติไม่ได้(client):
