@@ -137,7 +137,11 @@
 .cats-all:hover { text-decoration: underline; }
 .cats-toggle { display: inline-flex; align-items: center; border: none; background: none; height: 50px; padding: 0 10px 0 2px; color: inherit; cursor: pointer; }
 .mega { position: absolute; left: 0; right: 0; top: 100%; max-height: calc(100vh - 150px); overflow-y: auto; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.12); z-index: 55; }
-.mega-in { display: grid; grid-template-columns: 240px 1fr; gap: 24px; padding: 18px 0 24px; }
+.mega-in { display: grid; grid-template-columns: 240px 1fr; gap: 24px; }
+/* ระยะบน/ล่างตั้งแยกและเจาะจงกว่า .container — เดิมเขียนรวมเป็น padding เดียว
+   แล้ว .container (padding: 0 gutter) โหลดทีหลังทับจนระยะบนเป็น 0
+   กล่องดำของหมวดที่เลือกเลยชิดติดเส้นใต้ของแถบเมนู ดูเหมือนทับกัน */
+.mega .mega-in { padding-top: 18px; padding-bottom: 24px; }
 .mega-side { max-height: 460px; overflow: auto; border-right: 1px solid var(--line); padding-right: 12px; }
 /* ภาษาไทยมีสระบน/วรรณยุกต์ที่กินที่เหนือตัวอักษร (ใ ้ ่ ์) line-height 1.5 จึงแคบไป
    แถวชิดกันสนิท (ห่าง 0px) + แถวที่เลือกมีพื้นดำทึบ = หัวสระของแถวล่างไปอยู่บนพื้นดำ
@@ -320,7 +324,8 @@
      ห้องที่ยกหมวดมาจากเว็บ 3 ชั้น (.nav-groups) · ห้องอื่น 2 ชั้น (.sub-list)
      ถ้าตั้งค่าแยกกันจะเพี้ยนกันเองเวลาแก้ทีหลัง จึงคุมด้วยกฎชุดเดียว:
      2 คอลัมน์ · ฟอนต์ 12px · ระยะชิดกว่าเดสก์ท็อป */
-  .mega-in, .nav-groups { padding: 10px 0 14px; }
+  .nav-groups { padding: 10px 0 14px; }
+  .mega .mega-in { padding-top: 10px; padding-bottom: 14px; }
 
   .mega-grid, .brand-grid, .sub-list { grid-template-columns: repeat(2, 1fr); gap: 0 12px; }
   .nav-groups { columns: 2; column-gap: 12px; }
