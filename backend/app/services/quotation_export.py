@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
-from app.api.quotation_doc import COMPANY_LOGO, STATUS_TXT, SUPPLY_TXT, _terms, month_end_of
+from app.api.quotation_doc import COMPANY_LOGO, STATUS_TXT, SUPPLY_TXT, _terms, deadline, doc_title, is_order, month_end_of
 from app.core.config import get_settings
 from app.models.quotation import Quotation
 from app.services import sales_extras_service
@@ -41,6 +41,7 @@ class Sheet:
     bank: str
     terms: list[str]
     logo_path: str | None = None
+    title: tuple[str, str] = ("ใบเสนอราคา", "Quotation")
 
 
 def build(q: Quotation) -> Sheet:
@@ -56,8 +57,9 @@ def build(q: Quotation) -> Sheet:
     meta = []
     if b_name:
         meta.append(("สาขา", f"{b_code} · {b_name}".strip(" ·")))
-    meta += [("เลขที่ใบเสนอราคา", q.quotation_no), ("วันที่ออก", q.issued_at.strftime("%d/%m/%Y")),
-             ("ยืนราคาถึง", q.valid_until.strftime("%d/%m/%Y")), ("สถานะ", STATUS_TXT.get(q.status, q.status))]
+    title_th, title_en = doc_title(q)
+    meta += [(f"เลขที่{title_th}", q.quotation_no), ("วันที่ออก", q.issued_at.strftime("%d/%m/%Y")),
+             deadline(q), ("สถานะ", STATUS_TXT.get(q.status, q.status))]
 
     bill_addr = " ".join(x for x in [c.get("address") or "", c.get("postcode") or ""] if x).strip()
     ship_addr = " ".join(x for x in [q.ship_address or "", q.ship_postcode or ""] if x).strip()
@@ -96,15 +98,17 @@ def build(q: Quotation) -> Sheet:
                  f"เลขประจำตัวผู้เสียภาษี TAX ID {s.company_tax_id}"],
         meta=meta, bill=bill, ship=ship, who=who, remark=remark, items=items, totals=totals,
         bank=(tp.get("bank_accounts") or "").strip(),
-        terms=_terms(q.valid_until.strftime("%d/%m/%Y"), month_end_of(q), tp.get("footer_terms")),
+        terms=[t.replace("ใบเสนอราคานี้", "ใบสรุปคำสั่งซื้อนี้") if is_order(q) else t
+               for t in _terms(q.valid_until.strftime("%d/%m/%Y"), month_end_of(q), tp.get("footer_terms"))],
         logo_path=tp.get("logo_path"),
+        title=(title_th, title_en),
     )
 
 
 # ---------- แถวเรียบ (CSV / Google Sheets) ----------
 def flat_rows(q: Quotation) -> list[list]:
     d = build(q)
-    rows: list[list] = [["ใบเสนอราคา / Quotation"], *[[x] for x in d.company], []]
+    rows: list[list] = [[f"{d.title[0]} / {d.title[1]}"], *[[x] for x in d.company], []]
     rows += [[k, v] for k, v in d.meta]
     rows += [[], ["ชื่อ-ที่อยู่ลูกค้า", "", "", "", "ชื่อ-สถานที่ส่งสินค้า"]]
     rows += [[a, "", "", "", b] for a, b in zip(d.bill, d.ship)]
@@ -206,11 +210,11 @@ def xlsx_bytes(q: Quotation) -> bytes:
             log.info("ใส่โลโก้ใน Excel ไม่ได้: %s", e)
     for i, line in enumerate(d.company, 1):
         put(f"C{i}", line, F(bold=i <= 2, size=10 if i <= 2 else 9, color=None if i <= 2 else "333333"))
-    put("G1", "ใบเสนอราคา", F(bold=True, size=16), Alignment(horizontal="right"), merge="G1:I1")
-    put("G2", "Quotation", F(color=gray, size=9), Alignment(horizontal="right"), merge="G2:I2")
+    put("G1", d.title[0], F(bold=True, size=16), Alignment(horizontal="right"), merge="G1:I1")
+    put("G2", d.title[1], F(color=gray, size=9), Alignment(horizontal="right"), merge="G2:I2")
     for i, (k, v) in enumerate(d.meta, 3):
         put(f"G{i}", k, F(color=gray, size=9), Alignment(horizontal="right"))
-        put(f"H{i}", v, F(bold=k in ("เลขที่ใบเสนอราคา", "ยืนราคาถึง"), size=9), Alignment(horizontal="right"), merge=f"H{i}:I{i}")
+        put(f"H{i}", v, F(bold=k.startswith("เลขที่") or k in ("ยืนราคาถึง", "ชำระภายใน"), size=9), Alignment(horizontal="right"), merge=f"H{i}:I{i}")
     row = max(len(d.company), len(d.meta) + 2) + 1
     for col in "ABCDEFGHI":
         ws[f"{col}{row}"].border = Border(bottom=thick)
@@ -365,15 +369,15 @@ def docx_bytes(q: Quotation) -> bytes:
             log.info("ใส่โลโก้ใน Word ไม่ได้: %s", e)
     for i, line in enumerate(d.company):
         para(left, line, bold=i < 2, size=9.5 if i < 2 else 8.5, color=None if i < 2 else gray)
-    para(right.paragraphs[0], "ใบเสนอราคา", bold=True, size=16, align=WD_ALIGN_PARAGRAPH.RIGHT)
-    para(right, "Quotation", size=8.5, color=gray, align=WD_ALIGN_PARAGRAPH.RIGHT, after=4)
+    para(right.paragraphs[0], d.title[0], bold=True, size=16, align=WD_ALIGN_PARAGRAPH.RIGHT)
+    para(right, d.title[1], size=8.5, color=gray, align=WD_ALIGN_PARAGRAPH.RIGHT, after=4)
     for k, v in d.meta:
         p = right.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         r1 = p.add_run(f"{k}  ")
         r1.font.size, r1.font.color.rgb = Pt(8.5), gray
         r2 = p.add_run(v)
-        r2.font.size, r2.bold = Pt(8.5), k in ("เลขที่ใบเสนอราคา", "ยืนราคาถึง")
+        r2.font.size, r2.bold = Pt(8.5), k.startswith("เลขที่") or k in ("ยืนราคาถึง", "ชำระภายใน")
     para(doc, "", after=2)
 
     # ---- ลูกค้า · สถานที่ส่ง ----

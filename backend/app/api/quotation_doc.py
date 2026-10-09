@@ -8,7 +8,7 @@
 """
 import html
 from urllib.parse import quote
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -45,6 +45,40 @@ DEFAULT_TERMS = [
     "การรับประกันสินค้า เป็นไปตามเงื่อนไขที่บริษัทกำหนด ดูรายละเอียดการรับประกันได้ที่ www.sbdesignsquare.com",
     "อื่นๆ ..",
 ]
+
+
+# ---------- ชนิดเอกสารตามช่องทาง ----------
+# พนักงานดูแลตะกร้าแล้วออกใบให้ = "ใบเสนอราคา" (เสนอราคาให้ลูกค้าตัดสินใจ มีวันยืนราคา)
+# ลูกค้าสั่งเองออนไลน์ = "ใบสรุปคำสั่งซื้อ" (ไม่มีใครเสนอราคา ลูกค้าสั่งแล้วรอจ่าย)
+# เลขที่ยังเป็น QT-… ทั้งคู่ — เป็นเลขอ้างอิงที่ส่งเข้า SAP เปลี่ยนรูปแบบแล้วกระทบการเชื่อมต่อ
+def is_order(q: Quotation) -> bool:
+    return q.channel == "online"
+
+
+def doc_title(q: Quotation) -> tuple[str, str]:
+    return ("ใบสรุปคำสั่งซื้อ", "Order Summary") if is_order(q) else ("ใบเสนอราคา", "Quotation")
+
+
+def deadline(q: Quotation) -> tuple[str, str]:
+    """(หัวข้อ, ค่า) ของแถวกำหนดเวลา
+
+    ใบเสนอราคา: ยืนราคาถึง (วันที่)
+    ใบสรุปคำสั่งซื้อ: ชำระภายใน = เวลาหมดอายุของรายการชำระที่รออยู่ (หมดแล้วใบถูกยกเลิกอัตโนมัติ)
+      ยังไม่เคยกดจ่าย = ยังไม่เริ่มนับเวลา ใช้วันยืนราคาของใบแทน
+    """
+    if not is_order(q):
+        return "ยืนราคาถึง", q.valid_until.strftime("%d/%m/%Y")
+    from sqlalchemy.orm import object_session
+
+    from app.models.payment import Payment
+
+    db = object_session(q)
+    p = db.scalar(select(Payment).where(Payment.quotation_id == q.id, Payment.status == "pending")
+                  .order_by(Payment.created_at.desc())) if db else None
+    if p:
+        # เก็บเป็น UTC — ลูกค้าอ่านเวลาไทย
+        return "ชำระภายใน", (p.expires_at + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M น.")
+    return "ชำระภายใน", q.valid_until.strftime("%d/%m/%Y")
 
 
 def _fill(t: str, valid_until: str, month_end: str) -> str:
@@ -202,6 +236,10 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
     note_block = f"<div class='note-box'><b>หมายเหตุ</b><div>{e(note).replace(chr(10), '<br>')}</div></div>" if note else ""
 
     items = _terms(q.valid_until.strftime("%d/%m/%Y"), month_end_of(q), tp.get("footer_terms"))
+    if is_order(q):
+        items = [t.replace("ใบเสนอราคานี้", "ใบสรุปคำสั่งซื้อนี้") for t in items]
+    title_th, title_en = doc_title(q)
+    dl_label, dl_value = deadline(q)
     # เลขข้อเป็นตัวหนังสือธรรมดา ไม่ใช้เลขอัตโนมัติของ <ol> — ตอนแปลงเป็นรูป/PDF เลขอัตโนมัติลอยสูงกว่าบรรทัด
     lis = "".join(f"<li><span class='n'>{i}.</span><span>{e(t).replace(chr(10), '<br>')}</span></li>" for i, t in enumerate(items, 1))
     terms_block = f"<div class='terms'><b>เงื่อนไข</b><ol>{lis}</ol></div>" if items else ""
@@ -211,13 +249,13 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
 
     img_css = ".ph{width:72px}.ph img{width:64px;height:64px;object-fit:cover;border-radius:4px;background:#f2f2f0}" if with_images else ""
 
-    return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>ใบเสนอราคา {e(q.quotation_no)}</title>
+    return f"""<!doctype html><html lang="th"><head><meta charset="utf-8"><title>{title_th} {e(q.quotation_no)}</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <style>body{{font-family:'Noto Sans Thai',sans-serif;color:#111;max-width:860px;margin:32px auto;padding:0 24px;font-size:14px}}h1{{font-size:22px;margin:0}}table{{width:100%;border-collapse:collapse;margin-top:16px}}th,td{{padding:8px 10px;border-bottom:1px solid #e0e0de;vertical-align:top;text-align:left}}th{{background:#f2f2f0;font-size:12px}}.r{{text-align:right}}.mono{{font-family:ui-monospace,'Courier New',monospace;font-size:13px;white-space:nowrap}}.tot td{{font-weight:700;border-top:2px solid #111}}tbody tr:last-child td{{border-bottom:none}}.box{{display:flex;justify-content:space-between;gap:24px;margin-top:16px}}.box.three>div{{flex:1}}.muted{{color:#777;font-size:12px}}.tag{{display:inline-block;padding:2px 8px;border-radius:4px;background:#111;color:#fff;font-size:12px}}.note-box{{margin-top:16px;border:1px solid #e0e0de;border-radius:6px;padding:10px 12px;font-size:13px}}.note-box .blank{{min-height:38px}}.terms{{margin-top:18px;font-size:12px}}.terms ol{{margin:6px 0 0;padding:0;list-style:none}}.terms li{{display:flex;gap:6px}}.terms .n{{flex:none;min-width:16px;text-align:right}}.terms li{{margin-bottom:6px;line-height:1.6}}.rmk{{color:#a15c00}}.logo{{width:110px;max-height:70px;object-fit:contain;flex:none}}.hdr{{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #111}}.hdr-co{{display:flex;gap:14px;align-items:flex-start}}.co-txt{{font-size:11.5px;line-height:1.55;color:#333}}.co-txt b{{color:#111;font-size:12.5px}}.hdr-doc{{text-align:right;min-width:250px}}.hdr-doc h1{{font-size:26px;line-height:1.1}}.hdr-doc .sub{{color:#777;font-size:12px;margin-bottom:8px}}.meta{{width:auto;margin:0 0 0 auto}}.meta th,.meta td{{padding:2px 0 2px 14px;border:0;background:none;font-size:12.5px;text-align:right;white-space:nowrap}}.meta th{{color:#777;font-weight:400}}.parties{{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:16px;font-size:13px;line-height:1.6}}.parties .ttl{{display:block;margin-bottom:2px;font-size:13.5px}}.who{{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 48px;margin-top:14px;padding:8px 0;border-top:1px solid #e0e0de;border-bottom:1px solid #e0e0de;font-size:13px}}.who b{{margin-right:6px}}.staff{{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px}}{img_css}@media print{{body{{margin:0}}.no-print{{display:none!important}}}}</style></head>
 <body><div class="hdr">
 <div class="hdr-co">{logo}<div class="co-txt"><b>{e(s.company_name_th)}</b><br><b>{e(s.company_name_en)}</b><br>{e(s.company_address_th)}<br>{e(s.company_address_en)}<br>เลขประจำตัวผู้เสียภาษี TAX ID {e(s.company_tax_id)}</div></div>
-<div class="hdr-doc"><h1>ใบเสนอราคา</h1><div class="sub">Quotation</div>
-<table class="meta">{f"<tr><th>สาขา</th><td>{br}</td></tr>" if br else ""}<tr><th>เลขที่ใบเสนอราคา</th><td><b>{e(q.quotation_no)}</b></td></tr><tr><th>วันที่ออก</th><td>{q.issued_at.strftime('%d/%m/%Y')}</td></tr><tr><th>ยืนราคาถึง</th><td><b>{q.valid_until.strftime('%d/%m/%Y')}</b></td></tr><tr><th>สถานะ</th><td><span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></td></tr></table></div>
+<div class="hdr-doc"><h1>{title_th}</h1><div class="sub">{title_en}</div>
+<table class="meta">{f"<tr><th>สาขา</th><td>{br}</td></tr>" if br else ""}<tr><th>เลขที่{title_th}</th><td><b>{e(q.quotation_no)}</b></td></tr><tr><th>วันที่ออก</th><td>{q.issued_at.strftime('%d/%m/%Y')}</td></tr><tr><th>{dl_label}</th><td><b>{e(dl_value)}</b></td></tr><tr><th>สถานะ</th><td><span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></td></tr></table></div>
 </div>
 <div class="parties">
 <div><b class="ttl">ชื่อ-ที่อยู่ลูกค้า</b><div>{e(c.get('name') or '')}</div><div>{bill_addr}</div><div>{e(c.get('phone') or '')}{(' · ' + e(c.get('email'))) if c.get('email') else ''}</div></div>

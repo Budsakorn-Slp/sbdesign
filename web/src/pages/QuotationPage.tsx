@@ -74,9 +74,9 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
         <div className="cart-main">
           <div className="row between wrap">
             <div>
-              <div className="small muted">ใบเสนอราคา</div>
+              <div className="small muted">{q.doc_title || "ใบเสนอราคา"}</div>
               <h1 className="cart-title" style={{ marginBottom: 2 }}>{q.quotation_no}</h1>
-              <div className="small">ยืนราคาถึง <b>{thDate(q.valid_until, true)}</b> · <span className={"chip " + (q.status === "paid" || q.status === "converted" ? "green" : q.status === "cancelled" ? "red" : "light")}>{QSTATUS[q.status] || q.status}</span></div>
+              <div className="small">{q.deadline_label || "ยืนราคาถึง"} <b>{q.deadline || thDate(q.valid_until, true)}</b> · <span className={"chip " + (q.status === "paid" || q.status === "converted" ? "green" : q.status === "cancelled" ? "red" : "light")}>{QSTATUS[q.status] || q.status}</span></div>
             </div>
             <div className="small muted" style={{ textAlign: "right" }}>
               ออกเมื่อ {thDate(q.issued_at)} {thTime(q.issued_at)}<br />{q.sales_name ? `พนักงานขาย ${q.sales_name} (${q.sales_code})` : "สั่งซื้อออนไลน์"}
@@ -146,7 +146,7 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
           </div>
         </aside>
       </div>
-      {shareOpen && <QuotationShare no={q.quotation_no} token={tk} staff={isStaff} onClose={() => setShareOpen(false)} />}
+      {shareOpen && <QuotationShare no={q.quotation_no} token={tk} staff={isStaff} title={q.doc_title} onClose={() => setShareOpen(false)} />}
     </main>
   );
 }

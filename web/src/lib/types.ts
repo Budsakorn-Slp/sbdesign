@@ -553,6 +553,10 @@ export type Quotation = {
   cancelled_at: string | null;
   cancel_reason: string | null;
   link_token: string | null;
+  /** ใบเสนอราคา (พนักงานดูแล) หรือ ใบสรุปคำสั่งซื้อ (ลูกค้าสั่งเองออนไลน์) */
+  doc_title?: string;
+  deadline_label?: string;
+  deadline?: string;
 };
 
 // ---------- payment ----------

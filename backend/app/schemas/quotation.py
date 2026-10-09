@@ -96,6 +96,10 @@ class QuotationOut(BaseModel):
     cancelled_at: datetime | None = None
     cancel_reason: str | None = None
     link_token: str | None = None  # เฉพาะพนักงาน — ใช้สร้างลิงก์ให้ลูกค้า
+    # ชื่อเอกสารตามช่องทาง: พนักงานดูแล = ใบเสนอราคา · ลูกค้าสั่งเองออนไลน์ = ใบสรุปคำสั่งซื้อ
+    doc_title: str = "ใบเสนอราคา"
+    deadline_label: str = "ยืนราคาถึง"   # หรือ "ชำระภายใน" สำหรับใบสั่งซื้อออนไลน์
+    deadline: str = ""
 
 
 class SendIn(BaseModel):

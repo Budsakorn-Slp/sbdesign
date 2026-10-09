@@ -14,7 +14,7 @@ type Kind = "pdf" | "jpg";
  * รูปภาพ: รูปเดียวทั้งใบ ส่งเข้า LINE แล้วลูกค้าเห็นใบในแชตทันที ไม่ต้องกดเปิดไฟล์
  * ปุ่ม LINE/Facebook/WhatsApp/อีเมล ส่งเป็น "ลิงก์" (แอปพวกนี้รับไฟล์ผ่านลิงก์แชร์ไม่ได้)
  */
-export default function QuotationShare({ no, token, staff = false, onClose }: { no: string; token: string | null | undefined; staff?: boolean; onClose: () => void }) {
+export default function QuotationShare({ no, token, staff = false, title = "ใบเสนอราคา", onClose }: { no: string; token: string | null | undefined; staff?: boolean; title?: string; onClose: () => void }) {
   const [kind, setKind] = useState<Kind>("pdf");
   const [withImages, setWithImages] = useState(true);
   const [files, setFiles] = useState<File[]>([]);
@@ -42,7 +42,7 @@ export default function QuotationShare({ no, token, staff = false, onClose }: { 
   const label = kind === "pdf" ? "PDF" : "รูปภาพ";
   const canShareFile = files.length > 0 && typeof navigator.canShare === "function" && navigator.canShare({ files });
   const link = token ? `${location.origin}/q/${no}?t=${token}` : `${location.origin}/q/${no}`;
-  const text = `ใบเสนอราคา ${no} จาก SB Design Square`;
+  const text = `${title} ${no} จาก SB Design Square`;
   const enc = encodeURIComponent;
   const exportUrl = (format: "xlsx" | "docx") => `${API_BASE}/quotations/${no}/export?format=${format}${token ? `&t=${token}` : ""}`;
   const size = files.reduce((n, f) => n + f.size, 0);
@@ -66,7 +66,7 @@ export default function QuotationShare({ no, token, staff = false, onClose }: { 
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>แชร์ใบเสนอราคา {no}</h2>
+          <h2>แชร์{title} {no}</h2>
           <button className="icon-btn" onClick={onClose} aria-label="ปิด"><Icon name="close" /></button>
         </div>
         <div className="qs-kind" role="tablist">

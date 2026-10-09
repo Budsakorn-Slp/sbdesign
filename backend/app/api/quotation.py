@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.cart import CartCtx, cart_out
 from app.api.deps import get_current_user, get_current_user_optional, require_role
-from app.api.quotation_doc import render_document
+from app.api.quotation_doc import deadline, doc_title, render_document
 from app.db.session import get_db
 from app.models.promo import AppliedDiscount
 from app.models.quotation import Preso, Quotation
@@ -54,6 +54,7 @@ def _link_token_for(q: Quotation, user: User | None) -> str | None:
 
 def quotation_out(db: Session, q: Quotation, user: User | None) -> QuotationOut:
     discs = db.scalars(select(AppliedDiscount).where(AppliedDiscount.quotation_id == q.id)).all()
+    dl = deadline(q)
     return QuotationOut(
         id=q.id, quotation_no=q.quotation_no, preso_no=q.preso.preso_no if q.preso else None, status=q.status, channel=q.channel, customer=q.customer_snapshot,
         sales_name=q.sales.name if q.sales else None, sales_code=q.sales.staff_code if q.sales else None,
@@ -63,6 +64,7 @@ def quotation_out(db: Session, q: Quotation, user: User | None) -> QuotationOut:
         deposit_amount=q.deposit_amount, valid_until=q.valid_until, pdf_url=q.pdf_url, ship_address=q.ship_address, ship_postcode=q.ship_postcode, ship_zone=q.ship_zone, slot_date=q.slot_date,
         slot_period=q.slot_period, stock_warnings=q.stock_warnings, sap_so_no=q.sap_so_no, sap_sync_status=q.sap_sync_status, sap_sync_error=q.sap_sync_error, issued_at=q.issued_at, paid_at=q.paid_at,
         cancelled_at=q.cancelled_at, cancel_reason=q.cancel_reason, link_token=_link_token_for(q, user),
+        doc_title=doc_title(q)[0], deadline_label=dl[0], deadline=dl[1],
     )
 
 

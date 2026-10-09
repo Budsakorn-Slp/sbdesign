@@ -592,3 +592,32 @@ def test_ปิดตะกร้าคืนลูกค้า_ค่าขน�
     assert "A534" not in [it["matnr"] for it in mine["items"]], "ค่าส่งที่พนักงานตั้งไว้ต้องไม่ติดไปตะกร้าลูกค้า"
     assert "10023841" in [it["matnr"] for it in mine["items"]], "ของจริงยังอยู่ครบ"
     _cleanup_customer_carts(key)
+
+
+# ---------- ชื่อเอกสารตามช่องทาง ----------
+def test_สั่งเองออนไลน์เป็นใบสรุปคำสั่งซื้อ_พนักงานดูแลเป็นใบเสนอราคา(client):
+    from tests.helpers import login
+
+    hs = {"Authorization": "Bearer " + login(client, "1100440182")["access_token"]}
+    client.post("/cart/items", json={"matnr": "10031002", "qty": 1, "supply_mode": "ship"}, headers=hs)
+    cart = client.get("/cart", headers=hs).json()
+    dq = client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110"}, headers=hs).json()
+    client.post(f"/delivery/slots/{dq['slots'][0]['id']}/hold", json={"cart_id": cart["id"]}, headers=hs)
+    r = client.post("/checkout/quotation", json={"force": True}, headers=hs)
+    assert r.status_code == 201, r.text
+    q = r.json()
+    assert q["doc_title"] == "ใบสรุปคำสั่งซื้อ" and q["deadline_label"] == "ชำระภายใน"
+    doc = client.get(f"/quotations/{q['quotation_no']}/document", headers=hs).text
+    assert "<h1>ใบสรุปคำสั่งซื้อ</h1>" in doc and "Order Summary" in doc and "ชำระภายใน" in doc
+    assert "ใบเสนอราคา" not in doc.split("</title>")[1], "ใบสั่งซื้อออนไลน์ต้องไม่มีคำว่าใบเสนอราคา"
+    # กดจ่ายแล้ว → กำหนดเวลาเป็นเวลาหมดอายุของรายการชำระ (มีเวลา)
+    client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs)
+    assert client.get(f"/quotations/{q['quotation_no']}", headers=hs).json()["deadline"].endswith("น.")
+    from docx import Document
+
+    w = client.get(f"/quotations/{q['quotation_no']}/export", params={"format": "docx"}, headers=hs)
+    texts = " ".join(c.text for t in Document(io.BytesIO(w.content)).tables for row in t.rows for c in row.cells)
+    assert "ใบสรุปคำสั่งซื้อ" in texts
+
+    staff_q = _issued(client, auth_headers(client, "SA-104", "staff"))
+    assert staff_q["doc_title"] == "ใบเสนอราคา" and staff_q["deadline_label"] == "ยืนราคาถึง"
