@@ -855,14 +855,25 @@
 }
 
 /* ---------- แท็บรอชำระเงิน ---------- */
-.pending-list { display: flex; flex-direction: column; gap: 10px; }
-.pending-row { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between;
-  border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; background: #fff; }
+/* ชื่อคลาสแยกจาก .pending-row ของหน้าตะกร้า (cart.css) — เดิมใช้ชื่อเดียวกัน สไตล์สองชุดเลยปนกัน */
+.due-list { display: flex; flex-direction: column; gap: 8px; max-width: 960px; }
+.due-row { display: flex; align-items: center; gap: 14px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; background: #fff; }
 /* ใกล้หมดเวลาแล้วต้องสะดุดตา ไม่ใช่กลืนไปกับรายการอื่น */
-.pending-row.urgent { border-color: #e0a3a3; background: #fffaf9; }
-.pending-main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.pending-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; white-space: nowrap; }
+.due-row.urgent { border-color: #e0a3a3; background: #fffaf9; }
+.due-ico { flex: none; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--bg-3); color: var(--ink-2); }
+.due-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.due-top { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.due-top b { font-size: 14px; white-space: nowrap; }
+.due-items { min-width: 0; font-size: 13px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.due-time { font-size: 12px; color: var(--ink-3); display: flex; align-items: center; gap: 4px; }
+.due-time.red { color: var(--red); }
+.due-amt { flex: none; font-size: 16px; white-space: nowrap; }
+.due-acts { flex: none; display: flex; align-items: center; gap: 12px; }
 @media (max-width: 640px) {
-  .pending-row { flex-direction: column; }
-  .pending-side { align-items: stretch; width: 100%; }
+  .due-row { flex-wrap: wrap; gap: 8px 12px; }
+  .due-ico { display: none; }
+  .due-main { flex-basis: 100%; }
+  .due-top { flex-direction: column; align-items: flex-start; gap: 0; }
+  .due-items { white-space: normal; }
+  .due-amt { margin-right: auto; }
 }

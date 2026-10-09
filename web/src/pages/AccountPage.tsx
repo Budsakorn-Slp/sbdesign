@@ -377,24 +377,25 @@ function PendingPanel() {
     return <p className="muted">ไม่มีคำสั่งซื้อที่รอชำระเงิน — จ่ายครบแล้วทุกใบ</p>;
   }
   return (
-    <div className="pending-list">
+    <div className="due-list">
       {rows.map((r) => {
         const left = r.seconds_left ?? null;
         const urgent = left !== null && left > 0 && left < 2 * 3600;
         return (
-          <div key={r.quotation_no} className={"pending-row" + (urgent ? " urgent" : "")}>
-            <div className="pending-main">
-              <b className="mono">{r.quotation_no}</b>
-              <div className="small muted">
-                {r.first_item}{r.item_count > 1 ? ` และอีก ${r.item_count - 1} รายการ` : ""}
+          <div key={r.quotation_no} className={"due-row" + (urgent ? " urgent" : "")}>
+            <span className="due-ico"><Icon name="receipt_long" size={20} /></span>
+            <div className="due-main">
+              <div className="due-top">
+                <b>{r.quotation_no}</b>
+                <span className="due-items">{r.first_item}{r.item_count > 1 ? ` และอีก ${r.item_count - 1} รายการ` : ""}</span>
               </div>
-              <div className={"small " + (urgent ? "red" : "muted")}>
+              <div className={"due-time" + (urgent ? " red" : "")}>
                 <Icon name="schedule" size={13} /> {timeLeftText(left)}
                 {left !== null && left > 0 && " · ไม่ชำระภายในเวลาจะถูกยกเลิกอัตโนมัติ"}
               </div>
             </div>
-            <div className="pending-side">
-              <b>{baht(r.amount)}</b>
+            <b className="due-amt">{baht(r.amount)}</b>
+            <div className="due-acts">
               <Link to={`/pay/${r.quotation_no}`} className="btn primary sm" onClick={reload}>ชำระเงิน</Link>
               <Link to={`/q/${r.quotation_no}`} className="link-btn small">ดูรายละเอียด</Link>
             </div>
