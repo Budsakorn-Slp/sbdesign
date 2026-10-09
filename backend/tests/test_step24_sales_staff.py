@@ -572,3 +572,23 @@ def test_export_word(client):
     for must in (q["quotation_no"], "ชื่อ-ที่อยู่ลูกค้า", "ชื่อ-สถานที่ส่งสินค้า", "รหัสลูกค้า", "พนักงานขาย", "เงื่อนไข", "รวมสุทธิ"):
         assert must in allt, must
     assert "A534" not in cells, "บรรทัดค่าบริการไม่อยู่ในตารางสินค้า"
+
+
+# ---------- คืนตะกร้าให้ลูกค้า: ค่าบริการที่พนักงานเปิดไว้ต้องไม่ติดไป ----------
+def test_ปิดตะกร้าคืนลูกค้า_ค่าขนส่งที่พนักงานเปิดไว้ถูกถอดออก(client):
+    key = "1100440182"   # ลูกค้าทดสอบที่ล็อกอินได้
+    _cleanup_customer_carts(key)
+    hs = auth_headers(client, "SA-104", "staff")
+    cart = _new_cart(client, hs)
+    client.post(f"/sales/carts/{cart['id']}/attach-customer", json={"customer_key": key}, headers=hs)
+    r = client.post(f"/sales/carts/{cart['id']}/shipping-charge", json={"matnr": "A534", "fee": "1"}, headers=hs)
+    assert r.status_code in (200, 201), r.text
+    assert "A534" in [it["matnr"] for it in client.get(f"/sales/carts/{cart['id']}", headers=hs).json()["items"]]
+    assert client.delete(f"/sales/carts/{cart['id']}", headers=hs).json()["outcome"] == "returned_to_customer"
+
+    cust = auth_headers(client, key, "customer")
+    mine = client.get("/cart", headers=cust).json()
+    assert mine["id"] == cart["id"]
+    assert "A534" not in [it["matnr"] for it in mine["items"]], "ค่าส่งที่พนักงานตั้งไว้ต้องไม่ติดไปตะกร้าลูกค้า"
+    assert "10023841" in [it["matnr"] for it in mine["items"]], "ของจริงยังอยู่ครบ"
+    _cleanup_customer_carts(key)

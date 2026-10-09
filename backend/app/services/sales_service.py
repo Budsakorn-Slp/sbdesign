@@ -84,6 +84,7 @@ def close_cart(db: Session, sales: User, cart: Cart) -> dict:
         cart.owner_sales = None
         cart.owner_sales_id = None
         cart.expires_at = None
+        cart_service.drop_staff_charges(db, cart)
         for it in cart.items:
             it.pending_ack = False if it.added_by == "customer" else it.pending_ack
         outcome = "returned_to_customer"

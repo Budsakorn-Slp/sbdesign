@@ -63,6 +63,27 @@ def load_cart(db: Session, cart_id: str) -> Cart | None:
     return db.scalar(select(Cart).options(selectinload(Cart.items), selectinload(Cart.customer), selectinload(Cart.owner_sales)).where(Cart.id == cart_id))
 
 
+def drop_staff_charges(db: Session, cart: Cart) -> int:
+    """ถอดบรรทัดค่าบริการที่พนักงานเปิด Mat ไว้ (A534 ค่าขนส่งแบบหน้าร้าน ฯลฯ) — ใช้ตอนคืนใบให้ลูกค้า
+
+    ค่าพวกนี้พนักงานตั้งเองหน้าร้าน (ตามเทียร์ หรือพิมพ์ยอดเอง) ใช้ได้เฉพาะบิลที่พนักงานดูแล
+    คืนใบให้ลูกค้าไปสั่งออนไลน์แล้วยังติดอยู่ = ลูกค้าจ่ายค่าส่งที่พนักงานตั้งไว้ แทนค่าส่งตามกติกาออนไลน์
+    (เจอจริง: พนักงานทดสอบใส่ค่าส่ง 1 บาท แล้วตะกร้าคืนให้ลูกค้า ลูกค้าเห็นค่าจัดส่ง 1 บาท)
+    """
+    from app.services import staff_shipping_service  # ตรงนี้กัน circular import
+
+    charges = staff_shipping_service.charge_matnrs()
+    gone = [it for it in cart.items if it.matnr in charges]
+    for it in gone:
+        cart.items.remove(it)
+        db.delete(it)
+    if gone:
+        bump_rev(cart, "คืนตะกร้าให้ลูกค้า — ถอดค่าบริการที่พนักงานเปิดไว้")
+        audit_service.log(db, None, "cart.staff_charges_dropped", "cart", cart.id,
+                          {"matnrs": [it.matnr for it in gone]}, role="system")
+    return len(gone)
+
+
 def release_to_customer(db: Session, cart: Cart) -> Cart:
     """เซสชันเซลล์หมดอายุแต่ตะกร้าผูกลูกค้าไว้ → คืนใบให้ลูกค้าถือต่อ ไม่ใช่ทิ้ง
 
@@ -72,6 +93,7 @@ def release_to_customer(db: Session, cart: Cart) -> Cart:
     cart.owner_sales_id = None
     cart.owner_sales = None
     cart.expires_at = None
+    drop_staff_charges(db, cart)
     audit_service.log(db, None, "cart.released_to_customer", "cart", cart.id, {"customer_user_id": cart.customer_user_id}, role="system")
     db.commit()
     return load_cart(db, cart.id)
@@ -97,6 +119,7 @@ def leave_sales_care(db: Session, cart: Cart, actor) -> Cart:
     cart.owner_sales_id = None
     cart.owner_sales = None
     cart.expires_at = None
+    drop_staff_charges(db, cart)
     cart.promo_rev = None        # ส่วนลดเปลี่ยนแล้ว ด่านเช็คโปรฯ ต้องเริ่มใหม่
     audit_service.log(db, actor, "cart.left_sales_care", "cart", cart.id,
                       {"sales_id": was, "discounts_removed": [d.promo_code or d.kind for d in dropped]})
