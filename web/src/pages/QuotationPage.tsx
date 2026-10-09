@@ -36,10 +36,10 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
   if (!q) return <main className="container sec"><div className="ph" style={{ height: 240 }}>กำลังโหลด…</div></main>;
 
   const isStaff = mode === "sales" && (auth.role === "sales" || auth.role === "manager");
-  // ลูกค้าสั่งเองออนไลน์: ยังไม่จ่าย = หน้านี้คือหน้าสรุปรอชำระ ปุ่มหลักคือ "ชำระเงิน" อย่างเดียว
-  // (preview/แชร์ใบสั่งซื้อของตัวเองที่ยังไม่จ่ายไม่มีประโยชน์ และดึงสายตาออกจากปุ่มจ่าย)
-  // จ่ายแล้ว = ดาวน์โหลดใบสรุปเก็บเป็นหลักฐานได้ · ใบเสนอราคาจากพนักงานคงปุ่มไว้ (ลูกค้าเอาไปเทียบ/ส่งต่อ)
-  const onlineOrder = q.channel === "online";
+  // ลูกค้าเปิดดูเอง (จากแท็บรอชำระเงิน/ลิงก์) = หน้าสรุปรอชำระ ปุ่มหลักคือ "ชำระเงิน" อย่างเดียว
+  // ใช้กับทุกใบ ทั้งที่สั่งเองออนไลน์และใบเสนอราคาที่พนักงานออกให้ — preview/แชร์ดึงสายตาออกจากปุ่มจ่าย
+  // จ่ายแล้ว = ดาวน์โหลดใบเก็บเป็นหลักฐานได้ · พนักงานเปิด (หน้าขาย) คงปุ่มเอกสารครบ ไว้ส่งให้ลูกค้า
+  const customerView = !isStaff;
   const orderPaid = q.status === "paid" || q.status === "converted";
   const docUrl = `${API_BASE}${q.pdf_url}${q.link_token ? `?t=${q.link_token}` : token ? `?t=${token}` : ""}`;
   const tk = q.link_token || token;
@@ -116,11 +116,11 @@ export default function QuotationPage({ mode }: { mode: "sales" | "customer" }) 
             </tbody>
           </table>
           <div className="row wrap" style={{ marginTop: 14, gap: 8 }}>
-            {!onlineOrder && <a className="btn sm" href={`${docUrl}${docUrl.includes("?") ? "&" : "?"}images=1`} target="_blank" rel="noreferrer"><Icon name="visibility" size={18} /> Preview มีรูป</a>}
-            {!onlineOrder && <a className="btn sm" href={docUrl} target="_blank" rel="noreferrer"><Icon name="visibility" size={18} /> Preview ไม่มีรูป</a>}
+            {!customerView && <a className="btn sm" href={`${docUrl}${docUrl.includes("?") ? "&" : "?"}images=1`} target="_blank" rel="noreferrer"><Icon name="visibility" size={18} /> Preview มีรูป</a>}
+            {!customerView && <a className="btn sm" href={docUrl} target="_blank" rel="noreferrer"><Icon name="visibility" size={18} /> Preview ไม่มีรูป</a>}
             {/* แชร์/ดาวน์โหลดเป็นไฟล์ — ทั้งพนักงานและลูกค้าที่เปิดใบอยู่ใช้ได้ */}
-            {!onlineOrder && <button className="btn sm" onClick={() => setShareOpen(true)}><Icon name="ios_share" size={18} /> แชร์ / ดาวน์โหลด</button>}
-            {onlineOrder && orderPaid && <button className="btn sm" onClick={() => setShareOpen(true)}><Icon name="download" size={18} /> ดาวน์โหลด{q.doc_title || "ใบสรุปคำสั่งซื้อ"}</button>}
+            {!customerView && <button className="btn sm" onClick={() => setShareOpen(true)}><Icon name="ios_share" size={18} /> แชร์ / ดาวน์โหลด</button>}
+            {customerView && orderPaid && <button className="btn sm" onClick={() => setShareOpen(true)}><Icon name="download" size={18} /> ดาวน์โหลด{q.doc_title || "ใบสรุปคำสั่งซื้อ"}</button>}
             {isStaff && <button className="btn sm" disabled={busy !== null} onClick={() => send("email")}><Icon name="mail" size={18} /> ส่งอีเมล</button>}
             {isStaff && <button className="btn sm" disabled={busy !== null} onClick={() => send("sms")}><Icon name="sms" size={18} /> ส่ง SMS</button>}
             {isStaff && shareLink && <button className="btn sm" onClick={() => { navigator.clipboard?.writeText(shareLink); setMsg("คัดลอกลิงก์แล้ว: " + shareLink); }}><Icon name="link" size={18} /> คัดลอกลิงก์</button>}
