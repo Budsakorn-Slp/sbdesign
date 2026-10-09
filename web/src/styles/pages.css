@@ -877,3 +877,77 @@
   .due-items { white-space: normal; }
   .due-amt { margin-right: auto; }
 }
+
+/* ---------- ประวัติการสั่งซื้อ (แบบ Shopee) ---------- */
+.ord-list { display: flex; flex-direction: column; gap: 12px; }
+.ord { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+.ord-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.ord-id { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 13.5px; font-weight: 600; flex-wrap: wrap; }
+.ord-no { font-weight: 400; color: var(--ink-3); }
+.ord-status { flex: none; font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--bg-3); color: var(--ink-2); }
+.ord-status.green { background: #e7f5ef; color: var(--green); }
+.ord-status.blue { background: var(--brand-soft); color: var(--brand); }
+.ord-status.amber { background: var(--amber-bg); color: var(--amber); }
+.ord-status.red { background: #fdecee; color: var(--red); }
+.ord-items { display: block; padding: 4px 16px; color: inherit; text-decoration: none; }
+.ord-items:hover { background: var(--bg-2); }
+.ord-more { font-size: 12.5px; color: var(--ink-3); padding: 0 0 10px 76px; }
+.ord-foot { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--bg-2); flex-wrap: wrap; }
+.ord-foot > .small { flex: 1; min-width: 200px; }
+.ord-total { font-size: 13.5px; }
+.ord-total b { font-size: 17px; margin-left: 6px; color: var(--red); }
+
+/* แถวสินค้า: รูป · ชื่อ/รหัส · จำนวน · ราคา (ใช้ทั้งการ์ดและหน้ารายละเอียด) */
+.oi { display: flex; align-items: center; gap: 12px; padding: 10px 0; }
+.oi + .oi { border-top: 1px dashed var(--line); }
+.oi-pic { flex: none; width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: var(--bg-3); display: block; }
+.oi.compact .oi-pic { width: 56px; height: 56px; }
+.oi-pic .ph, .oi-pic img { width: 100%; height: 100%; object-fit: cover; }
+.oi-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.oi-main a { color: inherit; }
+.oi-main a:hover .oi-name { text-decoration: underline; }
+.oi-name { font-size: 14px; font-weight: 600; }
+.oi-sub { font-size: 12px; color: var(--ink-3); }
+.oi-remark { font-size: 12px; color: #a15c00; }
+.oi-qty { flex: none; font-size: 13px; color: var(--ink-3); }
+.oi-price { flex: none; min-width: 90px; text-align: right; font-size: 14px; }
+
+/* หน้ารายละเอียด */
+.od { max-width: 980px; }
+.od-back { margin-bottom: 12px; display: inline-flex; gap: 4px; }
+.od-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-radius: 12px; background: var(--ink); color: #fff; }
+.od-banner b { display: block; font-size: 18px; }
+.od-banner span { font-size: 13px; opacity: .85; }
+.od-banner.green { background: var(--green); }
+.od-banner.blue { background: var(--brand); }
+.od-banner.amber { background: var(--amber); }
+.od-banner.red { background: var(--red); }
+.od-steps { list-style: none; margin: 16px 0; padding: 18px 8px 14px; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.od-steps li { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 0 4px; }
+.od-steps li::before { content: ""; position: absolute; top: 17px; left: -50%; width: 100%; height: 3px; background: var(--line); z-index: 0; }
+.od-steps li:first-child::before { display: none; }
+.od-steps li.done::before { background: var(--green); }
+.od-dot { position: relative; z-index: 1; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: #fff; border: 2px solid var(--line-2); color: var(--ink-4); }
+.od-steps li.done .od-dot { border-color: var(--green); color: var(--green); }
+.od-steps li.cancel .od-dot { border-color: var(--red); color: var(--red); }
+.od-label { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.od-steps li.done .od-label { color: var(--ink); }
+.od-at { font-size: 11px; color: var(--ink-3); }
+.od-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.od-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.od-card h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 15px; }
+.od-dl { margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.od-dl div { display: flex; justify-content: space-between; gap: 12px; }
+.od-dl dt { color: var(--ink-3); }
+.od-dl dd { margin: 0; text-align: right; font-weight: 600; }
+.od-sum { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; font-size: 13.5px; }
+.od-sum div { display: flex; justify-content: space-between; }
+.od-total { padding-top: 8px; border-top: 1px dashed var(--line); align-items: baseline; }
+.od-total b { font-size: 20px; color: var(--red); }
+.od-total small { color: var(--ink-3); font-weight: 400; }
+@media (max-width: 720px) {
+  .od-grid { grid-template-columns: 1fr; }
+  .od-steps { overflow-x: auto; grid-auto-columns: minmax(78px, 1fr); }
+  .ord-foot .btn { margin-left: auto; }
+  .oi-price { min-width: 0; }
+}

@@ -192,6 +192,12 @@ def sync_order_history(db: Session, user: User) -> int:
         log.warning("ดึงประวัติสั่งซื้อจาก SAP ไม่ได้ (%s): %s", user.sap_customer_no, e)
         return 0
     n = 0
+    # order_history เป็นสำเนาของ SAP — เลข SO ที่ SAP ไม่ส่งมาแล้วคือของค้าง (เช่นเลขที่ตัวจำลองเคยสุ่มผิด) ลบทิ้ง
+    keep = {o.so_no for o in orders}
+    for stale in db.scalars(select(OrderHistory).where(OrderHistory.sap_customer_no == user.sap_customer_no)).all():
+        if stale.so_no not in keep:
+            db.delete(stale)
+    db.flush()
     for o in orders:
         row = db.scalar(select(OrderHistory).where(OrderHistory.so_no == o.so_no))
         if not row:

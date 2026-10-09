@@ -28,6 +28,7 @@ const QuotationPage = lazy(() => import("./pages/QuotationPage"));
 const SalesPage = lazy(() => import("./pages/SalesPage"));
 const PresosPage = lazy(() => import("./pages/PresosPage"));
 const QuotationTemplatePage = lazy(() => import("./pages/QuotationTemplatePage"));
+const OrderDetailPage = lazy(() => import("./pages/OrderDetailPage"));
 const ApprovalsPage = lazy(() => import("./pages/ApprovalsPage"));
 const SapSyncPage = lazy(() => import("./pages/SapSyncPage"));
 // สรุปการใช้งานช่วงทดสอบ — ตั้งใจไม่ใส่ลิงก์ในเมนู ให้เฉพาะคนที่รู้ URL
@@ -69,6 +70,7 @@ export default function App() {
                   <Route path="/p/:matnr" element={<ProductPage />} />
                   <Route path="/account" element={<AccountPage />} />
                   <Route path="/account/:tab" element={<AccountPage />} />
+                  <Route path="/account/orders/:key" element={<OrderDetailPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
                   <Route path="/sales" element={<SalesPage />} />

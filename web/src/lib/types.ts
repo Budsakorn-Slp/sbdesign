@@ -625,17 +625,39 @@ export type HomeContent = {
 };
 
 // ---------- ประวัติ + สินค้าขายดี (STEP 10) ----------
-export type OrderLine = { matnr: string; name: string; qty: number; unit_price: string; line_total: string };
+export type OrderLine = {
+  matnr: string; name: string; qty: number; unit_price: string; line_total: string;
+  variant?: string | null; image_url?: string | null; linkable?: boolean; supply?: string | null; remark?: string | null;
+};
+export type OrderStep = { key: string; label: string; done: boolean; at: string | null };
 export type OrderHistory = {
   so_no: string;
   order_date: string;
-  status: "confirmed" | "in_production" | "shipping" | "delivered" | "cancelled";
+  status: "paid" | "confirmed" | "in_production" | "shipping" | "delivered" | "cancelled";
   channel: string;
   branch: string | null;
   grand_total: string;
   delivery_date: string | null;
-  synced_at: string;
+  synced_at: string | null;
   lines: OrderLine[];
+  /** รายละเอียดแบบหน้าคำสั่งซื้อ — key ใช้เปิด /account/orders/{key} */
+  key: string;
+  order_no: string | null;
+  quotation_no: string | null;
+  source: "web" | "sap";
+  status_text: string;
+  ordered_at: string | null;
+  paid_at: string | null;
+  payment_method: string | null;
+  sales_name: string | null;
+  receiver: string | null;
+  phone: string | null;
+  ship_address: string | null;
+  subtotal: string | null;
+  discount_total: string | null;
+  shipping_fee: string | null;
+  vat: string | null;
+  steps: OrderStep[];
 };
 
 // ---------- ที่อยู่ไทย (/geo) ----------

@@ -55,12 +55,17 @@ def toggle_wishlist(matnr: str, db: Session = Depends(get_db), user: User = Depe
 
 @router.get("/me/orders", response_model=list[OrderOut])
 def my_orders(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return analytics_service.list_orders(db, user)
+    """ประวัติคำสั่งซื้อ: ที่จ่ายผ่านเว็บ + ประวัติจาก SAP รวมเป็นรายการเดียว"""
+    from app.services import order_view_service
+
+    return order_view_service.list_views(db, user)
 
 
 @router.get("/me/orders/{so_no}", response_model=OrderOut)
 def my_order(so_no: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    o = analytics_service.get_order(db, user, so_no)
+    from app.services import order_view_service
+
+    o = order_view_service.get_view(db, user, so_no)
     if not o:
         raise HTTPException(status_code=404, detail="ไม่พบออร์เดอร์นี้")
     return o

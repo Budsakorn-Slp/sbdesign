@@ -23,8 +23,20 @@ class OrderLineOut(BaseModel):
     qty: int
     unit_price: Decimal
     line_total: Decimal
+    variant: str | None = None
+    image_url: str | None = None
+    linkable: bool = False        # มีหน้าสินค้าในเว็บ กดเข้าไปดูได้
+    supply: str | None = None     # ยกกลับ / จัดส่ง / ส่ง+ติดตั้ง
+    remark: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class OrderStepOut(BaseModel):
+    key: str
+    label: str
+    done: bool
+    at: datetime | date | None = None
 
 
 class OrderOut(BaseModel):
@@ -35,8 +47,26 @@ class OrderOut(BaseModel):
     branch: str | None = None
     grand_total: Decimal
     delivery_date: date | None = None
-    synced_at: datetime
+    synced_at: datetime | None = None
     lines: list[OrderLineOut] = Field(default_factory=list)
+    # ---- รายละเอียดแบบหน้าคำสั่งซื้อ (Shopee) ----
+    key: str = ""                       # ใช้เปิดหน้ารายละเอียด /account/orders/{key}
+    order_no: str | None = None         # เลขคำสั่งซื้อ (SO ใน SAP) · ยังไม่มี = รอยืนยัน
+    quotation_no: str | None = None     # ใบที่จ่ายผ่านเว็บ
+    source: str = "sap"                 # web = จ่ายผ่านเว็บ · sap = ประวัติจาก SAP (หน้าร้าน)
+    status_text: str = ""
+    ordered_at: datetime | None = None
+    paid_at: datetime | None = None
+    payment_method: str | None = None
+    sales_name: str | None = None
+    receiver: str | None = None
+    phone: str | None = None
+    ship_address: str | None = None
+    subtotal: Decimal | None = None
+    discount_total: Decimal | None = None
+    shipping_fee: Decimal | None = None
+    vat: Decimal | None = None
+    steps: list[OrderStepOut] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

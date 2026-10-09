@@ -39,6 +39,17 @@ export function thTime(iso: string | null | undefined): string {
   return d.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
 }
 
+/** วันเวลาจากหลังบ้าน (UTC ไม่มีโซน) → "9 ต.ค. 69 15:05" เวลาไทย · ส่งมาแค่วันที่ → "9 ต.ค. 69" */
+export function thDateTime(iso: string | null | undefined): string {
+  if (!iso) return "-";
+  if (iso.length <= 10) return thDate(iso, true);
+  const utc = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");
+  if (Number.isNaN(utc.getTime())) return iso;
+  // วันที่ตามเวลาไทย (UTC+7) — ไม่งั้นออร์เดอร์ตอนตี 1 จะขึ้นเป็นวันก่อนหน้า
+  const ymd = new Date(utc.getTime() + 7 * 3600e3).toISOString().slice(0, 10);
+  return `${thDate(ymd, true)} ${thTime(iso)}`;
+}
+
 export function relTime(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso.endsWith("Z") || iso.includes("+") ? iso : iso + "Z");

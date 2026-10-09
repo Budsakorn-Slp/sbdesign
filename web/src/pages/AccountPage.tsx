@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import AddressBook from "../components/AddressBook";
 import Icon from "../components/Icon";
+import OrderCard from "../components/OrderCard";
 import ItTestPanel from "../components/ItTestPanel";
 import MemberLink from "../components/MemberLink";
 import ProductCard from "../components/ProductCard";
@@ -23,44 +24,6 @@ const TABS = [
   { key: "privacy", label: "ความเป็นส่วนตัว", icon: "shield_person" },
 ] as const;
 
-const STATUS_LABEL: Record<string, string> = {
-  confirmed: "ยืนยันแล้ว",
-  in_production: "กำลังผลิต",
-  shipping: "กำลังจัดส่ง",
-  delivered: "ส่งสำเร็จ",
-  cancelled: "ยกเลิก",
-};
-
-function OrderRow({ o }: { o: OrderHistory }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <article className={"order-card" + (open ? " open" : "")}>
-      <button className="order-head" onClick={() => setOpen(!open)}>
-        <div>
-          <div className="order-no mono">{o.so_no}</div>
-          <div className="small muted">{o.order_date} · {o.channel === "online" ? "สั่งออนไลน์" : "ที่สาขา"}{o.branch ? ` · ${o.branch}` : ""}</div>
-        </div>
-        <div className="order-right">
-          <span className={"order-status s-" + o.status}>{STATUS_LABEL[o.status] || o.status}</span>
-          <strong>{baht(o.grand_total)}</strong>
-          <Icon name={open ? "expand_less" : "expand_more"} size={20} />
-        </div>
-      </button>
-      {open && (
-        <div className="order-lines">
-          {o.lines.map((l) => (
-            <div key={l.matnr} className="order-line">
-              <Link to={`/p/${l.matnr}`}>{l.name}</Link>
-              <span className="muted small">×{l.qty}</span>
-              <span>{baht(l.line_total)}</span>
-            </div>
-          ))}
-          {o.delivery_date && <div className="small muted">กำหนดส่ง {o.delivery_date}</div>}
-        </div>
-      )}
-    </article>
-  );
-}
 
 type Privacy = { consent_marketing: boolean; consent_marketing_at: string | null; anonymized_at: string | null; history: { granted: boolean; source: string; created_at: string }[] };
 
@@ -459,7 +422,7 @@ export default function AccountPage() {
       {tab === "orders" && auth.user && (
         orders === null ? <p className="muted">กำลังโหลด…</p>
           : orders.length === 0 ? <p className="muted">ยังไม่มีประวัติการสั่งซื้อ</p>
-            : <div className="order-list">{orders.map((o) => <OrderRow key={o.so_no} o={o} />)}</div>
+            : <div className="ord-list">{orders.map((o) => <OrderCard key={o.key || o.so_no} o={o} />)}</div>
       )}
 
       {tab === "wishlist" && auth.user && (

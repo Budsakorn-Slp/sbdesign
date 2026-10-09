@@ -171,7 +171,9 @@ class MockSapClient:
             age = (today - ordered).days
             status = "delivered" if age > 30 else rnd.choice(["shipping", "in_production", "confirmed"])
             orders.append(OrderDTO(
-                so_no="26" + str(abs(hash((sap_customer_no, i))) % 10**8).zfill(8), sap_customer_no=sap_customer_no, order_date=ordered, status=status,
+                # เลข SO มาจากตัวสุ่มที่ตั้งต้นด้วยเลขลูกค้า — ไม่ใช้ hash() ของ Python ซึ่งเปลี่ยนทุกครั้งที่เปิดโปรแกรม
+                # (เคยทำให้ประวัติลูกค้าคนเดียวงอกเลข SO ใหม่ทุกครั้งที่ API รีสตาร์ท)
+                so_no="26" + str(rnd.randint(0, 10**8 - 1)).zfill(8), sap_customer_no=sap_customer_no, order_date=ordered, status=status,
                 grand_total=total, channel=rnd.choice(["online", "in_store_assisted"]), branch=rnd.choice(["SB Design Square บางนา", "SB Design Square เซ็นทรัลเวิลด์", "SB Design Square รัชดา"]),
                 delivery_date=ordered + timedelta(days=rnd.randint(3, 21)), lines=lines,
             ))

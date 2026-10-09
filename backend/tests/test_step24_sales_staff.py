@@ -649,3 +649,40 @@ def test_ใบสั่งซื้อออนไลน์_จ่ายแล�
     assert v["deadline_label"] == "" and v["deadline"] == ""
     doc = client.get(f"/quotations/{no}/document", headers=hs).text
     assert "ชำระภายใน" not in doc and "ชำระเมื่อ" not in doc
+
+
+# ---------- ประวัติคำสั่งซื้อแบบมีรายละเอียด ----------
+def test_ประวัติคำสั่งซื้อ_มีออร์เดอร์ที่จ่ายผ่านเว็บพร้อมรายละเอียด(client):
+    from tests.helpers import login
+
+    hs = {"Authorization": "Bearer " + login(client, "1100440182")["access_token"]}
+    client.post("/cart/items", json={"matnr": "10031002", "qty": 1, "supply_mode": "ship"}, headers=hs)
+    cart = client.get("/cart", headers=hs).json()
+    dq = client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110", "address": "1 ถ.สุขุมวิท"}, headers=hs).json()
+    client.post(f"/delivery/slots/{dq['slots'][0]['id']}/hold", json={"cart_id": cart["id"]}, headers=hs)
+    q = client.post("/checkout/quotation", json={"force": True}, headers=hs).json()
+    pay = client.post(f"/quotations/{q['quotation_no']}/payment-intent", json={"method": "qr_promptpay", "kind": "full"}, headers=hs).json()
+    from tests.test_step9_payment import _webhook
+
+    so = _webhook(client, pay["payment_no"]).json()["sap_so_no"]
+
+    rows = client.get("/me/orders", headers=hs).json()
+    mine = next(r for r in rows if r["quotation_no"] == q["quotation_no"])
+    assert mine["source"] == "web" and mine["order_no"] == so and mine["key"] == so
+    assert mine["ordered_at"] and mine["paid_at"] and mine["payment_method"] == "QR PromptPay"
+    assert mine["ship_address"] and "10110" in mine["ship_address"]
+    assert [s["key"] for s in mine["steps"]][:3] == ["ordered", "paid", "confirmed"] and all(s["done"] for s in mine["steps"][:3])
+    line = mine["lines"][0]
+    assert line["matnr"] == "10031002" and line["linkable"]
+    assert rows[0]["quotation_no"] == q["quotation_no"], "ล่าสุดอยู่บนสุด"
+    one = client.get(f"/me/orders/{so}", headers=hs).json()
+    assert one["quotation_no"] == q["quotation_no"] and one["steps"]
+
+
+def test_ประวัติจาก_SAP_ไม่งอกซ้ำทุกครั้งที่ดึง(client):
+    from tests.helpers import login
+
+    hs = {"Authorization": "Bearer " + login(client, "1100440182")["access_token"]}
+    a = [r["so_no"] for r in client.get("/me/orders", headers=hs).json() if r["source"] == "sap"]
+    b = [r["so_no"] for r in client.get("/me/orders", headers=hs).json() if r["source"] == "sap"]
+    assert a == b and len(a) == len(set(a))
