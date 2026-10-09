@@ -59,15 +59,27 @@ def doc_title(q: Quotation) -> tuple[str, str]:
     return ("ใบสรุปคำสั่งซื้อ", "Order Summary") if is_order(q) else ("ใบเสนอราคา", "Quotation")
 
 
-def deadline(q: Quotation) -> tuple[str, str]:
-    """(หัวข้อ, ค่า) ของแถวกำหนดเวลา
+def _th_time(dt) -> str:
+    # เก็บเป็น UTC — ลูกค้าอ่านเวลาไทย
+    return (dt + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M น.")
+
+
+def deadline(q: Quotation) -> tuple[str, str] | None:
+    """(หัวข้อ, ค่า) ของแถวกำหนดเวลา · None = ไม่ต้องแสดงแถวนี้
 
     ใบเสนอราคา: ยืนราคาถึง (วันที่)
-    ใบสรุปคำสั่งซื้อ: ชำระภายใน = เวลาหมดอายุของรายการชำระที่รออยู่ (หมดแล้วใบถูกยกเลิกอัตโนมัติ)
-      ยังไม่เคยกดจ่าย = ยังไม่เริ่มนับเวลา ใช้วันยืนราคาของใบแทน
+    ใบสรุปคำสั่งซื้อ:
+      จ่ายแล้ว → ชำระเมื่อ (วันเวลาที่จ่าย)
+      ยกเลิก/หมดอายุ → ไม่แสดง (สถานะบอกอยู่แล้ว "ชำระภายใน" ของใบที่ไม่มีผลแล้วชวนสับสน)
+      รอจ่าย → ชำระภายใน = เวลาหมดอายุของรายการชำระที่รออยู่ (หมดแล้วใบถูกยกเลิกอัตโนมัติ)
+        ยังไม่เคยกดจ่าย = ยังไม่เริ่มนับเวลา ใช้วันยืนราคาของใบแทน
     """
     if not is_order(q):
         return "ยืนราคาถึง", q.valid_until.strftime("%d/%m/%Y")
+    if q.status in ("paid", "converted"):
+        return ("ชำระเมื่อ", _th_time(q.paid_at)) if q.paid_at else None
+    if q.status in ("cancelled", "expired"):
+        return None
     from sqlalchemy.orm import object_session
 
     from app.models.payment import Payment
@@ -76,8 +88,7 @@ def deadline(q: Quotation) -> tuple[str, str]:
     p = db.scalar(select(Payment).where(Payment.quotation_id == q.id, Payment.status == "pending")
                   .order_by(Payment.created_at.desc())) if db else None
     if p:
-        # เก็บเป็น UTC — ลูกค้าอ่านเวลาไทย
-        return "ชำระภายใน", (p.expires_at + timedelta(hours=7)).strftime("%d/%m/%Y %H:%M น.")
+        return "ชำระภายใน", _th_time(p.expires_at)
     return "ชำระภายใน", q.valid_until.strftime("%d/%m/%Y")
 
 
@@ -239,7 +250,8 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
     if is_order(q):
         items = [t.replace("ใบเสนอราคานี้", "ใบสรุปคำสั่งซื้อนี้") for t in items]
     title_th, title_en = doc_title(q)
-    dl_label, dl_value = deadline(q)
+    dl = deadline(q)
+    dl_row = f"<tr><th>{dl[0]}</th><td><b>{e(dl[1])}</b></td></tr>" if dl else ""
     # เลขข้อเป็นตัวหนังสือธรรมดา ไม่ใช้เลขอัตโนมัติของ <ol> — ตอนแปลงเป็นรูป/PDF เลขอัตโนมัติลอยสูงกว่าบรรทัด
     lis = "".join(f"<li><span class='n'>{i}.</span><span>{e(t).replace(chr(10), '<br>')}</span></li>" for i, t in enumerate(items, 1))
     terms_block = f"<div class='terms'><b>เงื่อนไข</b><ol>{lis}</ol></div>" if items else ""
@@ -255,7 +267,7 @@ def render_document(db: Session, q: Quotation, with_images: bool = False, proxy_
 <body><div class="hdr">
 <div class="hdr-co">{logo}<div class="co-txt"><b>{e(s.company_name_th)}</b><br><b>{e(s.company_name_en)}</b><br>{e(s.company_address_th)}<br>{e(s.company_address_en)}<br>เลขประจำตัวผู้เสียภาษี TAX ID {e(s.company_tax_id)}</div></div>
 <div class="hdr-doc"><h1>{title_th}</h1><div class="sub">{title_en}</div>
-<table class="meta">{f"<tr><th>สาขา</th><td>{br}</td></tr>" if br else ""}<tr><th>เลขที่{title_th}</th><td><b>{e(q.quotation_no)}</b></td></tr><tr><th>วันที่ออก</th><td>{q.issued_at.strftime('%d/%m/%Y')}</td></tr><tr><th>{dl_label}</th><td><b>{e(dl_value)}</b></td></tr><tr><th>สถานะ</th><td><span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></td></tr></table></div>
+<table class="meta">{f"<tr><th>สาขา</th><td>{br}</td></tr>" if br else ""}<tr><th>เลขที่{title_th}</th><td><b>{e(q.quotation_no)}</b></td></tr><tr><th>วันที่ออก</th><td>{q.issued_at.strftime('%d/%m/%Y')}</td></tr>{dl_row}<tr><th>สถานะ</th><td><span class="tag">{e(STATUS_TXT.get(q.status, q.status))}</span></td></tr></table></div>
 </div>
 <div class="parties">
 <div><b class="ttl">ชื่อ-ที่อยู่ลูกค้า</b><div>{e(c.get('name') or '')}</div><div>{bill_addr}</div><div>{e(c.get('phone') or '')}{(' · ' + e(c.get('email'))) if c.get('email') else ''}</div></div>

@@ -621,3 +621,31 @@ def test_สั่งเองออนไลน์เป็นใบสรุ�
 
     staff_q = _issued(client, auth_headers(client, "SA-104", "staff"))
     assert staff_q["doc_title"] == "ใบเสนอราคา" and staff_q["deadline_label"] == "ยืนราคาถึง"
+
+
+def test_ใบสั่งซื้อออนไลน์_จ่ายแล้วขึ้นชำระเมื่อ_ยกเลิกแล้วไม่มีแถวกำหนดเวลา(client):
+    from datetime import datetime
+
+    from app.models.quotation import Quotation
+    from tests.helpers import login
+
+    hs = {"Authorization": "Bearer " + login(client, "1100440182")["access_token"]}
+    client.post("/cart/items", json={"matnr": "10031002", "qty": 1, "supply_mode": "ship"}, headers=hs)
+    cart = client.get("/cart", headers=hs).json()
+    dq = client.post("/delivery/quote", json={"cart_id": cart["id"], "postcode": "10110"}, headers=hs).json()
+    client.post(f"/delivery/slots/{dq['slots'][0]['id']}/hold", json={"cart_id": cart["id"]}, headers=hs)
+    no = client.post("/checkout/quotation", json={"force": True}, headers=hs).json()["quotation_no"]
+    with SessionLocal() as db:
+        q = db.scalar(select(Quotation).where(Quotation.quotation_no == no))
+        q.status, q.paid_at = "paid", datetime(2026, 10, 9, 3, 15)
+        db.commit()
+    v = client.get(f"/quotations/{no}", headers=hs).json()
+    assert v["deadline_label"] == "ชำระเมื่อ" and v["deadline"] == "09/10/2026 10:15 น.", "เวลาไทย (UTC+7)"
+    assert "ชำระภายใน" not in client.get(f"/quotations/{no}/document", headers=hs).text
+    with SessionLocal() as db:
+        db.scalar(select(Quotation).where(Quotation.quotation_no == no)).status = "cancelled"
+        db.commit()
+    v = client.get(f"/quotations/{no}", headers=hs).json()
+    assert v["deadline_label"] == "" and v["deadline"] == ""
+    doc = client.get(f"/quotations/{no}/document", headers=hs).text
+    assert "ชำระภายใน" not in doc and "ชำระเมื่อ" not in doc

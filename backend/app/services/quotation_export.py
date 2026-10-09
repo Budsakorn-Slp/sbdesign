@@ -59,7 +59,7 @@ def build(q: Quotation) -> Sheet:
         meta.append(("สาขา", f"{b_code} · {b_name}".strip(" ·")))
     title_th, title_en = doc_title(q)
     meta += [(f"เลขที่{title_th}", q.quotation_no), ("วันที่ออก", q.issued_at.strftime("%d/%m/%Y")),
-             deadline(q), ("สถานะ", STATUS_TXT.get(q.status, q.status))]
+             *([deadline(q)] if deadline(q) else []), ("สถานะ", STATUS_TXT.get(q.status, q.status))]
 
     bill_addr = " ".join(x for x in [c.get("address") or "", c.get("postcode") or ""] if x).strip()
     ship_addr = " ".join(x for x in [q.ship_address or "", q.ship_postcode or ""] if x).strip()

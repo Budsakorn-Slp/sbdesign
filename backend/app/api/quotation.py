@@ -64,7 +64,7 @@ def quotation_out(db: Session, q: Quotation, user: User | None) -> QuotationOut:
         deposit_amount=q.deposit_amount, valid_until=q.valid_until, pdf_url=q.pdf_url, ship_address=q.ship_address, ship_postcode=q.ship_postcode, ship_zone=q.ship_zone, slot_date=q.slot_date,
         slot_period=q.slot_period, stock_warnings=q.stock_warnings, sap_so_no=q.sap_so_no, sap_sync_status=q.sap_sync_status, sap_sync_error=q.sap_sync_error, issued_at=q.issued_at, paid_at=q.paid_at,
         cancelled_at=q.cancelled_at, cancel_reason=q.cancel_reason, link_token=_link_token_for(q, user),
-        doc_title=doc_title(q)[0], deadline_label=dl[0], deadline=dl[1],
+        doc_title=doc_title(q)[0], deadline_label=dl[0] if dl else "", deadline=dl[1] if dl else "",
     )
 
 
