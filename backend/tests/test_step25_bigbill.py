@@ -101,3 +101,31 @@ def test_รายการชำระบิลหมดเวลา_ไม่�
         db.commit()
     assert client.get(f"/payments/{pay['payment_no']}", headers=a).json()["status"] == "expired"
     assert client.get(f"/quotations/{q1['quotation_no']}", headers=a).json()["status"] == "issued", "ใบยังอยู่ จ่ายใหม่ได้"
+
+
+def test_ยกเลิกที่หน้าธนาคาร_หน้าบิลบอกผล_จ่ายใหม่ในบิลเดิมได้_และยกเลิกบิลได้(client):
+    a = auth_headers(client, "SA-104", "staff")
+    q1 = _issue(client, a)
+    bill = client.post("/sales/bigbills", json={"quotation_nos": [q1["quotation_no"]]}, headers=a).json()
+    p1 = client.post(f"/sales/bigbills/{bill['bill_no']}/pay", json={"method": "qr_promptpay"}, headers=a).json()
+    client.post(f"/payments/{p1['payment_no']}/mock-confirm", params={"outcome": "cancelled"}, headers=a)
+    v = client.get(f"/sales/bigbills/{bill['bill_no']}", headers=a).json()
+    assert v["status"] == "open" and v["pending_payment"] is None
+    assert v["attempts"][0]["status"] == "cancelled", "บอกว่ารอบล่าสุดถูกยกเลิก"
+
+    # ใบยังรอชำระ และในแท็บ Preso ขึ้นป้ายว่าอยู่ในบิลรวม
+    presos = client.get("/presos?mine=true", headers=a).json()
+    row = next(p for p in presos if p["quotation_no"] == q1["quotation_no"])
+    assert row["big_bill_no"] == bill["bill_no"]
+
+    # จ่ายใหม่ในบิลเดิม — ไม่ต้องสร้างบิลใหม่ · ธนาคารปฏิเสธ → บอกเหตุผล
+    p2 = client.post(f"/sales/bigbills/{bill['bill_no']}/pay", json={"method": "card"}, headers=a).json()
+    client.post(f"/payments/{p2['payment_no']}/mock-confirm", params={"outcome": "failed"}, headers=a)
+    v = client.get(f"/sales/bigbills/{bill['bill_no']}", headers=a).json()
+    assert [x["status"] for x in v["attempts"]] == ["failed", "cancelled"] and v["attempts"][0]["failed_reason"]
+
+    # ยกเลิกบิล → ใบกลับเป็นรอชำระปกติ ป้ายหาย
+    v = client.post(f"/sales/bigbills/{bill['bill_no']}/cancel", headers=a).json()
+    assert v["status"] == "cancelled"
+    row = next(p for p in client.get("/presos?mine=true", headers=a).json() if p["quotation_no"] == q1["quotation_no"])
+    assert row["big_bill_no"] is None and row["quotation_status"] == "issued"

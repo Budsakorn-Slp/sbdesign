@@ -141,6 +141,7 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", "/sales/bigbills", STAFF, {}),
     ("GET", f"/sales/bigbills/{BAD}", STAFF, None),
     ("POST", f"/sales/bigbills/{BAD}/pay", STAFF, {}),
+    ("POST", f"/sales/bigbills/{BAD}/cancel", STAFF, None),
     # ---------- หน้าพนักงานขาย: รูปตัวโชว์รายสาขา · พนักงานร่วมบิล · template ----------
     ("GET", "/staff/me", EMP, None),
     ("GET", f"/staff/materials/{BAD}/photos", EMP, None),

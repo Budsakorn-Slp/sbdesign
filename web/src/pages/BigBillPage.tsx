@@ -14,6 +14,7 @@ type Promo = { code: string; title: string; min: string; amount: string; expires
 type Bill = {
   bill_no: string; status: "open" | "paid" | "cancelled"; customer: Customer; promo_code: string | null; promo_title: string | null;
   subtotal: string; discount: string; grand_total: string; created_at: string; paid_at: string | null; pending_payment: string | null;
+  attempts: { payment_no: string; method: string; status: string; amount: string; created_at: string; paid_at: string | null; failed_reason: string | null }[];
   items: { quotation_no: string; status: string; amount: string; discount_share: string; sales_name: string | null; sap_so_no: string | null }[];
 };
 
@@ -189,24 +190,91 @@ function BillBuilder() {
   );
 }
 
+const ATTEMPT_TXT: Record<string, string> = { pending: "รอชำระ", paid: "ชำระสำเร็จ", failed: "ชำระไม่สำเร็จ", cancelled: "ยกเลิกการชำระ", expired: "หมดเวลาชำระ" };
+const METHOD_TXT: Record<string, string> = { qr_promptpay: "QR PromptPay", card: "บัตรเครดิต/เดบิต", installment: "ผ่อน 0%" };
+
 function BillView({ no }: { no: string }) {
   const nav = useNavigate();
   const [b, setB] = useState<Bill | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [method, setMethod] = useState<string>("qr_promptpay");
+  const [busy, setBusy] = useState<string | null>(null);
   useEffect(() => { apiGet<Bill>(`/sales/bigbills/${no}`).then(setB).catch((e) => setErr(errorMessage(e))); }, [no]);
-  if (err) return <main className="container sec"><div className="note err">{err}</div></main>;
-  if (!b) return <main className="container sec"><div className="ph" style={{ height: 200 }}>กำลังโหลด…</div></main>;
+
+  if (!b) return <main className="container sec">{err ? <div className="note err">{err}</div> : <div className="ph" style={{ height: 200 }}>กำลังโหลด…</div>}</main>;
   const paid = b.status === "paid";
+  const last = b.attempts[0];
+  // หัวหน้า: บิลจ่ายแล้ว/ยกเลิก หรือยังเปิดอยู่ + ผลการกดชำระรอบล่าสุด
+  const head = paid ? { tone: "green", title: "ชำระรวมสำเร็จ", icon: "task_alt" }
+    : b.status === "cancelled" ? { tone: "red", title: "บิลนี้ถูกยกเลิก", icon: "cancel" }
+    : b.pending_payment ? { tone: "amber", title: "รอชำระ — เปิดหน้าชำระเงินค้างอยู่", icon: "hourglass_top" }
+    : last?.status === "cancelled" ? { tone: "amber", title: "ยกเลิกการชำระ — บิลยังเปิดอยู่ ชำระใหม่ได้", icon: "undo" }
+    : last?.status === "failed" ? { tone: "red", title: "ชำระไม่สำเร็จ — ลองใหม่หรือเปลี่ยนช่องทาง", icon: "error" }
+    : last?.status === "expired" ? { tone: "amber", title: "หมดเวลาชำระ — ชำระใหม่ได้", icon: "timer_off" }
+    : { tone: "amber", title: "ยังไม่ได้ชำระ", icon: "receipt_long" };
+
+  const payAgain = async () => {
+    setBusy("pay");
+    setErr(null);
+    try {
+      const pay = await apiPost<Payment>(`/sales/bigbills/${b.bill_no}/pay`, { method });
+      if (pay.pay_url?.startsWith("http")) window.location.href = pay.pay_url;
+      else nav(pay.pay_url || `/pay/${pay.payment_no}/bank`);
+    } catch (e) {
+      setErr(errorMessage(e));
+      setBusy(null);
+    }
+  };
+  const cancelBill = async () => {
+    if (!confirm(`ยกเลิกบิลรวม ${b.bill_no}? ใบในบิลจะกลับไปเป็นใบรอชำระปกติ (จ่ายแยกหรือรวมบิลใหม่ได้)`)) return;
+    setBusy("cancel");
+    setErr(null);
+    try {
+      setB(await apiPost<Bill>(`/sales/bigbills/${b.bill_no}/cancel`, {}));
+    } catch (e) {
+      setErr(errorMessage(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
     <main className="container sec od">
       <Link to="/sales/presos" className="row small muted od-back"><Icon name="arrow_back" size={18} /> Preso ของฉัน</Link>
-      <section className={"od-banner " + (paid ? "green" : b.status === "cancelled" ? "red" : "amber")}>
+      <section className={"od-banner " + head.tone}>
         <div>
-          <b>{paid ? "ชำระรวมสำเร็จ" : b.status === "cancelled" ? "บิลนี้ถูกยกเลิก" : "รอชำระ"}</b>
-          <span>บิลรวม {b.bill_no} · {b.customer.name}{paid && b.paid_at ? ` · ชำระเมื่อ ${thDateTime(b.paid_at)}` : ""}</span>
+          <b>{head.title}</b>
+          <span>บิลรวม {b.bill_no} · {b.customer.name}{paid && b.paid_at ? ` · ชำระเมื่อ ${thDateTime(b.paid_at)}` : ""}
+            {!paid && last?.status === "failed" && last.failed_reason ? ` · ${last.failed_reason}` : ""}</span>
         </div>
-        <Icon name={paid ? "task_alt" : "receipt_long"} size={34} />
+        <Icon name={head.icon} size={34} />
       </section>
+      {err && <div className="note err" style={{ marginTop: 10 }}>{err}</div>}
+
+      {b.status === "open" && (
+        <section className="od-card bb-again" style={{ marginTop: 12 }}>
+          {b.pending_payment ? (
+            <>
+              <span className="grow small">มีหน้าชำระเงินที่เปิดค้างไว้ ({b.pending_payment})</span>
+              <button className="btn primary" onClick={() => nav(`/pay/${b.pending_payment}/bank`)}>ไปหน้าชำระเงิน</button>
+            </>
+          ) : (
+            <>
+              <div className="bb-methods">
+                {METHODS.map((m) => (
+                  <label key={m.id} className={"bb-method" + (method === m.id ? " on" : "")}>
+                    <input type="radio" name="method2" checked={method === m.id} onChange={() => setMethod(m.id)} />
+                    <Icon name={m.icon} size={18} /> {m.label}
+                  </label>
+                ))}
+              </div>
+              <button className="btn primary" disabled={busy !== null} onClick={payAgain}>{busy === "pay" ? "กำลังเปิดหน้าชำระ…" : `ชำระ ${bahtWord(b.grand_total)}`}</button>
+            </>
+          )}
+          <button className="link-btn small" disabled={busy !== null} onClick={cancelBill} style={{ color: "var(--red)" }}>ยกเลิกบิลรวม</button>
+        </section>
+      )}
+
       <section className="od-card" style={{ marginTop: 12 }}>
         <h3><Icon name="receipt_long" size={18} /> ใบในบิลนี้ ({b.items.length})</h3>
         <table className="tbl">
@@ -229,10 +297,26 @@ function BillView({ no }: { no: string }) {
           <div><span>ส่วนลดบิล{b.promo_code ? ` (${b.promo_code})` : ""}</span><span className="green">{Number(b.discount) ? `−${bahtWord(b.discount)}` : "0"}</span></div>
           <div className="od-total"><span>ยอดชำระ</span><b>{bahtWord(b.grand_total)}</b></div>
         </div>
-        {b.status === "open" && b.pending_payment && (
-          <button className="btn primary" style={{ marginTop: 12 }} onClick={() => nav(`/pay/${b.pending_payment}/bank`)}>ไปหน้าชำระเงิน</button>
-        )}
       </section>
+      {b.attempts.length > 0 && (
+        <section className="od-card" style={{ marginTop: 12 }}>
+          <h3><Icon name="history" size={18} /> ประวัติการชำระ ({b.attempts.length})</h3>
+          <table className="tbl">
+            <thead><tr><th>เวลา</th><th>รายการ</th><th>ช่องทาง</th><th>ผล</th><th className="r">ยอด</th></tr></thead>
+            <tbody>
+              {b.attempts.map((x) => (
+                <tr key={x.payment_no}>
+                  <td className="small">{thDateTime(x.created_at)}</td>
+                  <td className="mono small">{x.payment_no}</td>
+                  <td className="small">{METHOD_TXT[x.method] || x.method}</td>
+                  <td className="small"><span className={"bb-att " + x.status}>{ATTEMPT_TXT[x.status] || x.status}</span>{x.failed_reason ? <div className="tiny muted">{x.failed_reason}</div> : null}</td>
+                  <td className="r small">{bahtWord(x.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
     </main>
   );
 }

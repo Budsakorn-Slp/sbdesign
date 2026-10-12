@@ -121,7 +121,8 @@ export default function PresosPage() {
                     <br /><span className="small muted">{p.customer_name || "ยังไม่ผูกลูกค้า"}{p.note ? ` · ${p.note}` : ""}</span>
                   </td>
                   <td>{p.item_count} ชิ้น</td>
-                  <td><b>{bahtWord(p.grand_total)}</b>{p.quotation_status && <div className="small muted">{QSTATUS[p.quotation_status] || p.quotation_status}</div>}</td>
+                  <td><b>{bahtWord(p.grand_total)}</b>{p.quotation_status && <div className="small muted">{QSTATUS[p.quotation_status] || p.quotation_status}</div>}
+                    {p.big_bill_no && <Link to={`/sales/bigbill/${p.big_bill_no}`} className="bb-tag" title="ใบนี้อยู่ในบิลรวมที่ยังไม่ชำระ — กดไปหน้าบิล">บิลรวม {p.big_bill_no}</Link>}</td>
                   <td className="small muted">{relTime(p.updated_at)}</td>
                   <td>
                     <div className="row">

@@ -480,6 +480,8 @@ export type PresoSummary = {
   cart_id: string;
   customer_name: string | null;
   customer_id?: string | null;
+  /** อยู่ในบิลรวมที่ยังไม่ชำระ */
+  big_bill_no?: string | null;
   sales_name: string | null;
   item_count: number;
   grand_total: string;

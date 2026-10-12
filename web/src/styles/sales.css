@@ -487,3 +487,11 @@
 .bb-search input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 9px 0; font: inherit; font-size: 13.5px; background: transparent; color: var(--ink); }
 .bb-search:focus-within { border-color: var(--ink); }
 .bb-all { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+
+.bb-again { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.bb-again .bb-methods { margin: 0; flex-direction: row; flex-wrap: wrap; flex: 1; }
+.bb-att { display: inline-block; padding: 1px 8px; border-radius: 999px; font-weight: 600; background: var(--bg-3); }
+.bb-att.paid { background: #e7f5ef; color: var(--green); }
+.bb-att.failed { background: #fdecee; color: var(--red); }
+.bb-att.cancelled, .bb-att.expired { background: var(--amber-bg); color: var(--amber); }
+.bb-tag { display: inline-block; margin-top: 3px; padding: 1px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand); font-size: 11.5px; font-weight: 600; text-decoration: none; white-space: nowrap; }

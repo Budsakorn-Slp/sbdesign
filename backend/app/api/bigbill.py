@@ -64,6 +64,16 @@ class BillItemOut(BaseModel):
     sap_so_no: str | None
 
 
+class AttemptOut(BaseModel):
+    payment_no: str
+    method: str
+    status: str                 # pending | paid | failed | cancelled | expired
+    amount: Decimal
+    created_at: datetime
+    paid_at: datetime | None = None
+    failed_reason: str | None = None
+
+
 class BillOut(BaseModel):
     bill_no: str
     status: str
@@ -77,6 +87,7 @@ class BillOut(BaseModel):
     paid_at: datetime | None
     items: list[BillItemOut]
     pending_payment: str | None = None   # เลขรายการชำระที่รออยู่ (กดจ่ายต่อได้)
+    attempts: list[AttemptOut] = []      # ทุกครั้งที่กดชำระ ล่าสุดก่อน — บอกว่ารอบก่อนยกเลิก/ไม่สำเร็จ/หมดเวลา
 
 
 class CreateIn(BaseModel):
@@ -107,8 +118,14 @@ def _bill(db: Session, b: BigBill) -> BillOut:
 
     from app.models.payment import Payment
 
-    pend = db.scalar(select(Payment.payment_no).where(Payment.big_bill_id == b.id, Payment.status == "pending")
-                     .order_by(Payment.created_at.desc()))
+    pays = db.scalars(select(Payment).where(Payment.big_bill_id == b.id).order_by(Payment.created_at.desc())).all()
+    # รายการที่ยังรอแต่เลยเวลาแล้ว — ปิดเป็นหมดเวลาก่อนแสดง (ไม่งั้นขึ้น "รอชำระ" ทั้งที่จ่ายไม่ได้แล้ว)
+    from app.services import payment_service
+
+    for x in pays:
+        if x.status == "pending":
+            payment_service.get_payment(db, x.payment_no)
+    pend = next((x.payment_no for x in pays if x.status == "pending"), None)
     return BillOut(
         bill_no=b.bill_no, status=b.status, customer=_customer(b.customer), promo_code=b.promo_code, promo_title=b.promo_title,
         subtotal=b.subtotal, discount=b.discount, grand_total=b.grand_total, created_at=b.created_at, paid_at=b.paid_at,
@@ -116,6 +133,8 @@ def _bill(db: Session, b: BigBill) -> BillOut:
                            discount_share=it.discount_share, sales_name=it.quotation.sales.name if it.quotation.sales else None,
                            sap_so_no=it.quotation.sap_so_no) for it in b.items],
         pending_payment=pend,
+        attempts=[AttemptOut(payment_no=x.payment_no, method=x.method, status=x.status, amount=x.amount, created_at=x.created_at,
+                             paid_at=x.paid_at, failed_reason=x.failed_reason) for x in pays],
     )
 
 
@@ -140,6 +159,19 @@ def create(body: CreateIn, db: Session = Depends(get_db), me: User = Depends(sta
 @router.get("/sales/bigbills/{bill_no}", response_model=BillOut)
 def get(bill_no: str, db: Session = Depends(get_db), me: User = Depends(staff)):
     return _bill(db, bigbill_service.get(db, bill_no))
+
+
+@router.post("/sales/bigbills/{bill_no}/cancel", response_model=BillOut)
+def cancel(bill_no: str, db: Session = Depends(get_db), me: User = Depends(staff)):
+    """ยกเลิกบิลรวม — ใบในบิลกลับไปเป็นใบรอชำระปกติ (จ่ายแยก/รวมบิลใหม่ได้)"""
+    b = bigbill_service.get(db, bill_no)
+    if b.status == "paid":
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail="บิลนี้ชำระแล้ว ยกเลิกไม่ได้")
+    bigbill_service.cancel(db, b, me, "พนักงานกดยกเลิกบิลรวม")
+    db.commit()
+    return _bill(db, b)
 
 
 @router.post("/sales/bigbills/{bill_no}/pay", response_model=PaymentOut, status_code=201)
