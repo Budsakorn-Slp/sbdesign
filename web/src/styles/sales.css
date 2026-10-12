@@ -482,3 +482,8 @@
 }
 .bb-tbl td, .bb-tbl th { white-space: nowrap; }
 .bb-tbl td:nth-child(4), .bb-tbl td:nth-child(5) { white-space: normal; min-width: 120px; }
+.bb-find { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.bb-search { flex: 1 1 260px; display: flex; align-items: center; gap: 6px; padding: 0 6px 0 10px; border: 1px solid var(--line-2); border-radius: 10px; background: #fff; color: var(--ink-3); }
+.bb-search input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 9px 0; font: inherit; font-size: 13.5px; background: transparent; color: var(--ink); }
+.bb-search:focus-within { border-color: var(--ink); }
+.bb-all { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; cursor: pointer; }

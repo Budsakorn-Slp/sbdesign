@@ -42,6 +42,7 @@ function BillBuilder() {
   const [method, setMethod] = useState<string>("qr_promptpay");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [find, setFind] = useState("");
 
   useEffect(() => {
     if (!start[0]) return;
@@ -64,6 +65,16 @@ function BillBuilder() {
 
   const promo = promos.find((p) => p.code === code) || null;
   const discount = promo ? Number(promo.amount) : 0;
+
+  // ค้นจากเลขใบ ชื่อสินค้า หรือชื่อ/รหัสพนักงาน — ใบที่ติ๊กไว้ยังนับยอดแม้ค้นแล้วไม่โชว์
+  const term = find.trim().toLowerCase();
+  const shown = (cands || []).filter((c) => !term || [c.quotation_no, c.first_item, c.sales_name || "ออนไลน์", c.sales_code || "", c.mine ? "ของฉัน" : ""]
+    .some((x) => x.toLowerCase().includes(term)));
+  const hiddenPicked = chosen.filter((c) => !shown.includes(c)).length;
+  const allShownPicked = shown.length > 0 && shown.every((c) => sel.includes(c.quotation_no));
+  const pickShown = (on: boolean) => setSel((cur) => on
+    ? [...new Set([...cur, ...shown.map((c) => c.quotation_no)])]
+    : cur.filter((x) => !shown.some((c) => c.quotation_no === x)));
 
   const toggle = (q: string) => setSel((cur) => (cur.includes(q) ? cur.filter((x) => x !== q) : [...cur, q]));
 
@@ -100,11 +111,23 @@ function BillBuilder() {
 
           <section className="od-card" style={{ marginTop: 12 }}>
             <h3><Icon name="receipt_long" size={18} /> ใบเสนอราคาที่รอชำระ ({cands?.length ?? "…"})</h3>
+            <div className="bb-find">
+              <label className="bb-search">
+                <Icon name="search" size={18} />
+                <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="ค้นหาเลขที่ใบ ชื่อสินค้า หรือพนักงาน" aria-label="ค้นหาใบเสนอราคา" />
+                {find && <button className="icon-btn sm" onClick={() => setFind("")} aria-label="ล้างคำค้น"><Icon name="close" size={16} /></button>}
+              </label>
+              <label className="bb-all">
+                <input type="checkbox" checked={allShownPicked} disabled={shown.length === 0} onChange={(e) => pickShown(e.target.checked)} />
+                เลือกทั้งหมด{term ? "ที่ค้นเจอ" : ""} ({shown.length})
+              </label>
+            </div>
+            {hiddenPicked > 0 && <div className="tiny muted" style={{ marginBottom: 6 }}>เลือกไว้อีก {hiddenPicked} ใบที่ไม่ตรงคำค้น — ยังนับอยู่ในยอดรวม</div>}
             <div className="tbl-wrap">
               <table className="tbl bb-tbl">
                 <thead><tr><th></th><th>เลขที่</th><th>วันที่</th><th>สินค้า</th><th>พนักงาน</th><th className="r">ยอดสุทธิ</th></tr></thead>
                 <tbody>
-                  {(cands || []).map((c) => (
+                  {shown.map((c) => (
                     <tr key={c.quotation_no} className={sel.includes(c.quotation_no) ? "picked" : ""} onClick={() => toggle(c.quotation_no)}>
                       <td><input type="checkbox" checked={sel.includes(c.quotation_no)} onChange={() => toggle(c.quotation_no)} onClick={(e) => e.stopPropagation()} aria-label={`เลือก ${c.quotation_no}`} /></td>
                       <td><b className="mono">{c.quotation_no}</b><div className="tiny muted">ยืนราคาถึง {thDate(c.valid_until, true)}</div></td>
@@ -115,6 +138,7 @@ function BillBuilder() {
                     </tr>
                   ))}
                   {cands && cands.length === 0 && <tr><td colSpan={6} className="muted">ไม่มีใบรอชำระ</td></tr>}
+                  {cands && cands.length > 0 && shown.length === 0 && <tr><td colSpan={6} className="muted">ไม่พบใบที่ตรงกับ "{find}"</td></tr>}
                 </tbody>
               </table>
             </div>
