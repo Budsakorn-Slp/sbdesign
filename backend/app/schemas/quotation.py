@@ -17,6 +17,7 @@ class PresoSummaryOut(BaseModel):
     status: str
     cart_id: str
     customer_name: str | None = None
+    customer_id: str | None = None   # บิลรวมเลือกได้เฉพาะใบของลูกค้าคนเดียวกัน
     sales_name: str | None = None
     item_count: int
     grand_total: Decimal

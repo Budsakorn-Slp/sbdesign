@@ -27,6 +27,8 @@ export default function PresosPage() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [share, setShare] = useState<{ no: string; token: string | null } | null>(null);
+  // บิลรวม: ติ๊กใบรอชำระของลูกค้าคนเดียวกัน แล้วไปชำระรวมครั้งเดียว
+  const [picked, setPicked] = useState<PresoSummary[]>([]);
 
   const load = useCallback(() => {
     if (!sales.enabled) return;
@@ -97,11 +99,23 @@ export default function PresosPage() {
         <div className="tbl-wrap card flat">
           <table className="tbl">
             <thead>
-              <tr><th>เลขที่ / ลูกค้า</th><th>สินค้า</th><th>ยอด</th><th>อัปเดต</th><th></th></tr>
+              <tr>{tab === "quoted" && <th style={{ width: 36 }}></th>}<th>เลขที่ / ลูกค้า</th><th>สินค้า</th><th>ยอด</th><th>อัปเดต</th><th></th></tr>
             </thead>
             <tbody>
               {(tab === "draft" ? drafts : quoted).map((p) => (
-                <tr key={p.id}>
+                <tr key={p.id} className={picked.some((x) => x.id === p.id) ? "picked" : ""}>
+                  {tab === "quoted" && (
+                    <td>
+                      {p.quotation_status === "issued" && p.quotation_no && (
+                        <input type="checkbox" aria-label={`เลือก ${p.quotation_no} เข้าบิลรวม`}
+                          checked={picked.some((x) => x.id === p.id)}
+                          // บิลรวมต้องเป็นลูกค้าคนเดียวกัน — ติ๊กใบแรกแล้ว ใบของลูกค้าอื่นติ๊กไม่ได้
+                          disabled={picked.length > 0 && picked[0].customer_id !== p.customer_id}
+                          title={picked.length > 0 && picked[0].customer_id !== p.customer_id ? "บิลรวมได้เฉพาะลูกค้าคนเดียวกัน" : ""}
+                          onChange={(e) => setPicked((cur) => e.target.checked ? [...cur, p] : cur.filter((x) => x.id !== p.id))} />
+                      )}
+                    </td>
+                  )}
                   <td>
                     <b className="mono">{p.preso_no}</b>{p.quotation_no && <> → <Link to={`/sales/quotations/${p.quotation_no}`} className="mono strong">{p.quotation_no}</Link></>}
                     <br /><span className="small muted">{p.customer_name || "ยังไม่ผูกลูกค้า"}{p.note ? ` · ${p.note}` : ""}</span>
@@ -128,7 +142,7 @@ export default function PresosPage() {
                   </td>
                 </tr>
               ))}
-              {(tab === "draft" ? drafts : quoted).length === 0 && <tr><td colSpan={5} className="muted">ไม่มีรายการ</td></tr>}
+              {(tab === "draft" ? drafts : quoted).length === 0 && <tr><td colSpan={6} className="muted">ไม่มีรายการ</td></tr>}
             </tbody>
           </table>
         </div>
@@ -136,6 +150,18 @@ export default function PresosPage() {
       <p className="small muted" style={{ marginTop: 10 }}>Preso = ใบร่างที่ยังแก้ได้ · Quotation = ล็อกราคา/โปร แล้วส่งต่อให้ระบบ SAP{quotes.length ? ` · ใบเสนอราคาทั้งหมดของฉัน ${quotes.length} ใบ` : ""}</p>
       <div className="row" style={{ marginTop: 6 }}><Icon name="arrow_back" size={16} /> <Link to="/sales">กลับไปตะกร้าที่กำลังดูแล</Link></div>
       {share && <QuotationShare no={share.no} token={share.token} staff onClose={() => setShare(null)} />}
+      {tab === "quoted" && picked.length > 0 && (
+        <div className="bb-bar">
+          <div>
+            <b>เลือก {picked.length} ใบ · {picked[0].customer_name}</b>
+            <span>รวม {bahtWord(picked.reduce((n, p) => n + Number(p.grand_total), 0))} · ในหน้าถัดไปเพิ่มใบอื่นของลูกค้าคนนี้ได้</span>
+          </div>
+          <button className="link-btn small" onClick={() => setPicked([])}>ล้าง</button>
+          <button className="btn primary" onClick={() => nav(`/sales/bigbill?q=${picked.map((p) => p.quotation_no).join(",")}`)}>
+            <Icon name="receipt_long" size={18} /> ชำระรวม (Big Bill)
+          </button>
+        </div>
+      )}
     </main>
   );
 }

@@ -135,6 +135,12 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", "/sales/availability", STAFF, {"matnr": 123}),  # ผิด type → 422 ไม่ยิง SAP จริง
     ("POST", "/sales/availability/batch", STAFF, {"items": 1}),  # ผิด type → 422 ไม่ยิง SAP จริง
     ("GET", "/customers/search?q=สม", STAFF, None),
+    # บิลรวม (Big Bill) — เครื่องมือพนักงาน
+    ("GET", f"/sales/bigbill/candidates?quotation_no={BAD}", STAFF, None),
+    ("GET", "/sales/bigbill/promos?amount=1000", STAFF, None),
+    ("POST", "/sales/bigbills", STAFF, {}),
+    ("GET", f"/sales/bigbills/{BAD}", STAFF, None),
+    ("POST", f"/sales/bigbills/{BAD}/pay", STAFF, {}),
     # ---------- หน้าพนักงานขาย: รูปตัวโชว์รายสาขา · พนักงานร่วมบิล · template ----------
     ("GET", "/staff/me", EMP, None),
     ("GET", f"/staff/materials/{BAD}/photos", EMP, None),

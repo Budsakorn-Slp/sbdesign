@@ -15,3 +15,4 @@ from app.models.geo import ThaiGeo  # noqa: F401
 from app.models.shipping import ShipArea, ShipAreaPostcode, ShipProductAttr, ShipRate, ShipRule  # noqa: F401
 from app.models.user import MemberLinkEvent, OtpCode, User, UserSession  # noqa: F401
 from app.models.photo import ProductPhoto, ProductPhotoAudit  # noqa: F401
+from app.models.bigbill import BigBill, BigBillItem  # noqa: F401

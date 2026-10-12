@@ -60,7 +60,7 @@ def create_intent(db: Session, q: Quotation, actor: User | None, method: str, ki
 
     # intent เดิมที่ยังไม่หมดอายุและเงื่อนไขเดียวกัน → ใช้ใบเดิม (กดซ้ำไม่สร้างซ้ำ)
     now = utcnow()
-    old = db.scalar(select(Payment).where(Payment.quotation_id == q.id, Payment.status == "pending").order_by(Payment.created_at.desc()))
+    old = db.scalar(select(Payment).where(Payment.quotation_id == q.id, Payment.big_bill_id.is_(None), Payment.status == "pending").order_by(Payment.created_at.desc()))
     if old and old.expires_at > now:
         if old.method == method and old.kind == kind:
             return old
@@ -113,6 +113,14 @@ def expire_payment(db: Session, p: Payment) -> Payment:
     ถ้าปล่อยใบไว้เฉยๆ ของจะถูกจองไว้ในสายตาลูกค้าทั้งที่ไม่มีใครจ่าย แล้วคิวจัดส่ง
     ที่กันไว้ก็ค้างกินที่ของคนอื่น · ลูกค้ายังสั่งใหม่ได้ ไม่ได้เสียอะไร
     """
+    if p.big_bill_id:
+        # บิลรวมหมดเวลาจ่าย: ไม่ยกเลิกใบในบิล (ใบมีอายุของตัวเอง) กดจ่ายบิลใหม่ได้
+        from app.services import bigbill_service
+
+        bigbill_service.on_expired(db, p)
+        db.commit()
+        db.refresh(p)
+        return p
     p.status = "expired"
     db.commit()
     q = p.quotation
@@ -140,7 +148,7 @@ def pending_for_user(db: Session, user: User) -> list[tuple[Quotation, Payment |
     out: list[tuple[Quotation, Payment | None]] = []
     for q in qs:
         p = db.scalar(
-            select(Payment).where(Payment.quotation_id == q.id, Payment.status == "pending")
+            select(Payment).where(Payment.quotation_id == q.id, Payment.big_bill_id.is_(None), Payment.status == "pending")
             .order_by(Payment.created_at.desc())
         )
         out.append((q, p))
@@ -203,6 +211,16 @@ def handle_webhook(db: Session, body: bytes, signature: str | None) -> dict:
 
     p.status = "paid"
     p.paid_at = utcnow()
+    if p.big_bill_id:
+        # บิลรวม: ทุกใบในบิลจ่ายแล้วพร้อมกัน แต่ละใบส่งเข้า SAP เป็น SO ของตัวเอง
+        from app.services import bigbill_service
+
+        qs = bigbill_service.on_paid(db, p)
+        db.commit()
+        for one in qs:
+            push_to_sap(db, one)
+        return {"ok": True, "payment_no": p.payment_no, "status": p.status, "big_bill": p.big_bill.bill_no,
+                "quotations": [{"quotation_no": one.quotation_no, "sap_so_no": one.sap_so_no} for one in qs]}
     q = p.quotation
     q.status = "paid"
     q.paid_at = p.paid_at

@@ -39,6 +39,7 @@ class PendingPaymentOut(BaseModel):
 class PaymentOut(BaseModel):
     payment_no: str
     quotation_no: str
+    big_bill_no: str | None = None   # จ่ายแบบบิลรวม → หน้าธนาคารจำลองพากลับไปหน้าบิล
     method: str
     kind: str
     amount: str
@@ -67,13 +68,23 @@ class SyncJobOut(BaseModel):
     paid_at: datetime | None
 
 
+def _check_payment_access(p: Payment, user: User | None, t: str | None) -> None:
+    """บิลรวม: พนักงานขาย/ผู้จัดการ หรือลูกค้าเจ้าของบิล · รายใบ: สิทธิ์เดียวกับใบเสนอราคา
+    (บิลรวมมีใบของพนักงานหลายคน ใช้สิทธิ์รายใบไม่ได้ — คนเก็บเงินไม่ใช่คนออกใบแรกเสมอ)"""
+    if p.big_bill_id:
+        if user and (user.role in ("sales", "manager", "admin") or user.id == p.big_bill.customer_user_id):
+            return
+        raise HTTPException(status_code=401 if user is None else 403, detail="ไม่มีสิทธิ์ดูรายการชำระของบิลนี้")
+    quotation_service.check_access(p.quotation, user, t)
+
+
 def payment_out(p: Payment) -> PaymentOut:
     q = p.quotation
     return PaymentOut(
         payment_no=p.payment_no, quotation_no=q.quotation_no, method=p.method, kind=p.kind, amount=str(p.amount), status=p.status,
         qr_payload=p.qr_payload, pay_url=p.pay_url, expires_at=p.expires_at, paid_at=p.paid_at,
         sap_so_no=q.sap_so_no, sap_sync_status=q.sap_sync_status, quotation_status=q.status,
-        failed_reason=p.failed_reason,
+        failed_reason=p.failed_reason, big_bill_no=p.big_bill.bill_no if p.big_bill_id else None,
     )
 
 
@@ -89,7 +100,7 @@ def create_payment_intent(no: str, body: IntentIn, t: str | None = Query(default
 def get_payment(payment_no: str, t: str | None = Query(default=None), db: Session = Depends(get_db), user: User | None = Depends(get_current_user_optional)):
     """หน้าจ่ายเงิน poll สถานะจากตรงนี้ (รอ webhook จาก provider)"""
     p = payment_service.get_payment(db, payment_no)
-    quotation_service.check_access(p.quotation, user, t)
+    _check_payment_access(p, user, t)
     return payment_out(p)
 
 
@@ -124,7 +135,7 @@ def mock_confirm(
     if s.is_prod and not s.mock_payment_enabled:
         raise HTTPException(status_code=404, detail="ปิดใช้งานในโหมด production")
     p = payment_service.get_payment(db, payment_no)
-    quotation_service.check_access(p.quotation, user, t)
+    _check_payment_access(p, user, t)
 
     # ลูกค้ากดยกเลิกเอง ไม่ใช่ธนาคารปฏิเสธ — webhook ของจริงไม่มีเหตุการณ์นี้
     # (provider ถือว่ารายการยังค้าง แล้วหมดอายุไปเอง) จึงตั้งสถานะตรงนี้ ไม่ผ่าน webhook

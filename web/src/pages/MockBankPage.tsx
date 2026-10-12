@@ -44,7 +44,8 @@ export default function MockBankPage() {
       await apiPost<Payment>(`/payments/${no}/mock-confirm${qs ? qs + "&" : "?"}outcome=${outcome}`, {});
       // ส่งเลขรายการไปด้วยเพื่อให้หน้าผลไปถามสถานะจริงจากหลังบ้าน ไม่ใช่เชื่อค่าใน URL
       const sep = qs ? "&" : "?";
-      nav(`/pay/${pay?.quotation_no || ""}/result${qs}${sep}p=${encodeURIComponent(no)}`, { replace: true });
+      if (pay?.big_bill_no) nav(`/sales/bigbill/${pay.big_bill_no}`, { replace: true });
+      else nav(`/pay/${pay?.quotation_no || ""}/result${qs}${sep}p=${encodeURIComponent(no)}`, { replace: true });
     } catch (e) {
       setErr(errorMessage(e));
       setBusy(null);

@@ -479,6 +479,7 @@ export type PresoSummary = {
   status: "draft" | "quoted" | "expired" | "cancelled";
   cart_id: string;
   customer_name: string | null;
+  customer_id?: string | null;
   sales_name: string | null;
   item_count: number;
   grand_total: string;
@@ -563,6 +564,8 @@ export type Quotation = {
 export type PaymentMethod = "qr_promptpay" | "card" | "installment" | "link";
 
 export type Payment = {
+  /** จ่ายแบบบิลรวม → หลังจ่ายกลับไปหน้าบิล ไม่ใช่หน้าใบเดียว */
+  big_bill_no?: string | null;
   payment_no: string;
   quotation_no: string;
   method: PaymentMethod;

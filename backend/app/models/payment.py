@@ -28,8 +28,11 @@ class Payment(Base, TimestampMixin):
     failed_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by_user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     raw_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # payload ดิบจาก webhook
+    # จ่ายแบบบิลรวม — quotation_id ชี้ใบแรกในบิล (ตัวยึด) ยอดเงินคือยอดทั้งบิล · None = จ่ายรายใบ
+    big_bill_id: Mapped[str | None] = mapped_column(ForeignKey("big_bills.id"), index=True, nullable=True)
 
     quotation = relationship("Quotation")
+    big_bill = relationship("BigBill")
 
 
 class SapSyncJob(Base, TimestampMixin):
