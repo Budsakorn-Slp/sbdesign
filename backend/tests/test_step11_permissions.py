@@ -139,6 +139,7 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("GET", f"/sales/bigbill/candidates?quotation_no={BAD}", STAFF, None),
     ("GET", "/sales/bigbill/promos?amount=1000", STAFF, None),
     ("POST", "/sales/bigbills", STAFF, {}),
+    ("GET", "/sales/bigbills", STAFF, None),
     ("GET", f"/sales/bigbills/{BAD}", STAFF, None),
     ("POST", f"/sales/bigbills/{BAD}/pay", STAFF, {}),
     ("POST", f"/sales/bigbills/{BAD}/cancel", STAFF, None),

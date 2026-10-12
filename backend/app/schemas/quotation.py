@@ -18,7 +18,8 @@ class PresoSummaryOut(BaseModel):
     cart_id: str
     customer_name: str | None = None
     customer_id: str | None = None   # บิลรวมเลือกได้เฉพาะใบของลูกค้าคนเดียวกัน
-    big_bill_no: str | None = None   # อยู่ในบิลรวมที่ยังไม่จ่าย → กดกลับไปหน้าบิลได้
+    big_bill_no: str | None = None   # อยู่ในบิลรวม (ยังไม่จ่าย/จ่ายแล้ว) → กดไปหน้าบิลได้
+    big_bill_status: str | None = None   # open | paid
     sales_name: str | None = None
     item_count: int
     grand_total: Decimal

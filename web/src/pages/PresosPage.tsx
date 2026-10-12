@@ -4,7 +4,7 @@ import Icon from "../components/Icon";
 import QuotationShare from "../components/QuotationShare";
 import { API_BASE, apiGet, apiPost, errorMessage } from "../lib/api";
 import { useAuth } from "../lib/auth";
-import { bahtWord, relTime } from "../lib/format";
+import { bahtWord, relTime, thDateTime } from "../lib/format";
 import { useSales } from "../lib/sales";
 import type { PresoSummary, Quotation } from "../lib/types";
 
@@ -21,7 +21,8 @@ export default function PresosPage() {
   const auth = useAuth();
   const sales = useSales();
   const nav = useNavigate();
-  const [tab, setTab] = useState<"draft" | "quoted">("draft");
+  const [tab, setTab] = useState<"draft" | "quoted" | "bills">("draft");
+  const [bills, setBills] = useState<BillRow[]>([]);
   const [rows, setRows] = useState<PresoSummary[] | null>(null);
   const [quotes, setQuotes] = useState<Quotation[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -34,6 +35,7 @@ export default function PresosPage() {
     if (!sales.enabled) return;
     apiGet<PresoSummary[]>("/presos?mine=true").then(setRows).catch((e) => setErr(errorMessage(e)));
     apiGet<Quotation[]>("/quotations").then(setQuotes).catch(() => setQuotes([]));
+    apiGet<BillRow[]>("/sales/bigbills").then(setBills).catch(() => setBills([]));
   }, [sales.enabled]);
   useEffect(load, [load]);
 
@@ -91,11 +93,13 @@ export default function PresosPage() {
         <div className="seg" style={{ margin: 0, width: 360 }}>
           <button className={"seg-btn" + (tab === "draft" ? " on" : "")} onClick={() => setTab("draft")}>ร่าง {drafts.length}</button>
           <button className={"seg-btn" + (tab === "quoted" ? " on" : "")} onClick={() => setTab("quoted")}>ออก Quotation แล้ว {quoted.length}</button>
+          <button className={"seg-btn" + (tab === "bills" ? " on" : "")} onClick={() => setTab("bills")}>บิลรวม {bills.length}</button>
         </div>
       </div>
       {err && <div className="note err" style={{ marginBottom: 10 }}>{err}</div>}
       {!rows && !err && <div className="ph" style={{ height: 120 }}>กำลังโหลด…</div>}
-      {rows && (
+      {tab === "bills" && <BillList bills={bills} />}
+      {rows && tab !== "bills" && (
         <div className="tbl-wrap card flat">
           <table className="tbl">
             <thead>
@@ -122,7 +126,12 @@ export default function PresosPage() {
                   </td>
                   <td>{p.item_count} ชิ้น</td>
                   <td><b>{bahtWord(p.grand_total)}</b>{p.quotation_status && <div className="small muted">{QSTATUS[p.quotation_status] || p.quotation_status}</div>}
-                    {p.big_bill_no && <Link to={`/sales/bigbill/${p.big_bill_no}`} className="bb-tag" title="ใบนี้อยู่ในบิลรวมที่ยังไม่ชำระ — กดไปหน้าบิล">บิลรวม {p.big_bill_no}</Link>}</td>
+                    {p.big_bill_no && (
+                      <Link to={`/sales/bigbill/${p.big_bill_no}`} className={"bb-tag" + (p.big_bill_status === "paid" ? " paid" : "")}
+                        title={p.big_bill_status === "paid" ? "ใบนี้ชำระผ่านบิลรวม — กดดูบิล" : "ใบนี้อยู่ในบิลรวมที่ยังไม่ชำระ — กดไปหน้าบิล"}>
+                        {p.big_bill_status === "paid" ? "ชำระรวม" : "บิลรวม"} {p.big_bill_no}
+                      </Link>
+                    )}</td>
                   <td className="small muted">{relTime(p.updated_at)}</td>
                   <td>
                     <div className="row">
@@ -168,3 +177,33 @@ export default function PresosPage() {
 }
 
 export const QSTATUS: Record<string, string> = { issued: "รอชำระ", paid: "ชำระแล้ว", converted: "สร้าง SO แล้ว", cancelled: "ยกเลิก", expired: "หมดอายุ" };
+
+type BillRow = {
+  bill_no: string; status: "open" | "paid" | "cancelled"; customer_name: string; count: number;
+  grand_total: string; discount: string; created_at: string; paid_at: string | null; created_by: string | null;
+};
+const BILL_STATUS: Record<string, string> = { open: "รอชำระ", paid: "ชำระแล้ว", cancelled: "ยกเลิก" };
+
+/** แท็บ "บิลรวม" — ทุกบิลที่ฉันสร้างหรือมีใบของฉันอยู่ ล่าสุดก่อน กดดูรายละเอียด/ผลการชำระ */
+function BillList({ bills }: { bills: BillRow[] }) {
+  return (
+    <div className="tbl-wrap card flat">
+      <table className="tbl">
+        <thead><tr><th>เลขที่บิล / ลูกค้า</th><th>จำนวนใบ</th><th>ยอดชำระ</th><th>สถานะ</th><th>วันที่</th><th></th></tr></thead>
+        <tbody>
+          {bills.map((b) => (
+            <tr key={b.bill_no}>
+              <td><Link to={`/sales/bigbill/${b.bill_no}`} className="mono strong">{b.bill_no}</Link><br /><span className="small muted">{b.customer_name}{b.created_by ? ` · รวมโดย ${b.created_by}` : ""}</span></td>
+              <td>{b.count} ใบ</td>
+              <td><b>{bahtWord(b.grand_total)}</b>{Number(b.discount) > 0 && <div className="small green">ส่วนลดบิล −{bahtWord(b.discount)}</div>}</td>
+              <td><span className={"bb-att " + (b.status === "open" ? "pending" : b.status === "cancelled" ? "void" : b.status)}>{BILL_STATUS[b.status] || b.status}</span></td>
+              <td className="small muted">{b.paid_at ? `ชำระ ${thDateTime(b.paid_at)}` : `สร้าง ${thDateTime(b.created_at)}`}</td>
+              <td><Link to={`/sales/bigbill/${b.bill_no}`} className="btn sm">ดูบิล</Link></td>
+            </tr>
+          ))}
+          {bills.length === 0 && <tr><td colSpan={6} className="muted">ยังไม่มีบิลรวม — ติ๊กใบในแท็บ "ออก Quotation แล้ว" แล้วกด ชำระรวม (Big Bill)</td></tr>}
+        </tbody>
+      </table>
+    </div>
+  );
+}

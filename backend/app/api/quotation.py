@@ -19,10 +19,13 @@ router = APIRouter(tags=["preso-quotation"])
 staff = require_role("sales", "manager")
 
 
-def _open_bill_no(db: Session, q: Quotation) -> str | None:
+def _bill_of(db: Session, q: Quotation):
+    """บิลรวมที่ใบนี้อยู่: บิลที่จ่ายแล้ว (ใบนี้จ่ายผ่านบิลนั้น) หรือบิลที่ยังเปิดอยู่ — ไม่นับบิลที่ยกเลิก"""
     from app.models.bigbill import BigBill, BigBillItem
 
-    return db.scalar(select(BigBill.bill_no).join(BigBillItem).where(BigBillItem.quotation_id == q.id, BigBill.status == "open"))
+    return db.execute(select(BigBill.bill_no, BigBill.status).join(BigBillItem).where(
+        BigBillItem.quotation_id == q.id, BigBill.status.in_(("open", "paid"))
+    ).order_by(BigBill.created_at.desc())).first()
 
 
 def preso_summary(db: Session, p: Preso, user: User | None = None) -> PresoSummaryOut:
@@ -31,7 +34,7 @@ def preso_summary(db: Session, p: Preso, user: User | None = None) -> PresoSumma
     return PresoSummaryOut(
         id=p.id, preso_no=p.preso_no, status=p.status, cart_id=p.cart_id, customer_name=p.customer.name if p.customer else (snap.get("customer") or {}).get("name"),
         customer_id=(q.customer_user_id if q else None) or (p.customer.id if p.customer else None),
-        big_bill_no=_open_bill_no(db, q) if q and q.status == "issued" else None,
+        **({"big_bill_no": b[0], "big_bill_status": b[1]} if q and (b := _bill_of(db, q)) else {}),
         sales_name=p.sales.name if p.sales else None, item_count=sum(int(i["qty"]) for i in snap.get("items", [])),
         grand_total=(snap.get("totals") or {}).get("grand_total", "0"), note=p.note, quotation_no=q.quotation_no if q else None, quotation_status=q.status if q else None,
         # ให้เฉพาะพนักงาน — ลูกค้าเปิดเอกสารของตัวเองผ่านหน้าใบเสนอราคาอยู่แล้ว

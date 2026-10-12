@@ -62,6 +62,12 @@ def test_รวมใบของพนักงานสองคน_ใช้�
     done = client.get(f"/sales/bigbills/{bill['bill_no']}", headers=a).json()
     assert done["status"] == "paid" and all(i["status"] in ("paid", "converted") for i in done["items"])
     assert all(i["sap_so_no"] for i in done["items"]), "แต่ละใบเป็น SO แยกใน SAP"
+    # หลังจ่ายแล้วหาบิลเจอ: ในรายการบิลรวม (ทั้งคนสร้างและเจ้าของใบอีกคน) และป้ายบนแถว Preso
+    for hs in (a, b):
+        rows = client.get("/sales/bigbills", headers=hs).json()
+        assert any(r["bill_no"] == bill["bill_no"] and r["status"] == "paid" and r["count"] == 2 for r in rows)
+    row = next(p for p in client.get("/presos?mine=true", headers=b).json() if p["quotation_no"] == q2["quotation_no"])
+    assert row["big_bill_no"] == bill["bill_no"] and row["big_bill_status"] == "paid"
     with SessionLocal() as db:
         for it in done["items"]:
             q = db.scalar(select(Quotation).where(Quotation.quotation_no == it["quotation_no"]))

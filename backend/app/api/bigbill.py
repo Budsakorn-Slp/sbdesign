@@ -90,6 +90,18 @@ class BillOut(BaseModel):
     attempts: list[AttemptOut] = []      # ทุกครั้งที่กดชำระ ล่าสุดก่อน — บอกว่ารอบก่อนยกเลิก/ไม่สำเร็จ/หมดเวลา
 
 
+class BillRowOut(BaseModel):
+    bill_no: str
+    status: str
+    customer_name: str
+    count: int
+    grand_total: Decimal
+    discount: Decimal
+    created_at: datetime
+    paid_at: datetime | None
+    created_by: str | None
+
+
 class CreateIn(BaseModel):
     quotation_nos: list[str] = Field(min_length=1, max_length=30)
     promo_code: str | None = Field(default=None, max_length=32)
@@ -149,6 +161,22 @@ def candidates(quotation_no: str = Query(min_length=1), db: Session = Depends(ge
 @router.get("/sales/bigbill/promos", response_model=list[PromoOut])
 def promos(amount: Decimal = Query(ge=0), me: User = Depends(staff)):
     return [PromoOut(**p) for p in bigbill_service.promos(amount)]
+
+
+@router.get("/sales/bigbills", response_model=list[BillRowOut])
+def list_bills(db: Session = Depends(get_db), me: User = Depends(staff)):
+    """บิลรวมที่เกี่ยวกับฉัน: ที่ฉันสร้าง หรือมีใบของฉันอยู่ · ผู้จัดการเห็นทุกบิล — ล่าสุดก่อน"""
+    from sqlalchemy import or_, select
+
+    from app.models.bigbill import BigBillItem
+
+    q = select(BigBill).order_by(BigBill.created_at.desc()).limit(200)
+    if me.role != "manager":
+        mine = select(BigBillItem.bill_id).join(Quotation, Quotation.id == BigBillItem.quotation_id).where(Quotation.sales_user_id == me.id)
+        q = q.where(or_(BigBill.created_by_user_id == me.id, BigBill.id.in_(mine)))
+    return [BillRowOut(bill_no=b.bill_no, status=b.status, customer_name=b.customer.name, count=len(b.items),
+                       grand_total=b.grand_total, discount=b.discount, created_at=b.created_at, paid_at=b.paid_at,
+                       created_by=b.created_by.name if b.created_by else None) for b in db.scalars(q).all()]
 
 
 @router.post("/sales/bigbills", response_model=BillOut, status_code=201)
