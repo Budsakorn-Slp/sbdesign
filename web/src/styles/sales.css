@@ -498,3 +498,4 @@
 .bb-tag.paid { background: #e7f5ef; color: var(--green); }
 .bb-att.pending { background: var(--amber-bg); color: var(--amber); }
 .bb-att.void { background: var(--bg-3); color: var(--ink-3); }
+.tbl tr.bb-void-row td { opacity: .6; }

@@ -90,10 +90,10 @@ export default function PresosPage() {
     <main className="container sec">
       <div className="row between wrap" style={{ marginBottom: 12 }}>
         <h1 className="cart-title" style={{ marginBottom: 0 }}>Preso ของฉัน</h1>
-        <div className="seg" style={{ margin: 0, width: 360 }}>
+        <div className="seg" style={{ margin: 0, width: 470, maxWidth: "100%" }}>
           <button className={"seg-btn" + (tab === "draft" ? " on" : "")} onClick={() => setTab("draft")}>ร่าง {drafts.length}</button>
-          <button className={"seg-btn" + (tab === "quoted" ? " on" : "")} onClick={() => setTab("quoted")}>ออก Quotation แล้ว {quoted.length}</button>
-          <button className={"seg-btn" + (tab === "bills" ? " on" : "")} onClick={() => setTab("bills")}>บิลรวม {bills.length}</button>
+          <button className={"seg-btn" + (tab === "quoted" ? " on" : "")} style={{ flex: 1.6, whiteSpace: "nowrap" }} onClick={() => setTab("quoted")}>ออก Quotation แล้ว {quoted.length}</button>
+          <button className={"seg-btn" + (tab === "bills" ? " on" : "")} onClick={() => setTab("bills")}>บิลรวม {bills.filter((b) => b.status !== "cancelled").length}</button>
         </div>
       </div>
       {err && <div className="note err" style={{ marginBottom: 10 }}>{err}</div>}
@@ -186,13 +186,18 @@ const BILL_STATUS: Record<string, string> = { open: "รอชำระ", paid: 
 
 /** แท็บ "บิลรวม" — ทุกบิลที่ฉันสร้างหรือมีใบของฉันอยู่ ล่าสุดก่อน กดดูรายละเอียด/ผลการชำระ */
 function BillList({ bills }: { bills: BillRow[] }) {
+  // บิลที่ยกเลิกส่วนใหญ่เกิดจากรวมบิลใหม่แทนบิลเดิม — โชว์ปนกันแล้วดูงง ซ่อนไว้ กดดูได้เมื่อต้องการ
+  const [showVoid, setShowVoid] = useState(false);
+  const voided = bills.filter((b) => b.status === "cancelled");
+  const shown = showVoid ? bills : bills.filter((b) => b.status !== "cancelled");
   return (
+    <>
     <div className="tbl-wrap card flat">
       <table className="tbl">
         <thead><tr><th>เลขที่บิล / ลูกค้า</th><th>จำนวนใบ</th><th>ยอดชำระ</th><th>สถานะ</th><th>วันที่</th><th></th></tr></thead>
         <tbody>
-          {bills.map((b) => (
-            <tr key={b.bill_no}>
+          {shown.map((b) => (
+            <tr key={b.bill_no} className={b.status === "cancelled" ? "bb-void-row" : ""}>
               <td><Link to={`/sales/bigbill/${b.bill_no}`} className="mono strong">{b.bill_no}</Link><br /><span className="small muted">{b.customer_name}{b.created_by ? ` · รวมโดย ${b.created_by}` : ""}</span></td>
               <td>{b.count} ใบ</td>
               <td><b>{bahtWord(b.grand_total)}</b>{Number(b.discount) > 0 && <div className="small green">ส่วนลดบิล −{bahtWord(b.discount)}</div>}</td>
@@ -201,9 +206,15 @@ function BillList({ bills }: { bills: BillRow[] }) {
               <td><Link to={`/sales/bigbill/${b.bill_no}`} className="btn sm">ดูบิล</Link></td>
             </tr>
           ))}
-          {bills.length === 0 && <tr><td colSpan={6} className="muted">ยังไม่มีบิลรวม — ติ๊กใบในแท็บ "ออก Quotation แล้ว" แล้วกด ชำระรวม (Big Bill)</td></tr>}
+          {shown.length === 0 && <tr><td colSpan={6} className="muted">ยังไม่มีบิลรวม — ติ๊กใบในแท็บ "ออก Quotation แล้ว" แล้วกด ชำระรวม (Big Bill)</td></tr>}
         </tbody>
       </table>
     </div>
+    {voided.length > 0 && (
+      <button className="link-btn small" style={{ marginTop: 8 }} onClick={() => setShowVoid((v) => !v)}>
+        {showVoid ? "ซ่อนบิลที่ยกเลิก" : `แสดงบิลที่ยกเลิก (${voided.length})`}
+      </button>
+    )}
+    </>
   );
 }
