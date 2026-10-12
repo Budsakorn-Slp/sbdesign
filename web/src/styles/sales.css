@@ -461,7 +461,10 @@
 .bb-bar span { font-size: 12.5px; opacity: .85; }
 .bb-bar .link-btn { color: #fff; }
 .bb { max-width: 1180px; }
-.bb-grid { display: grid; grid-template-columns: 1fr 340px; gap: 14px; align-items: start; }
+.bb-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+/* คอลัมน์ซ้ายต้องหดได้ — ไม่งั้นตารางที่ไม่ตัดบรรทัดดันจนกล่องสรุปด้านขวาล้นจอ */
+.bb-grid > * { min-width: 0; }
+.bb .tbl-wrap { overflow-x: auto; }
 .bb-side { position: sticky; top: 90px; }
 .bb-tbl tbody tr { cursor: pointer; }
 .bb-promos { display: flex; flex-direction: column; gap: 8px; }
@@ -478,4 +481,4 @@
   .bb-bar { flex-wrap: wrap; }
 }
 .bb-tbl td, .bb-tbl th { white-space: nowrap; }
-.bb-tbl td:nth-child(4) { white-space: normal; min-width: 160px; }
+.bb-tbl td:nth-child(4), .bb-tbl td:nth-child(5) { white-space: normal; min-width: 120px; }
