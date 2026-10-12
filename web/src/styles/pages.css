@@ -915,15 +915,20 @@
 /* หน้ารายละเอียด */
 .od { max-width: 980px; }
 .od-back { margin-bottom: 12px; display: inline-flex; gap: 4px; }
-.od-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-radius: 12px; background: var(--ink); color: #fff; }
-.od-banner b { display: block; font-size: 18px; }
-.od-banner span { font-size: 13px; opacity: .85; }
-.od-banner.green { background: var(--green); }
-.od-banner.blue { background: var(--brand); }
-.od-banner.amber { background: var(--amber); }
-.od-banner.red { background: var(--red); }
-/* คลาสสีส่วนกลาง (.green/.amber/.red) ตั้งสีตัวหนังสือ — บนแถบต้องเป็นขาวเสมอ ไม่งั้นตัวหนังสือกลืนกับพื้น */
-.od-banner.green, .od-banner.blue, .od-banner.amber, .od-banner.red { color: #fff; }
+.od-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-radius: 12px;
+  background: var(--bg-2); color: var(--ink); border: 1px solid var(--line); border-left-width: 5px; }
+.od-banner b { display: block; font-size: 17px; }
+.od-banner span { font-size: 13px; color: var(--ink-3); }
+/* พื้นอ่อน + ขอบซ้ายและหัวข้อสีตามสถานะ — แถบสีทึบเต็มแผ่นหนักตาและอ่านยาก (สีเหลืองมัสตาร์ด)
+   ระบุสีตัวหนังสือเองทุกตัว เพราะคลาสสีส่วนกลาง (.green/.amber/.red) ตั้งสีตัวหนังสือไว้ */
+.od-banner.green { background: #eef8f3; border-color: #bfe3d2; border-left-color: var(--green); }
+.od-banner.green b, .od-banner.green .ms { color: var(--green); }
+.od-banner.blue { background: var(--brand-soft); border-color: #cfd6ff; border-left-color: var(--brand); }
+.od-banner.blue b, .od-banner.blue .ms { color: var(--brand); }
+.od-banner.amber { background: #fff8ec; border-color: #f3dcae; border-left-color: #e0a12b; }
+.od-banner.amber b, .od-banner.amber .ms { color: #9a6a0c; }
+.od-banner.red { background: #fdf0f1; border-color: #f2c4ca; border-left-color: var(--red); }
+.od-banner.red b, .od-banner.red .ms { color: var(--red); }
 .od-steps { list-style: none; margin: 16px 0; padding: 18px 8px 14px; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
 .od-steps li { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 0 4px; }
 .od-steps li::before { content: ""; position: absolute; top: 17px; left: -50%; width: 100%; height: 3px; background: var(--line); z-index: 0; }
