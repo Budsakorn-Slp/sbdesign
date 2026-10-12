@@ -30,6 +30,10 @@ class Payment(Base, TimestampMixin):
     raw_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # payload ดิบจาก webhook
     # จ่ายแบบบิลรวม — quotation_id ชี้ใบแรกในบิล (ตัวยึด) ยอดเงินคือยอดทั้งบิล · None = จ่ายรายใบ
     big_bill_id: Mapped[str | None] = mapped_column(ForeignKey("big_bills.id"), index=True, nullable=True)
+    # รับเงินแล้วแต่ใบถูกชำระทางอื่นไปก่อน (จ่ายซ้ำ) — ไม่แตะใบ ไม่สร้าง SO รอผู้จัดการคืนเงิน
+    refund_due: Mapped[Decimal | None] = mapped_column(Numeric(12, 2), nullable=True)
+    refund_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    refunded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     quotation = relationship("Quotation")
     big_bill = relationship("BigBill")

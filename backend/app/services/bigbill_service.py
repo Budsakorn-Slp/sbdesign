@@ -153,6 +153,10 @@ def pay(db: Session, b: BigBill, actor: User, method: str) -> Payment:
         return old
     if old:
         old.status = "cancelled"
+    # ใบในบิลมี QR เดี่ยวค้างอยู่ — ปิดก่อน ไม่งั้นลูกค้าจ่ายได้สองทาง
+    from app.services.payment_service import close_other_channels
+
+    close_other_channels(db, [it.quotation for it in b.items], keep=None, keep_bill_id=b.id)
     anchor = b.items[0].quotation
     no = quotation_service._doc_no(db, Payment, Payment.payment_no, "PAY")
     try:
@@ -181,12 +185,17 @@ def pay(db: Session, b: BigBill, actor: User, method: str) -> Payment:
 # ---------- 4. จ่ายสำเร็จ ----------
 def on_paid(db: Session, p: Payment) -> list[Quotation]:
     """เรียกจาก webhook ตอนรายการชำระของบิลรวมสำเร็จ — คืนรายการใบที่ต้องส่งเข้า SAP"""
+    from app.services.payment_service import _refund_due
+
     b = p.big_bill
     done: list[Quotation] = []
     for it in b.items:
         q = it.quotation
         if q.status != "issued":
-            continue      # ใบนี้ถูกจ่าย/ยกเลิกทางอื่นไปแล้ว — ไม่แตะ
+            # ใบนี้ถูกจ่าย/ยกเลิกทางอื่นไปแล้ว — ไม่แตะใบ ยอดของใบนี้ในบิลคือเงินที่ต้องคืน
+            _refund_due(db, p, _q(Decimal(it.amount) - Decimal(it.discount_share or 0)),
+                        f"{q.quotation_no} สถานะ {q.status} อยู่แล้ว (ชำระซ้ำในบิล {b.bill_no})", full=False)
+            continue
         share = Decimal(it.discount_share or 0)
         if share > 0:
             # ส่วนลดบิลลงใบนี้ — SO ใน SAP ได้ยอดตรงกับที่ลูกค้าจ่ายจริง
@@ -199,6 +208,11 @@ def on_paid(db: Session, p: Payment) -> list[Quotation]:
         q.status = "paid"
         q.paid_at = p.paid_at
         done.append(q)
+    if not done:
+        # ทุกใบในบิลถูกชำระทางอื่นไปหมดแล้ว — ทั้งก้อนคือเงินรอคืน บิลไม่มีผล
+        p.status = "refund_due"
+        b.status = "cancelled"
+        return done
     b.status = "paid"
     b.paid_at = p.paid_at
     audit_service.log(db, None, "bigbill.paid", "big_bill", b.bill_no,

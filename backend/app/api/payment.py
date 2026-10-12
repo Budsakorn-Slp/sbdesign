@@ -174,6 +174,39 @@ def my_pending_payments(db: Session = Depends(get_db), me: User = Depends(get_cu
 
 
 # ---------- admin: คิวส่ง SAP ----------
+class RefundOut(BaseModel):
+    payment_no: str
+    quotation_no: str
+    big_bill_no: str | None
+    customer_name: str | None
+    method: str
+    amount: str
+    refund_due: str
+    refund_note: str | None
+    paid_at: datetime | None
+    refunded_at: datetime | None
+
+
+def _refund_out(p: Payment) -> RefundOut:
+    return RefundOut(payment_no=p.payment_no, quotation_no=p.quotation.quotation_no,
+                     big_bill_no=p.big_bill.bill_no if p.big_bill_id else None,
+                     customer_name=(p.quotation.customer_snapshot or {}).get("name"), method=p.method,
+                     amount=str(p.amount), refund_due=str(p.refund_due), refund_note=p.refund_note,
+                     paid_at=p.paid_at, refunded_at=p.refunded_at)
+
+
+@router.get("/admin/refunds", response_model=list[RefundOut])
+def list_refunds(db: Session = Depends(get_db), me: User = Depends(manager)):
+    """เงินที่รับซ้ำ (ใบถูกชำระทางอื่นไปก่อน) รอคืนลูกค้า — ยังไม่คืนอยู่บนสุด"""
+    return [_refund_out(p) for p in payment_service.list_refunds(db)]
+
+
+@router.post("/admin/refunds/{payment_no}/done", response_model=RefundOut)
+def refund_done(payment_no: str, db: Session = Depends(get_db), me: User = Depends(manager)):
+    """ผู้จัดการคืนเงินลูกค้าแล้ว (นอกระบบ/ที่ธนาคาร) — กดบันทึกว่าคืนแล้ว"""
+    return _refund_out(payment_service.mark_refunded(db, payment_no, me))
+
+
 @router.get("/admin/sap-sync", response_model=list[SyncJobOut])
 def list_sap_sync(status: str | None = None, db: Session = Depends(get_db), me: User = Depends(manager)):
     return [_job_out(j) for j in payment_service.list_sync_jobs(db, status)]

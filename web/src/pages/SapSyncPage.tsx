@@ -1,3 +1,4 @@
+import RefundList from "../components/RefundList";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Icon from "../components/Icon";
@@ -84,6 +85,7 @@ export default function SapSyncPage() {
           </table>
         </div>
       )}
+      <RefundList />
     </main>
   );
 }

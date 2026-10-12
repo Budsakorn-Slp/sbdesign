@@ -167,6 +167,8 @@ MATRIX: list[tuple[str, str, tuple[str, ...], dict | None]] = [
     ("POST", f"/discount-approvals/{BAD}/approve", (M,), None),
     ("POST", f"/discount-approvals/{BAD}/reject", (M,), None),
     ("GET", "/admin/sap-sync", MGR, None),
+    ("GET", "/admin/refunds", MGR, None),
+    ("POST", f"/admin/refunds/{BAD}/done", MGR, None),
     ("POST", "/admin/sap-sync/run", MGR, None),
     ("POST", f"/admin/sap-sync/{BAD}/retry", MGR, None),
     ("POST", "/admin/jobs/daily-stats", MGR, None),

@@ -57,6 +57,10 @@ def create_intent(db: Session, q: Quotation, actor: User | None, method: str, ki
         raise HTTPException(status_code=400, detail=f"ใบเสนอราคานี้ชำระเงินไม่ได้ (สถานะ {q.status})")
     if q.valid_until < utcnow().date():
         raise HTTPException(status_code=400, detail="ใบเสนอราคาหมดอายุแล้ว กรุณาให้พนักงานออกใบใหม่")
+    # ใบที่บิลรวมเปิดหน้าชำระค้างไว้ — ห้ามเปิดชำระเดี่ยวซ้อน ไม่งั้นจ่ายได้สองทาง = เก็บเงินซ้ำ + SO ซ้ำ
+    in_bill = _pending_bill_payment_for(db, q)
+    if in_bill:
+        raise HTTPException(status_code=409, detail=f"ใบนี้อยู่ในบิลรวม {in_bill.big_bill.bill_no} ที่เปิดหน้าชำระค้างอยู่ — ชำระผ่านบิลรวม หรือยกเลิกบิลรวมก่อน")
 
     # intent เดิมที่ยังไม่หมดอายุและเงื่อนไขเดียวกัน → ใช้ใบเดิม (กดซ้ำไม่สร้างซ้ำ)
     now = utcnow()
@@ -93,6 +97,68 @@ def create_intent(db: Session, q: Quotation, actor: User | None, method: str, ki
     )
     db.add(p)
     audit_service.log(db, actor, "payment.intent", "quotation", q.quotation_no, {"payment_no": no, "method": method, "kind": kind, "amount": str(amount)})
+    db.commit()
+    db.refresh(p)
+    return p
+
+
+def _pending_bill_payment_for(db: Session, q: Quotation) -> Payment | None:
+    """รายการชำระของบิลรวม (ที่ยังรอ) ที่มีใบนี้อยู่"""
+    from app.models.bigbill import BigBill, BigBillItem
+
+    return db.scalar(
+        select(Payment).join(BigBill, BigBill.id == Payment.big_bill_id).join(BigBillItem, BigBillItem.bill_id == BigBill.id)
+        .where(BigBillItem.quotation_id == q.id, BigBill.status == "open", Payment.status == "pending", Payment.expires_at > utcnow())
+    )
+
+
+def close_other_channels(db: Session, quotations: list[Quotation], keep: Payment | None, keep_bill_id: str | None = None) -> int:
+    """ใบชุดนี้จ่ายแล้ว (หรือกำลังจะเปิดชำระทางเดียว) — ปิดหน้าชำระอื่นที่ค้างอยู่ทั้งหมด
+
+    QR เดี่ยวที่ค้าง และบิลรวมอื่นที่มีใบเหล่านี้ (ยกเลิกทั้งบิล — ใบในบิลกลับไปรอชำระตามปกติ)
+    ไม่ปิด = ลูกค้ายังถือ QR อีกอันที่จ่ายได้ → เก็บเงินซ้ำ
+    TODO: ต่อ KBank จริงต้องเรียก API ยกเลิก QR ที่ธนาคารด้วย (รอสเปก) — ระหว่างนี้ถ้าธนาคารยังรับเงินเข้ามา
+          handle_webhook จะจับเป็น "รับเงินซ้ำ รอคืนเงิน" ไม่แตะใบ ไม่สร้าง SO
+    """
+    from app.models.bigbill import BigBill, BigBillItem
+    from app.services import bigbill_service
+
+    n = 0
+    ids = [q.id for q in quotations]
+    keep_bill = keep.big_bill_id if keep is not None and keep.big_bill_id else keep_bill_id
+    for x in db.scalars(select(Payment).where(Payment.quotation_id.in_(ids), Payment.big_bill_id.is_(None), Payment.status == "pending")).all():
+        if keep is None or x.id != keep.id:
+            x.status = "cancelled"
+            n += 1
+    for b in db.scalars(select(BigBill).join(BigBillItem).where(BigBillItem.quotation_id.in_(ids), BigBill.status == "open").distinct()).all():
+        if b.id != keep_bill:
+            bigbill_service.cancel(db, b, None, "ใบในบิลถูกชำระ/เปิดชำระทางอื่น")
+            n += 1
+    return n
+
+
+def _refund_due(db: Session, p: Payment, amount: Decimal, note: str, full: bool) -> None:
+    """เงินเข้ามาแล้วแต่ใบไม่ต้องจ่ายแล้ว — บันทึกให้ผู้จัดการคืนเงิน ไม่แตะใบ ไม่ส่ง SAP"""
+    p.refund_due = (p.refund_due or Decimal(0)) + amount
+    p.refund_note = ((p.refund_note + " · ") if p.refund_note else "") + note
+    if full:
+        p.status = "refund_due"
+    audit_service.log(db, None, "payment.refund_due", "payment", p.payment_no, {"amount": str(amount), "note": note}, role="system")
+
+
+def list_refunds(db: Session) -> list[Payment]:
+    return list(db.scalars(select(Payment).where(Payment.refund_due.is_not(None), Payment.refund_due > 0)
+                           .order_by(Payment.refunded_at.is_not(None), Payment.paid_at.desc())).all())
+
+
+def mark_refunded(db: Session, payment_no: str, actor: User) -> Payment:
+    p = get_payment(db, payment_no)
+    if not p.refund_due:
+        raise HTTPException(status_code=400, detail="รายการนี้ไม่มียอดที่ต้องคืน")
+    if p.refunded_at:
+        return p
+    p.refunded_at = utcnow()
+    audit_service.log(db, actor, "payment.refunded", "payment", p.payment_no, {"amount": str(p.refund_due)})
     db.commit()
     db.refresh(p)
     return p
@@ -201,7 +267,7 @@ def handle_webhook(db: Session, body: bytes, signature: str | None) -> dict:
     event = str(data.get("event", "payment.succeeded"))
     p.raw_json = data
 
-    if p.status == "paid":  # provider ยิงซ้ำได้ — ต้อง idempotent
+    if p.status in ("paid", "refund_due"):  # provider ยิงซ้ำได้ — ต้อง idempotent
         return {"ok": True, "duplicate": True, "payment_no": p.payment_no, "status": p.status, "sap_so_no": p.quotation.sap_so_no}
     if event != "payment.succeeded":
         p.status = "failed"
@@ -209,22 +275,32 @@ def handle_webhook(db: Session, body: bytes, signature: str | None) -> dict:
         db.commit()
         return {"ok": True, "payment_no": p.payment_no, "status": p.status}
 
+    # เงินเข้าแล้ว — ไม่ว่ารายการนี้เคยถูกยกเลิกฝั่งเราหรือไม่ (ธนาคารอาจรับเงินก่อนเรายกเลิกทัน)
     p.status = "paid"
     p.paid_at = utcnow()
     if p.big_bill_id:
         # บิลรวม: ทุกใบในบิลจ่ายแล้วพร้อมกัน แต่ละใบส่งเข้า SAP เป็น SO ของตัวเอง
+        # ใบที่ถูกชำระทางอื่นไปก่อน → ข้าม และบันทึกยอดของใบนั้นเป็นเงินรอคืน
         from app.services import bigbill_service
 
         qs = bigbill_service.on_paid(db, p)
+        close_other_channels(db, qs, keep=p)
         db.commit()
         for one in qs:
             push_to_sap(db, one)
         return {"ok": True, "payment_no": p.payment_no, "status": p.status, "big_bill": p.big_bill.bill_no,
+                "refund_due": str(p.refund_due) if p.refund_due else None,
                 "quotations": [{"quotation_no": one.quotation_no, "sap_so_no": one.sap_so_no} for one in qs]}
     q = p.quotation
+    if q.status != "issued":
+        # ใบนี้ถูกชำระ (หรือยกเลิก) ทางอื่นไปแล้ว — เงินรอบนี้คือเงินเกิน ห้ามแตะใบ ห้ามสร้าง SO ซ้ำ
+        _refund_due(db, p, Decimal(p.amount), f"{q.quotation_no} สถานะ {q.status} อยู่แล้ว (ชำระซ้ำ)", full=True)
+        db.commit()
+        return {"ok": True, "payment_no": p.payment_no, "status": p.status, "refund_due": str(p.refund_due)}
     q.status = "paid"
     q.paid_at = p.paid_at
     audit_service.log(db, None, "payment.paid", "quotation", q.quotation_no, {"payment_no": p.payment_no, "kind": p.kind, "amount": str(p.amount)}, role="system")
+    close_other_channels(db, [q], keep=p)
     db.commit()
 
     push_to_sap(db, q)
@@ -243,6 +319,10 @@ def _job_for(db: Session, q: Quotation) -> SapSyncJob:
 
 def push_to_sap(db: Session, q: Quotation) -> Quotation:
     """เรียก create_sales_order — ล้มเหลวไม่ throw ต่อ (เงินรับแล้ว) แต่เข้าคิว retry"""
+    if q.sap_so_no:
+        # มี SO แล้ว — ไม่สร้างซ้ำ (ของจะถูกจัดส่งสองรอบ ยอดขายนับซ้ำ)
+        log.info("ข้ามการส่ง SAP %s: มี SO %s อยู่แล้ว", q.quotation_no, q.sap_so_no)
+        return q
     job = _job_for(db, q)
     job.attempts = (job.attempts or 0) + 1
     try:
