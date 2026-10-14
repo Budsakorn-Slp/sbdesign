@@ -106,7 +106,7 @@ export default function Header({ cartCount = 0, cartHref = "/cart" }: { cartCoun
       {/* util bar */}
       <div className="hdr-util">
         <div className="container hdr-util-in">
-          <span className="hdr-free">{lang === "en" ? "Free delivery over 3,000.-" : content?.free_shipping_note || "ส่งฟรีเมื่อช้อปครบ 3,000.-"}</span>
+          <span className="hdr-free">{lang === "en" ? "Free delivery over 6,000.-" : content?.free_shipping_note || "ส่งฟรีเมื่อช้อปครบ 6,000.-"}</span>
           <nav className="hdr-util-links">
             <a href="#"><Icon name="credit_card" size={18} /> SB Member Card</a>
             <a href="#"><Icon name="location_on" size={18} /> {t("ค้นหาสาขา")}</a>

@@ -404,7 +404,16 @@ def _shuffle(seed: int):
     return ((k % 2147483647) * seed) % 2147483647
 
 
-def _ordered(stmt, sort: str, a: sq.AnalyzedQuery | None = None, seed: int | None = None):
+def _stock_qty(plant: str | None = None):
+    """จำนวนพร้อมขายของแต่ละสินค้า — เลือกสาขาไว้ใช้ยอดของสาขานั้น ไม่งั้นใช้ยอดรวม (ตัวเดียวกับที่การ์ดโชว์)"""
+    if plant:
+        q = select(ProductStockSite.available_qty).where(ProductStockSite.matnr == Material.matnr, ProductStockSite.plant_code == plant)
+    else:
+        q = select(ProductStock.ready_qty).where(ProductStock.matnr == Material.matnr)
+    return func.coalesce(q.correlate(Material).scalar_subquery(), 0)
+
+
+def _ordered(stmt, sort: str, a: sq.AnalyzedQuery | None = None, seed: int | None = None, browse: bool = False, plant: str | None = None):
     """matnr ต่อท้ายทุกแบบเพื่อให้ลำดับนิ่ง ไม่งั้นค่าซ้ำกันแล้วเลื่อนหน้าถัดไปสินค้าจะซ้ำ/หายเอง
 
     ของหมด (_SOLD_OUT) นำหน้าทุกแบบการเรียง — ของที่ซื้อไม่ได้ไม่ควรกินที่หน้าแรก
@@ -424,6 +433,10 @@ def _ordered(stmt, sort: str, a: sq.AnalyzedQuery | None = None, seed: int | Non
         # ชั้น Z (MAABC) ขึ้นก่อนเสมอ — เป็นการจัดชั้นจากยอดขายจริงทั้งบริษัท
         # sold_qty เป็นตัวรอง เพราะนับเฉพาะยอดที่สั่งผ่านเว็บ ของขายดีหน้าร้านจะได้ 0
         return stmt.order_by(_SOLD_OUT, Material.is_bestseller.desc(), Material.sold_qty.desc(), _NO_IMAGE, Material.matnr)
+    if browse:
+        # เข้าหมวดสินค้า (ไม่ได้ค้นคำ ไม่ได้เลือกการเรียงเอง): ของที่มีสต็อกเยอะขึ้นก่อน ทุกหมวด
+        # ลูกค้า/พนักงานเห็นของที่ขายได้ทันทีก่อน ไม่ต้องไล่ข้ามตัวที่เหลือชิ้นเดียว
+        return stmt.order_by(_SOLD_OUT, _stock_qty(plant).desc(), _NO_IMAGE, Material.is_bestseller.desc(), Material.sold_qty.desc(), Material.matnr)
     if seed:
         # เปิดดูเฉยๆ ไม่ได้ค้นอะไร: ชั้น Z (MAABC) ขึ้นก่อน ที่เหลือสลับลำดับใหม่ทุกครั้งที่เข้าหน้า
         # เรียงตามชื่อทำให้หน้าแรกเป็นของชุดเดิมตลอดไป ลูกค้าประจำจึงเห็นแต่ของซ้ำๆ
@@ -497,7 +510,8 @@ def _run(db: Session, f: SearchFilters, limit: int, offset: int) -> tuple[list[M
         stmt = stmt.where(Material.brand_id.in_(f.brands))
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
     stmt = stmt.options(selectinload(Material.prices), selectinload(Material.category), selectinload(Material.brand))
-    rows = db.scalars(_ordered(stmt, f.sort, analysis_of(db, f) if f.q else None, f.seed).offset(offset).limit(limit)).all()
+    browse = not f.q and f.sort == "relevance" and bool(f.category or f.room or f.group)
+    rows = db.scalars(_ordered(stmt, f.sort, analysis_of(db, f) if f.q else None, f.seed, browse, f.plant).offset(offset).limit(limit)).all()
     return list(rows), int(total)
 
 
