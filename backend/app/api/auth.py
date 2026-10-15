@@ -80,6 +80,9 @@ def update_me(body: ProfileIn, db: Session = Depends(get_db), user: User = Depen
         # ที่ออกจาก SAP อยู่ดี · ล็อกที่นี่ด้วย ไม่ใช่แค่ซ่อนช่องกรอกในหน้าเว็บ
         if user.sap_customer_no and name != user.name:
             raise HTTPException(status_code=409, detail="ชื่อมาจากบัตรสมาชิก — แก้ไขได้ที่สาขาหรือศูนย์บริการลูกค้า")
+        # พนักงานที่เข้าด้วย SAP: ชื่อมาจาก SAP ทุกครั้งที่ล็อกอิน แก้ที่นี่ก็โดนทับอยู่ดี
+        if user.auth_source == "sap" and name != user.name:
+            raise HTTPException(status_code=409, detail="ชื่อพนักงานมาจาก SAP — แก้ไขที่ระบบ SAP")
         user.name = name
 
     if body.email is not None:
@@ -93,6 +96,10 @@ def update_me(body: ProfileIn, db: Session = Depends(get_db), user: User = Depen
         user.email = email
 
     if body.password:
+        # พนักงานที่เข้าด้วย SAP ห้ามตั้งรหัสผ่านในฐานเรา — ไม่งั้นได้ทางเข้าที่ไม่ผ่าน SAP
+        # (ลาออก/ถูกปิด PIN ที่ SAP แล้วก็ยังเข้าเว็บได้ด้วยรหัสนี้)
+        if user.auth_source == "sap":
+            raise HTTPException(status_code=409, detail="บัญชีพนักงานใช้ PIN ของ SAP — ตั้งรหัสผ่านในเว็บไม่ได้")
         if user.password_hash:
             raise HTTPException(status_code=409, detail="บัญชีนี้มีรหัสผ่านอยู่แล้ว — เปลี่ยนรหัสผ่านผ่านเมนู ลืมรหัสผ่าน")
         user.password_hash = auth_service.hash_password(body.password)

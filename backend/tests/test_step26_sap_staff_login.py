@@ -146,3 +146,13 @@ def test_รหัสชนกับบัญชีทดสอบ_รหัส�
     before = sap_on["calls"]
     r2 = _login(client, "4680012", pin="1122")
     assert r2.status_code == 200 and r2.json()["user"]["auth_source"] == "local" and sap_on["calls"] == before
+
+
+def test_พนักงาน_SAP_ตั้งรหัสผ่านในเว็บไม่ได้_แก้ชื่อไม่ได้(client, sap_on):
+    p = _pernr()
+    sap_on["result"] = _emp(p)
+    tok = _login(client, p).json()["access_token"]
+    h = {"Authorization": f"Bearer {tok}"}
+    assert client.patch("/me", json={"password": "abcd1234"}, headers=h).status_code == 409
+    assert client.patch("/me", json={"name": "ชื่อใหม่"}, headers=h).status_code == 409
+    assert client.patch("/me", json={"email": f"{p}@sb.local"}, headers=h).status_code == 200

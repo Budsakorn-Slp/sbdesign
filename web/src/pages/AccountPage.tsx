@@ -101,7 +101,10 @@ function ProfilePanel() {
   const auth = useAuth();
   const u = auth.user;
   // ผูกบัตรสมาชิกแล้ว = ชื่อเป็นของ SAP แก้ที่นี่ไม่ได้ (หลังบ้านก็ปฏิเสธเหมือนกัน)
-  const nameLocked = !!u?.sap_customer_no;
+  // พนักงานที่เข้าด้วย SAP: ชื่อมาจาก SAP เหมือนกัน
+  const staff = !!u && u.role !== "customer";
+  const sapStaff = staff && u?.auth_source === "sap";
+  const nameLocked = !!u?.sap_customer_no || sapStaff;
   // ค่าเริ่มต้นเป็นโหมดดูอย่างเดียว — กันแก้โดนโดยไม่ตั้งใจ ต้องกด "แก้ไข" ก่อนถึงพิมพ์ได้
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(u?.name || "");
@@ -159,7 +162,8 @@ function ProfilePanel() {
     <form className="privacy" onSubmit={save}>
       {/* บัตรสมาชิกอยู่บนสุด — รหัสลูกค้ากับแต้มคือสิ่งที่ลูกค้าเปิดหน้านี้มาดูบ่อยที่สุด
           ส่วนชื่อ/อีเมล/เบอร์ เข้ามาแก้นานๆ ครั้ง */}
-      <section className="privacy-box">
+      {/* บัตรสมาชิก / รหัสลูกค้า / เบอร์เข้าระบบ เป็นของลูกค้า — พนักงานไม่มี ซ่อนทั้งหมด */}
+      {!staff && <section className="privacy-box">
         <h2>บัตรสมาชิก</h2>
         {u.sap_customer_no ? (
           <p className="small">แต้มสะสม <b>{u.points.toLocaleString()}</b> พ้อยท์
@@ -169,7 +173,7 @@ function ProfilePanel() {
         ) : (
           <p className="small muted">ยังไม่ได้ผูกบัตรสมาชิก — ผูกแล้วจะเห็นแต้มสะสมและประวัติการซื้อจากหน้าร้าน</p>
         )}
-      </section>
+      </section>}
 
       <section className="privacy-box">
         <div className="row between" style={{ marginBottom: 12 }}>
@@ -184,19 +188,20 @@ function ProfilePanel() {
         {/* รหัสลูกค้ามาก่อนทุกช่อง — เวลาโทรหาศูนย์บริการหรือคุยกับเซลล์ เขาถามเลขนี้เป็นอย่างแรก
             ของเดิมไปอยู่ท้ายสุดในกล่อง "บัตรสมาชิก" ต้องเลื่อนหาทุกครั้ง
             เลขของ SAP มีหลายชุด (ขึ้นต้น 11 สำหรับลูกค้าทั่วไป · 44 สำหรับสมาชิก) โชว์ตามที่ผูกไว้จริง */}
-        <div className={"cust-id" + (u.sap_customer_no ? "" : " none")}>
+        {!staff && <div className={"cust-id" + (u.sap_customer_no ? "" : " none")}>
           <span className="cust-id-lbl"><Icon name="badge" size={16} /> รหัสลูกค้า (CUST ID)</span>
           {u.sap_customer_no ? (
             <b className="mono">{u.sap_customer_no}</b>
           ) : (
             <span className="small muted">ยังไม่มี — ผูกบัตรสมาชิกเพื่อรับรหัสลูกค้า</span>
           )}
-        </div>
+        </div>}
 
         <label className="field">
           <span className="field-lbl">ชื่อ-นามสกุล</span>
           <input value={name} onChange={(e) => setName(e.target.value)} disabled={!editing || nameLocked} maxLength={120} />
-          {nameLocked && (
+          {sapStaff && <span className="small muted">ชื่อมาจาก SAP — อัปเดตให้เองทุกครั้งที่เข้าสู่ระบบ</span>}
+          {nameLocked && !sapStaff && (
             <span className="small muted">
               ชื่อมาจากบัตรสมาชิก {u.sap_customer_no} — แก้ไขได้ที่สาขาหรือศูนย์บริการลูกค้า
               เพื่อให้ตรงกับใบเสร็จและใบกำกับภาษี
@@ -209,13 +214,17 @@ function ProfilePanel() {
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={!editing} placeholder="ใช้ส่งใบเสร็จและการแจ้งเตือน" />
         </label>
 
-        <label className="field">
+        {!staff && <label className="field">
           <span className="field-lbl">เบอร์โทร</span>
           <input value={u.phone || "—"} disabled />
           <span className="small muted">เบอร์นี้ใช้เข้าสู่ระบบ — เปลี่ยนได้ที่สาขาหรือศูนย์บริการลูกค้า</span>
-        </label>
+        </label>}
 
-        {u.has_password ? (
+        {sapStaff ? (
+          <p className="small muted">รหัสผ่าน: ใช้รหัสพนักงาน + PIN ของ SAP — เปลี่ยน PIN ได้ที่ระบบ SAP</p>
+        ) : staff ? (
+          <p className="small muted">รหัสผ่าน: บัญชีในระบบเว็บ (บัญชีทดสอบ) — ตั้ง/เปลี่ยนโดยผู้ดูแลระบบ</p>
+        ) : u.has_password ? (
           <p className="small muted">รหัสผ่าน: ตั้งไว้แล้ว — เปลี่ยนได้ที่เมนู “ลืมรหัสผ่าน” (ยืนยันด้วย OTP)</p>
         ) : (
           <label className="field">
