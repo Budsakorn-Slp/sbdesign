@@ -432,7 +432,7 @@
 .join-form input { flex: 1 1 180px; min-width: 0; letter-spacing: .1em; }
 
 /* โหมดทดสอบ IT (หน้าข้อมูลส่วนตัว) */
-.it-test { border: 1px dashed var(--brand); background: var(--brand-soft); margin-bottom: 16px; }
+.it-test { border: 1px dashed var(--brand); background: var(--brand-soft); }
 .it-test h2 { display: flex; align-items: center; gap: 6px; }
 .it-test-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
 .it-test-row label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; font-size: 13px; font-weight: 600; }
@@ -440,9 +440,21 @@
 .it-test-row input { padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; font-weight: 400; background: #fff; width: 100%; }
 .it-test-row label:has(input) { flex: 1 1 120px; }
 .it-test-sub { margin: 12px 0 10px; padding-top: 10px; border-top: 1px dashed var(--line-2); }
-.sap-id { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 14px; margin: 8px 0 0; }
-.sap-id div { font-size: 13px; color: var(--ink-3); }
-.sap-id b { display: block; color: var(--ink); font-size: 15px; }
+/* หัวโปรไฟล์พนักงาน (หน้าข้อมูลส่วนตัว) */
+.staff-head { display: flex; align-items: center; gap: 12px; }
+.staff-avatar { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--brand-soft); color: var(--brand); font-weight: 700; font-size: 18px; }
+.staff-who { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.staff-who b { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.staff-src { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; white-space: nowrap; flex: none; }
+.staff-src.sap { background: #e7f5ef; color: var(--green); }
+.staff-src.local { background: var(--amber-bg); color: var(--amber); }
+.staff-sub { font-size: 13px; font-weight: 600; color: var(--ink-3); margin: 16px 0 8px; padding-top: 14px; border-top: 1px solid var(--line); }
+.staff-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.staff-tile { background: var(--bg-2); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.staff-tile-lbl { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-3); }
+.staff-tile b { font-size: 15px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.staff-tile b.muted { font-weight: 400; font-size: 13px; }
+@media (max-width: 480px) { .staff-src { padding: 3px 8px; } .staff-head { flex-wrap: wrap; } }
 
 /* แชร์/ดาวน์โหลดใบเสนอราคา */
 .qs-file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; color: var(--red); }

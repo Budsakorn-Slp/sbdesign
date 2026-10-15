@@ -426,9 +426,14 @@ export default function AccountPage() {
       {!auth.user && tab !== "recent" && <p className="muted">เข้าสู่ระบบเพื่อดู{TABS.find((t) => t.key === tab)?.label}ของคุณ</p>}
 
       {tab === "pending" && <PendingPanel />}
-      {tab === "profile" && <StaffSapCard />}
-      {tab === "profile" && <ItTestPanel />}
-      {tab === "profile" && <ProfilePanel />}
+      {/* คอลัมน์เดียวกันทั้งหน้า — การ์ดพนักงาน / โหมดทดสอบ / ข้อมูลของคุณ กว้างเท่ากัน ระยะห่างเท่ากัน */}
+      {tab === "profile" && (
+        <div className="privacy">
+          <StaffSapCard />
+          <ItTestPanel />
+          <ProfilePanel />
+        </div>
+      )}
       {tab === "addresses" && auth.user && <AddressPanel />}
       {tab === "orders" && auth.user && (
         orders === null ? <p className="muted">กำลังโหลด…</p>
