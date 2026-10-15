@@ -4,6 +4,7 @@ import AddressBook from "../components/AddressBook";
 import Icon from "../components/Icon";
 import OrderCard from "../components/OrderCard";
 import ItTestPanel from "../components/ItTestPanel";
+import StaffSapCard from "../components/StaffSapCard";
 import MemberLink from "../components/MemberLink";
 import ProductCard from "../components/ProductCard";
 import { apiGet, apiPatch, apiPost, errorMessage } from "../lib/api";
@@ -416,6 +417,7 @@ export default function AccountPage() {
       {!auth.user && tab !== "recent" && <p className="muted">เข้าสู่ระบบเพื่อดู{TABS.find((t) => t.key === tab)?.label}ของคุณ</p>}
 
       {tab === "pending" && <PendingPanel />}
+      {tab === "profile" && <StaffSapCard />}
       {tab === "profile" && <ItTestPanel />}
       {tab === "profile" && <ProfilePanel />}
       {tab === "addresses" && auth.user && <AddressPanel />}

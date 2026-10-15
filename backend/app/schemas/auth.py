@@ -18,6 +18,11 @@ class UserOut(BaseModel):
     sap_address: str | None = None
     sap_postcode: str | None = None
     has_password: bool = False
+    # พนักงาน: เข้าระบบทางไหน + ตัวตนคนขายฝั่ง SAP (ลูกค้าได้ค่าว่าง)
+    auth_source: str = "local"
+    sap_pernr: str | None = None
+    sap_sales_office: str | None = None
+    sap_sales_group: str | None = None
     # หน้าเว็บใช้ตัวนี้ตัดสินว่าจะพาไปหน้าตั้งค่าบัญชีต่อไหม (ดู User.needs_profile)
     needs_profile: bool = False
 

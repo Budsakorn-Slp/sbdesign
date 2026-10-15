@@ -36,6 +36,17 @@ class CurrentEmployee:
     branch_name: str | None
     role: str
     permissions: frozenset[str]
+    # ตัวตนคนขายฝั่ง SAP — ใส่ลงใบเสนอราคาเป็น SALES_EMPLOYEE / SALES_OFFICE / SALES_GROUP
+    # auth_source = "sap" คือพนักงานจริงที่ SAP ยืนยันแล้ว · "local" คือบัญชีในฐานเรา (บัญชีทดสอบ)
+    # ซึ่งค่าพวกนี้ตั้งเองได้ → ห้ามใช้สร้างเอกสารจริง (ใช้ได้แค่โหมด TEST)
+    auth_source: str = "local"
+    sap_pernr: str | None = None
+    sap_sales_office: str | None = None
+    sap_sales_group: str | None = None
+
+    @property
+    def sap_verified(self) -> bool:
+        return self.auth_source == "sap" and bool(self.sap_pernr)
 
     def can(self, permission: str) -> bool:
         return permission in self.permissions
@@ -88,6 +99,10 @@ class LocalAccountEmployeeProvider:
             branch_name=user.branch_name,
             role=user.role,
             permissions=_permissions(user),
+            auth_source=user.auth_source or "local",
+            sap_pernr=user.sap_pernr,
+            sap_sales_office=user.sap_sales_office,
+            sap_sales_group=user.sap_sales_group,
         )
 
     def list_employees(self, db: Session) -> list[EmployeeRef]:

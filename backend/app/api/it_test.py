@@ -7,6 +7,11 @@
   - แก้ได้เฉพาะบัญชีตัวเอง (ไม่มีช่องให้ระบุบัญชีอื่น)
   - เฉพาะรหัสพนักงานที่อยู่ในรายชื่อ — ตั้งรายชื่อเป็นค่าว่างแล้วทั้งความสามารถนี้ปิด
   - เปลี่ยนเป็นลูกค้าไม่ได้ (ล็อกอินพนักงานจะเข้าไม่ได้อีก กลับมาแก้ไม่ได้)
+
+"พนักงานขายสำหรับทดสอบ" (sap_pernr / sales_office / sales_group):
+  บัญชีทดสอบไม่ได้ล็อกอินผ่าน SAP จึงไม่มีตัวตนคนขายฝั่ง SAP — ตั้งเองที่นี่เพื่อเทสการออก
+  ใบเสนอราคา · ค่าที่ตั้งเองไม่ผ่านการยืนยันจาก SAP (auth_source ยังเป็น local)
+  ระบบจึงยอมให้ใช้ได้แค่โหมด TEST ห้ามสร้างเอกสารจริง
 ทุกครั้งที่เปลี่ยนเขียน audit log
 """
 from __future__ import annotations
@@ -49,6 +54,9 @@ class TestProfileOut(BaseModel):
     role: str
     branch_code: str | None
     branch_name: str | None
+    sap_pernr: str | None
+    sap_sales_office: str | None
+    sap_sales_group: str | None
     roles: dict[str, str]
     branches: list[BranchOpt]
 
@@ -56,12 +64,17 @@ class TestProfileOut(BaseModel):
 class TestProfileIn(BaseModel):
     role: str | None = Field(default=None, pattern="^(sales|manager|admin)$")
     branch_code: str | None = Field(default=None, max_length=16)
+    # None = ไม่เปลี่ยน · "" = ล้างออก
+    sap_pernr: str | None = Field(default=None, pattern=r"^\d{0,8}$")
+    sap_sales_office: str | None = Field(default=None, pattern=r"^[A-Za-z0-9]{0,4}$")
+    sap_sales_group: str | None = Field(default=None, pattern=r"^[A-Za-z0-9]{0,3}$")
 
 
 def _out(db: Session, u: User) -> TestProfileOut:
     plants = db.scalars(select(Plant).where(Plant.type == "store").order_by(Plant.name)).all()
     return TestProfileOut(staff_code=u.staff_code or "", name=u.name, role=u.role, branch_code=u.branch_id,
-                          branch_name=u.branch_name, roles=ROLES,
+                          branch_name=u.branch_name, roles=ROLES, sap_pernr=u.sap_pernr,
+                          sap_sales_office=u.sap_sales_office, sap_sales_group=u.sap_sales_group,
                           branches=[BranchOpt(code=p.plant_code, name=p.name) for p in plants])
 
 
@@ -74,7 +87,9 @@ def get_profile(db: Session = Depends(get_db), user: User = Depends(get_current_
 @router.put("/it-test/profile", response_model=TestProfileOut)
 def set_profile(body: TestProfileIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     _require_it(user)
-    before = {"role": user.role, "branch": user.branch_id}
+    if user.auth_source == "sap":
+        raise HTTPException(status_code=400, detail="บัญชีที่เข้าด้วย SAP ใช้โหมดทดสอบไม่ได้")
+    before = {"role": user.role, "branch": user.branch_id, "sap": [user.sap_pernr, user.sap_sales_office, user.sap_sales_group]}
     if body.role:
         user.role = body.role
     if body.branch_code:
@@ -82,9 +97,16 @@ def set_profile(body: TestProfileIn, db: Session = Depends(get_db), user: User =
         if not plant:
             raise HTTPException(status_code=404, detail=f"ไม่พบสาขา {body.branch_code}")
         user.branch_id, user.branch_name = plant.plant_code, plant.name
+    if body.sap_pernr is not None:
+        user.sap_pernr = body.sap_pernr.zfill(8) if body.sap_pernr else None
+    if body.sap_sales_office is not None:
+        user.sap_sales_office = body.sap_sales_office.upper() or None
+    if body.sap_sales_group is not None:
+        user.sap_sales_group = body.sap_sales_group.upper() or None
     user.updated_at = utcnow()
     audit_service.log(db, user, "it_test.profile_change", "user", user.id,
-                      {"before": before, "after": {"role": user.role, "branch": user.branch_id}})
+                      {"before": before, "after": {"role": user.role, "branch": user.branch_id,
+                                                  "sap": [user.sap_pernr, user.sap_sales_office, user.sap_sales_group]}})
     db.commit()
     db.refresh(user)
     return _out(db, user)

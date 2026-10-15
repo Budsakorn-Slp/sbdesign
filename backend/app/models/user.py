@@ -31,6 +31,15 @@ class User(Base, TimestampMixin):
     # ตาราง plants เป็นสาขาจำลอง 4 แห่ง ส่วน product_stock_sites มีชื่อก็จริงแต่โผล่เฉพาะ
     # สาขาที่บังเอิญมีของอยู่ตอนนั้น จะหายไปเมื่อของหมด แล้วหัวเอกสารจะกลายเป็นว่างเปล่า
     branch_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # พนักงานเข้าระบบทางไหน — local = บัญชีในฐานเรา (บัญชีทดสอบ/ชั่วคราว) · sap = รหัสพนักงาน+PIN ของ SAP CRM
+    # บัญชี sap ไม่มีรหัสผ่านในฐานเรา ตรวจกับ SAP ทุกครั้ง
+    auth_source: Mapped[str] = mapped_column(String(8), nullable=False, default="local", server_default="local")
+    # ตัวตน "คนขาย" ที่จะลงเอกสาร SAP (VBPA Z3 / VBAK-VKBUR / VKGRP)
+    # บัญชี sap ได้จาก SAP ตอน login · บัญชีทดสอบตั้งเองได้ในโหมดทดสอบ IT (ใช้ได้แค่โหมด TEST)
+    sap_pernr: Mapped[str | None] = mapped_column(String(10), nullable=True, index=True)  # เติม 0 ครบ 8 หลัก
+    sap_sales_office: Mapped[str | None] = mapped_column(String(8), nullable=True)  # VKBUR เช่น SBDS
+    sap_sales_group: Mapped[str | None] = mapped_column(String(8), nullable=True)  # VKGRP เช่น 311 = showroom
+    sap_distr_chan: Mapped[str | None] = mapped_column(String(4), nullable=True)  # VTWEG — ช่องทาง 18 ถึงออกเอกสารได้
     # แต้มสะสม — SAP เป็นเจ้าของตัวเลขจริง ฝั่งนี้เก็บไว้โชว์เฉยๆ อัปเดตตอน login/ผูกลูกค้า
     points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     is_guest: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

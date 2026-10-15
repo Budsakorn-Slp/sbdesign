@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.security import create_access_token, hash_password, hash_token, new_refresh_token, verify_password
+from app.integrations.sap import employee_auth as sap_employee_auth
 from app.integrations.sms import SmsError, get_sms_client
 from app.models.common import utcnow
 from app.models.user import OtpCode, User, UserSession
@@ -77,6 +78,10 @@ def login(db: Session, identifier: str, password: str, account_type: str, reques
 
     if account_type == "staff":
         user = db.scalar(select(User).where(User.staff_code == ident.upper(), User.role.in_(("sales", "manager", "admin"))))
+        # สองทางคู่กัน: บัญชีในฐานเราที่มีรหัสผ่าน (บัญชีทดสอบ) ตรวจที่นี่เหมือนเดิม
+        # นอกนั้นถ้าเปิด SAP login ไว้ ส่งไปตรวจรหัสพนักงาน + PIN กับ SAP CRM
+        if not (user and user.password_hash) and sap_employee_auth.enabled():
+            return _sap_staff_login(db, ident, password, acct_key, ip, request)
     else:
         user = find_customer_by_identifier(db, ident)
     ok = verify_password(password, user.password_hash) if user else verify_password(password, _DUMMY_HASH)
@@ -96,6 +101,70 @@ def login(db: Session, identifier: str, password: str, account_type: str, reques
         audit_service.log(db, user, "auth.login", "user", user.id, {"ip": ip, "staff_code": user.staff_code})
     _run_hooks(db, user, request)
     return issue_tokens(db, user, request)
+
+
+def _sap_staff_login(db: Session, ident: str, password: str, acct_key: str, ip: str | None, request: Request | None) -> TokenPair:
+    """พนักงานจริง — ตรวจกับ SAP CRM แล้วสร้าง/อัปเดตบัญชีในฐานเราให้ (ไม่เก็บ PIN)
+
+    ไม่ต้องมีบัญชีในฐานเรามาก่อน: ล็อกอินผ่านครั้งแรกระบบสร้างให้เป็นพนักงานขาย
+    ครั้งต่อไปอัปเดตชื่อ/สำนักงานขาย/กลุ่มขายตาม SAP ทุกครั้ง แต่ไม่แตะ role
+    (ผู้จัดการที่ตั้งไว้ในฐานเราไม่โดนลดเป็นเซลล์ทุกครั้งที่ล็อกอิน)
+    """
+    def fail(status_code: int = status.HTTP_401_UNAUTHORIZED, detail: str = _LOGIN_FAIL):
+        rl.record(db, "login", acct_key, ok=False, request=request)
+        if ip:
+            rl.record(db, "login", f"ip:{ip}", ok=False, request=request)
+        audit_service.log(db, None, "auth.login_failed", "user", None, {"identifier": ident.upper(), "ip": ip, "via": "sap"}, role="guest")
+        db.commit()
+        raise HTTPException(status_code=status_code, detail=detail)
+
+    try:
+        emp = sap_employee_auth.login(ident, password)
+    except sap_employee_auth.SapLoginFailed:
+        fail()
+    except sap_employee_auth.SapLoginLocked as e:
+        mins = max(1, round((e.retry_after or 900) / 60))
+        fail(status.HTTP_429_TOO_MANY_REQUESTS, f"ลองผิดหลายครั้งเกินไป — รออีกประมาณ {mins} นาทีแล้วลองใหม่")
+    except sap_employee_auth.SapAuthUnavailable:
+        # ไม่ใช่ความผิดของคนกรอก — ไม่นับเป็นการลองผิด
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="ตรวจรหัสกับ SAP ไม่ได้ตอนนี้ — ลองใหม่อีกครั้ง หรือแจ้งทีม IT")
+
+    user = db.scalar(select(User).where(User.sap_pernr == emp.pernr, User.auth_source == "sap"))
+    if not user:
+        # รหัสที่โชว์ในระบบ = ตัดศูนย์หน้า (09570311 -> 9570311) ตรงกับที่พนักงานพิมพ์กันจริง
+        # ถ้าชนกับบัญชีที่มีอยู่แล้ว (เช่นบัญชีทดสอบ) ใช้รหัสเต็ม 8 หลักแทน
+        code = emp.pernr.lstrip("0") or emp.pernr
+        if db.scalar(select(User).where(User.staff_code == code)):
+            code = emp.pernr
+        user = User(role="sales", name=emp.name or code, staff_code=code, auth_source="sap", is_guest=False)
+        db.add(user)
+    user.sap_pernr = emp.pernr
+    user.name = emp.name or user.name
+    user.sap_sales_office = emp.sales_office or None
+    user.sap_sales_group = emp.sales_group or None
+    user.sap_distr_chan = emp.distr_chan or None
+    _branch_from_sales_group(db, user)
+    db.flush()
+
+    rl.record(db, "login", acct_key, ok=True, request=request)
+    audit_service.log(db, user, "auth.login", "user", user.id, {"ip": ip, "staff_code": user.staff_code, "via": "sap"})
+    _run_hooks(db, user, request)
+    return issue_tokens(db, user, request)
+
+
+def _branch_from_sales_group(db: Session, user: User) -> None:
+    """VKGRP คือ showroom ที่พนักงานประจำ (เช่น 311) — ตรงกับรหัสสาขา S311 ในทะเบียนสาขา
+
+    หาไม่เจอก็ไม่เดา ปล่อยสาขาเดิมไว้ (หรือว่าง) ดีกว่าผูกผิดสาขาแล้วรูป/สต็อกเพี้ยน
+    """
+    from app.models.catalog import Plant
+
+    g = (user.sap_sales_group or "").strip()
+    if not g:
+        return
+    plant = db.get(Plant, f"S{g}") or db.get(Plant, g)
+    if plant:
+        user.branch_id, user.branch_name = plant.plant_code, plant.name
 
 
 def register(db: Session, phone: str, password: str, name: str, email: str | None, request: Request | None) -> TokenPair:

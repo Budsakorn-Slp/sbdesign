@@ -26,6 +26,7 @@ INVITE_ONLY=true
 JWT_SECRET=<สุ่มใหม่ อย่างน้อย 32 ตัว ห้ามใช้ตัวเดียวกับเครื่อง dev>
 SAP_API_KEY=<คีย์จากทีม SAP>
 SAP_AVAIL_URL=... SAP_STOCK_URL=... SAP_CATALOG_URL=...
+SAP_AUTH_URL=http://<rfc_api>/v1/auth/login   # login พนักงานด้วยรหัส+PIN ของ SAP · ว่าง = ใช้แต่บัญชีในฐานเรา
 CORS_ORIGINS=https://<โดเมนที่จะใช้>
 ```
 

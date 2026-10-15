@@ -20,6 +20,12 @@ export type User = {
   has_password: boolean;
   /** ยังไม่เคยผ่านขั้น "ตั้งค่าบัญชี" หลังล็อกอินครั้งแรก — ผูกเลขสมาชิกแล้วจะเป็น false เสมอ */
   needs_profile: boolean;
+  /** พนักงาน: เข้าระบบทางไหน — sap = รหัส+PIN ของ SAP · local = บัญชีในฐานเรา (บัญชีทดสอบ) */
+  auth_source?: "local" | "sap";
+  /** ตัวตนคนขายที่จะลงเอกสาร SAP (รหัสพนักงาน 8 หลัก / สำนักงานขาย / กลุ่มขาย) */
+  sap_pernr?: string | null;
+  sap_sales_office?: string | null;
+  sap_sales_group?: string | null;
 };
 
 export type TokenPair = {

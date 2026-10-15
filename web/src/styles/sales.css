@@ -437,6 +437,12 @@
 .it-test-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
 .it-test-row label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 200px; min-width: 0; font-size: 13px; font-weight: 600; }
 .it-test-row select { padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; font-weight: 400; background: #fff; width: 100%; }
+.it-test-row input { padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; font-weight: 400; background: #fff; width: 100%; }
+.it-test-row label:has(input) { flex: 1 1 120px; }
+.it-test-sub { margin: 12px 0 10px; padding-top: 10px; border-top: 1px dashed var(--line-2); }
+.sap-id { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 14px; margin: 8px 0 0; }
+.sap-id div { font-size: 13px; color: var(--ink-3); }
+.sap-id b { display: block; color: var(--ink); font-size: 15px; }
 
 /* แชร์/ดาวน์โหลดใบเสนอราคา */
 .qs-file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; color: var(--red); }

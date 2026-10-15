@@ -77,17 +77,17 @@ export default function StaffLoginPage() {
   return (
     <AuthShell
       title="สำหรับพนักงาน SB"
-      subtitle="เข้าสู่ระบบด้วยรหัสพนักงานเพื่อใช้เครื่องมือขาย"
+      subtitle="เข้าสู่ระบบด้วยรหัสพนักงานและ PIN เดียวกับระบบ SAP"
       footer={<>เป็นลูกค้า? <Link to="/login">เข้าสู่ระบบด้วยเบอร์โทร</Link></>}
     >
       <>
         <form onSubmit={submit} className="form">
           <label className="field">
             <span>รหัสพนักงาน</span>
-            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="เช่น SA-104" autoFocus autoCapitalize="characters" />
+            <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="เช่น 09570311" inputMode="text" autoFocus autoCapitalize="characters" />
           </label>
           <label className="field">
-            <span>รหัสผ่าน</span>
+            <span>PIN / รหัสผ่าน</span>
             <input type="password" value={pass} onChange={(e) => setPass(e.target.value)} placeholder="••••" autoComplete="current-password" />
           </label>
           {error && <div className="note err">{error}</div>}
