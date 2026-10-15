@@ -132,3 +132,17 @@ def test_โหมดทดสอบ_IT_ตั้งพนักงานขา�
     r = client.put("/it-test/profile", json={"sap_pernr": "", "sap_sales_office": "", "sap_sales_group": ""}, headers=h)
     assert r.json()["sap_pernr"] is None
     assert client.put("/it-test/profile", json={"sap_pernr": "12AB"}, headers=h).status_code == 422
+
+
+def test_รหัสชนกับบัญชีทดสอบ_รหัสผ่านไม่ตรง_ลอง_SAP_ต่อ(client, sap_on):
+    # 4680012 มีทั้งบัญชีทดสอบ (รหัสผ่าน 1122) และตัวตนจริงใน SAP (PIN อีกค่า)
+    sap_on["result"] = _emp("04680012", name="รัตนากร อ่อนน้อม")
+    r = _login(client, "4680012", pin="sap-pin")
+    assert r.status_code == 200, r.text
+    u = r.json()["user"]
+    assert u["auth_source"] == "sap" and u["sap_pernr"] == "04680012"
+    assert u["staff_code"] == "04680012", "ชนกับบัญชีทดสอบ → ใช้รหัสเต็ม 8 หลัก แยกบัญชีกัน"
+    # รหัสผ่านของบัญชีทดสอบยังเข้าบัญชีทดสอบได้ ไม่ยิง SAP
+    before = sap_on["calls"]
+    r2 = _login(client, "4680012", pin="1122")
+    assert r2.status_code == 200 and r2.json()["user"]["auth_source"] == "local" and sap_on["calls"] == before

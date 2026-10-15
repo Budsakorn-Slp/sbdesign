@@ -80,7 +80,9 @@ def login(db: Session, identifier: str, password: str, account_type: str, reques
         user = db.scalar(select(User).where(User.staff_code == ident.upper(), User.role.in_(("sales", "manager", "admin"))))
         # สองทางคู่กัน: บัญชีในฐานเราที่มีรหัสผ่าน (บัญชีทดสอบ) ตรวจที่นี่เหมือนเดิม
         # นอกนั้นถ้าเปิด SAP login ไว้ ส่งไปตรวจรหัสพนักงาน + PIN กับ SAP CRM
-        if not (user and user.password_hash) and sap_employee_auth.enabled():
+        # รหัสเดียวกันอาจมีทั้งบัญชีทดสอบในฐานเราและตัวตนจริงใน SAP (เช่น 4680012) —
+        # รหัสผ่านของบัญชีทดสอบไม่ตรง ให้ลอง SAP ต่อ ไม่ใช่ตีกลับว่ารหัสผิดทันที
+        if sap_employee_auth.enabled() and not (user and user.password_hash and verify_password(password, user.password_hash)):
             return _sap_staff_login(db, ident, password, acct_key, ip, request)
     else:
         user = find_customer_by_identifier(db, ident)
