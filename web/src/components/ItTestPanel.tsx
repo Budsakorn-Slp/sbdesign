@@ -81,9 +81,9 @@ export default function ItTestPanel() {
         </label>
       </div>
       <div className="it-test-sub">
-        <b className="small">พนักงานขายสำหรับทดสอบ (ฝั่ง SAP)</b>
+        <b className="small">พนักงานขายสำหรับทดสอบ</b>
         <p className="tiny muted" style={{ margin: "2px 0 6px" }}>
-          บัญชีทดสอบไม่ได้เข้าผ่าน SAP — ใส่รหัสคนขายที่จะลงใบเสนอราคาตอนเทส · ใช้ได้แค่โหมดทดสอบ (TEST) ออกเอกสารจริงไม่ได้
+          ใส่รหัสคนขายที่จะลงใบเสนอราคาตอนเทส · ใช้ได้แค่โหมดทดสอบ (TEST) ออกเอกสารจริงไม่ได้
         </p>
         <div className="it-test-row">
           <label>

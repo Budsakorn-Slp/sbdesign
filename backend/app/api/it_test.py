@@ -88,7 +88,7 @@ def get_profile(db: Session = Depends(get_db), user: User = Depends(get_current_
 def set_profile(body: TestProfileIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     _require_it(user)
     if user.auth_source == "sap":
-        raise HTTPException(status_code=400, detail="บัญชีที่เข้าด้วย SAP ใช้โหมดทดสอบไม่ได้")
+        raise HTTPException(status_code=400, detail="บัญชีพนักงานจริงใช้โหมดทดสอบไม่ได้")
     before = {"role": user.role, "branch": user.branch_id, "sap": [user.sap_pernr, user.sap_sales_office, user.sap_sales_group]}
     if body.role:
         user.role = body.role

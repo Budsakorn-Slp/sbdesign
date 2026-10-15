@@ -13,7 +13,7 @@ export default function StaffSapCard() {
   const sap = u.auth_source === "sap";
   const initials = (u.name || "?").trim().slice(0, 1);
   const items: [string, string, string | null | undefined][] = [
-    ["badge", "รหัสพนักงาน SAP", u.sap_pernr],
+    ["badge", "รหัสพนักงาน", u.sap_pernr],
     ["apartment", "สำนักงานขาย", u.sap_sales_office],
     ["groups", "กลุ่มขาย (showroom)", u.sap_sales_group],
     ["storefront", "สาขาในระบบเว็บ", u.branch_id],
@@ -26,10 +26,7 @@ export default function StaffSapCard() {
           <b>{u.name}</b>
           <span className="small muted">{ROLE[u.role] || u.role} · รหัส {u.staff_code}</span>
         </div>
-        <span className={"staff-src " + (sap ? "sap" : "local")}>
-          <Icon name={sap ? "verified_user" : "science"} size={15} />
-          {sap ? "ยืนยันจาก SAP" : "บัญชีทดสอบ"}
-        </span>
+        {!sap && <span className="staff-src local"><Icon name="science" size={15} /> บัญชีทดสอบ</span>}
       </div>
 
       <h3 className="staff-sub">ข้อมูลพนักงานขาย</h3>
@@ -43,7 +40,7 @@ export default function StaffSapCard() {
       </div>
       {!sap && (
         <p className="tiny muted" style={{ margin: "10px 0 0" }}>
-          บัญชีทดสอบไม่ได้เข้าผ่าน SAP — ตั้งค่าได้ในโหมดทดสอบ IT ด้านล่าง ใช้เทสได้แต่ออกเอกสารจริงไม่ได้
+          บัญชีทดสอบ — ตั้งค่าได้ในโหมดทดสอบ IT ด้านล่าง ใช้เทสได้แต่ออกเอกสารจริงไม่ได้
         </p>
       )}
     </section>

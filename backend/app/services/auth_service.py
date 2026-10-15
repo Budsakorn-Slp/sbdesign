@@ -129,7 +129,7 @@ def _sap_staff_login(db: Session, ident: str, password: str, acct_key: str, ip: 
         fail(status.HTTP_429_TOO_MANY_REQUESTS, f"ลองผิดหลายครั้งเกินไป — รออีกประมาณ {mins} นาทีแล้วลองใหม่")
     except sap_employee_auth.SapAuthUnavailable:
         # ไม่ใช่ความผิดของคนกรอก — ไม่นับเป็นการลองผิด
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="ตรวจรหัสกับ SAP ไม่ได้ตอนนี้ — ลองใหม่อีกครั้ง หรือแจ้งทีม IT")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="ระบบตรวจรหัสพนักงานไม่ตอบตอนนี้ — ลองใหม่อีกครั้ง หรือแจ้งทีม IT")
 
     user = db.scalar(select(User).where(User.sap_pernr == emp.pernr, User.auth_source == "sap"))
     if not user:

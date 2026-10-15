@@ -102,7 +102,7 @@ def test_SAP_ล็อก_ส่งต่อเป็น_429(client, sap_on):
 def test_SAP_ล่ม_ได้_503_ไม่ใช่รหัสผิด(client, sap_on):
     sap_on["result"] = employee_auth.SapAuthUnavailable("timeout")
     r = _login(client, _pernr())
-    assert r.status_code == 503 and "SAP" in r.json()["detail"]
+    assert r.status_code == 503 and "ไม่ตอบ" in r.json()["detail"]
 
 
 def test_บัญชีทดสอบในฐานเรา_ยังเข้าทางเดิม_ไม่ยิง_SAP(client, sap_on):

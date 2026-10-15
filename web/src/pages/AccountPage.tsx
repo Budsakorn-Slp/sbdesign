@@ -200,7 +200,6 @@ function ProfilePanel() {
         <label className="field">
           <span className="field-lbl">ชื่อ-นามสกุล</span>
           <input value={name} onChange={(e) => setName(e.target.value)} disabled={!editing || nameLocked} maxLength={120} />
-          {sapStaff && <span className="small muted">ชื่อมาจาก SAP — อัปเดตให้เองทุกครั้งที่เข้าสู่ระบบ</span>}
           {nameLocked && !sapStaff && (
             <span className="small muted">
               ชื่อมาจากบัตรสมาชิก {u.sap_customer_no} — แก้ไขได้ที่สาขาหรือศูนย์บริการลูกค้า
@@ -220,9 +219,7 @@ function ProfilePanel() {
           <span className="small muted">เบอร์นี้ใช้เข้าสู่ระบบ — เปลี่ยนได้ที่สาขาหรือศูนย์บริการลูกค้า</span>
         </label>}
 
-        {sapStaff ? (
-          <p className="small muted">รหัสผ่าน: ใช้รหัสพนักงาน + PIN ของ SAP — เปลี่ยน PIN ได้ที่ระบบ SAP</p>
-        ) : staff ? (
+        {sapStaff ? null : staff ? (
           <p className="small muted">รหัสผ่าน: บัญชีในระบบเว็บ (บัญชีทดสอบ) — ตั้ง/เปลี่ยนโดยผู้ดูแลระบบ</p>
         ) : u.has_password ? (
           <p className="small muted">รหัสผ่าน: ตั้งไว้แล้ว — เปลี่ยนได้ที่เมนู “ลืมรหัสผ่าน” (ยืนยันด้วย OTP)</p>
