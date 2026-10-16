@@ -20,7 +20,7 @@ from fastapi import HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.integrations.sap import get_sap_client
+from app.integrations.sap import lookup_customer
 from app.integrations.sap.base import SapError
 from app.models.common import utcnow
 from app.models.user import MemberLinkEvent, User
@@ -63,7 +63,7 @@ def _require_verified_customer(user: User) -> str:
 def _lookup(key: str):
     """ถามทะเบียนสมาชิก — ระบบปลายทางล่มถือว่า "ยังตอบไม่ได้" ไม่ใช่ "ไม่มีสมาชิก" """
     try:
-        return get_sap_client().get_customer(key)
+        return lookup_customer(key)
     except SapError as e:
         log.warning("ถามทะเบียนสมาชิกไม่ได้ (%s): %s", key, e)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="ระบบสมาชิกตอบไม่ได้ตอนนี้ — ลองใหม่อีกครั้ง") from e

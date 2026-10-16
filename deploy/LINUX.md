@@ -27,6 +27,8 @@ JWT_SECRET=<สุ่มใหม่ อย่างน้อย 32 ตัว �
 SAP_API_KEY=<คีย์จากทีม SAP>
 SAP_AVAIL_URL=... SAP_STOCK_URL=... SAP_CATALOG_URL=...
 SAP_AUTH_URL=http://<rfc_api>/v1/auth/login   # login พนักงานด้วยรหัส+PIN ของ SAP · ว่าง = ใช้แต่บัญชีในฐานเรา
+SAP_CUSTOMER_URL=http://<rfc_api>/v1/rfc/customer-search   # ทะเบียนลูกค้าจริง (เบอร์/อีเมล → เลข CUST + ที่อยู่) · ว่าง = ข้อมูลจำลอง
+SAP_CUSTOMER_CREATE_URL=   # สร้างเลขลูกค้าใหม่ — รอ API จากทีม SAP
 CORS_ORIGINS=https://<โดเมนที่จะใช้>
 ```
 

@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.integrations.sap import get_sap_client
+from app.integrations.sap import lookup_customer, search_customers as sap_search_customers
 from app.integrations.sap.base import SapError
 from app.models.cart import Cart, CartHandler
 from app.models.common import utcnow
@@ -114,11 +114,17 @@ def search_customers(db: Session, actor: User, q: str, limit: int = 10) -> list[
         out.append(_customer_row(db, u))
     if len(out) < limit:
         try:
-            sap_c = get_sap_client().get_customer(ql)
+            sap_rows = sap_search_customers(ql)
         except SapError:
-            sap_c = None
-        if sap_c and sap_c.sap_customer_no not in seen:
-            out.append({"id": None, "name": sap_c.name, "points": sap_c.points, "sap_customer_no": sap_c.sap_customer_no, "phone": sap_c.phone, "email": sap_c.email, "address": sap_c.address, "postcode": sap_c.postcode, "online_cart_count": 0, "source": "sap"})
+            sap_rows = []
+        # เบอร์เดียวอาจผูกหลายลูกค้า — โชว์ให้เลือกทุกราย (เจ้าของเบอร์ขึ้นก่อน) แล้วผูกด้วยเลขลูกค้า
+        for sap_c in sap_rows:
+            if len(out) >= limit:
+                break
+            if sap_c.sap_customer_no in seen:
+                continue
+            seen.add(sap_c.sap_customer_no)
+            out.append({"id": None, "name": sap_c.name, "points": sap_c.points, "sap_customer_no": sap_c.sap_customer_no, "phone": _mask_phone(sap_c.phone), "email": sap_c.email, "address": sap_c.address, "postcode": sap_c.postcode, "online_cart_count": 0, "source": "sap"})
     audit_service.log(db, actor, "customer.search", "user", None, {"q": ql, "results": len(out)})
     db.commit()
     return out
@@ -146,7 +152,7 @@ def resolve_customer(db: Session, key: str) -> User:
     if u:
         return u
     try:
-        c = get_sap_client().get_customer(key)
+        c = lookup_customer(key)
     except SapError:
         c = None
     if not c:
